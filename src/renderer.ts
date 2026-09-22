@@ -5,7 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { groundAt, type Course, type Segment, type Surface } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
-import { STROKE_RADIUS, type Point } from './shapes';
+import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
@@ -277,10 +277,11 @@ export class GameRenderer {
   addWater(start: number, end: number, y: number, alpine: boolean) {
     const material = new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { time: { value: 0 }, colorDeep: { value: new THREE.Color(alpine ? '#235c71' : '#1d6d67') }, colorShallow: { value: new THREE.Color('#a6d6c5') }, eye: { value: this.camera.position } },
+      uniforms: { time: { value: 0 }, colorDeep: { value: new THREE.Color(alpine ? '#235c71' : '#1d6d67') }, colorShallow: { value: new THREE.Color('#a6d6c5') }, eye: { value: this.camera.position }, wakes: { value: Array.from({ length: 4 }, () => new THREE.Vector4(-1000, 0, 0, 0)) } },
       vertexShader: `varying vec3 vWorld; uniform float time; void main(){vec3 p=position; p.z+=sin(p.x*1.6+time*1.4)*.027+sin(p.y*2.3-time*.9)*.02; vec4 world=modelMatrix*vec4(p,1.); vWorld=world.xyz; gl_Position=projectionMatrix*viewMatrix*world;}`,
-      fragmentShader: `varying vec3 vWorld; uniform float time; uniform vec3 colorDeep; uniform vec3 colorShallow; uniform vec3 eye;
+      fragmentShader: `varying vec3 vWorld; uniform float time; uniform vec3 colorDeep; uniform vec3 colorShallow; uniform vec3 eye; uniform vec4 wakes[4];
       void main(){vec2 p=vWorld.xz; float a=sin(p.x*5.3+p.y*3.8+time*2.); float b=sin(p.x*11.-p.y*7.-time*1.8); vec3 n=normalize(vec3(a*.07+b*.03,1.,cos(p.y*6.+time)*.1)); vec3 v=normalize(eye-vWorld); float fres=pow(1.-max(dot(n,v),0.),3.); vec3 sun=normalize(vec3(-.5,.9,.5)); float shine=pow(max(dot(reflect(-sun,n),v),0.),95.); float glint=pow(max(a*b,0.),8.); vec3 c=mix(colorDeep,colorShallow,fres*.65)+shine*.85+glint*.045; gl_FragColor=vec4(c,.77+fres*.18);
+      float foam=0.; for(int i=0;i<4;i++){vec2 d=p-wakes[i].xy; float trail=(1.-smoothstep(-.4,.5,d.x))*exp(-.24*abs(d.x)-1.8*abs(d.y)); foam+=trail*wakes[i].z*(.5+.5*sin(d.x*8.+time*9.-abs(d.y)*4.));} gl_FragColor.rgb+=foam*vec3(.18,.23,.2);
       #include <tonemapping_fragment>
       #include <colorspace_fragment>
       }`
@@ -326,7 +327,8 @@ export class GameRenderer {
       const seat = box(.13, .59, .42, black, -.28, .45, z); seat.rotation.z = .13; group.add(seat);
       for (const x of [-.64, .65]) group.add(cylinderBetween(new THREE.Vector3(x, .12, z * 1.6), new THREE.Vector3(x - .17, 1, z * 1.45), .045, metal));
       group.add(cylinderBetween(new THREE.Vector3(-.81, 1, z * 1.45), new THREE.Vector3(.48, 1, z * 1.45), .045, metal));
-      group.add(cylinderBetween(new THREE.Vector3(-1.2, -.2, z * 1.95), new THREE.Vector3(1.2, -.2, z * 1.95), .11, black, 12));
+      group.add(cylinderBetween(new THREE.Vector3(-1.35, -.17, z * 1.95), new THREE.Vector3(1.35, -.17, z * 1.95), .18, black, 12));
+      for (const x of [-1.35, 1.35]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(.18, 12, 8), black); cap.position.set(x, -.17, z * 1.95); group.add(cap); }
       group.add(box(.14, .15, .25, light, 1.39, .16, z));
       for (const x of AXLES) {
         group.add(cylinderBetween(new THREE.Vector3(x, -.27, 0), new THREE.Vector3(x, -.39, z * 2.5), .05, metal));
@@ -361,14 +363,12 @@ export class GameRenderer {
     this.disposeObject(g); g.clear();
     const rubber = new THREE.MeshStandardMaterial({ color: 0x171e1d, roughness: .78 });
     const rim = new THREE.MeshStandardMaterial({ color: 0x8c9691, metalness: .8, roughness: .32 });
-    // Linear interpolation preserves the same edges and open ends as the capsule colliders.
-    const curve = new THREE.CurvePath<THREE.Vector3>();
-    for (let i = 1; i < shape.length; i++) curve.add(new THREE.LineCurve3(new THREE.Vector3(shape[i - 1].x, shape[i - 1].y, 0), new THREE.Vector3(shape[i].x, shape[i].y, 0)));
-    const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, shape.length * 3, STROKE_RADIUS, 10, false), rubber); tube.castShadow = true; tube.receiveShadow = true; g.add(tube);
-    for (const p of [shape[0], shape.at(-1)!]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(STROKE_RADIUS, 8, 6), rubber); cap.position.set(p.x, p.y, 0); g.add(cap); }
-    for (let i = 0; i < 4; i++) {
-      const p = shape[Math.floor(i * (shape.length - 1) / 4)];
-      g.add(cylinderBetween(new THREE.Vector3(), new THREE.Vector3(p.x, p.y, 0), .025, rim, 6));
+    // Each straight edge and rounded joint matches a physical capsule. A
+    // globally sampled TubeGeometry used to cut across short corners.
+    for (let i = 1; i < shape.length; i++) g.add(cylinderBetween(new THREE.Vector3(shape[i - 1].x, shape[i - 1].y, 0), new THREE.Vector3(shape[i].x, shape[i].y, 0), STROKE_RADIUS, rubber, 10));
+    for (const p of shape) { const cap = new THREE.Mesh(new THREE.SphereGeometry(STROKE_RADIUS, 10, 6), rubber); cap.position.set(p.x, p.y, 0); g.add(cap); }
+    for (const p of spokeTips(shape)) {
+      g.add(cylinderBetween(new THREE.Vector3(), new THREE.Vector3(p.x, p.y, 0), SPOKE_RADIUS, rim, 6));
     }
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(.145, .145, .21, 16), rim); hub.rotation.x = Math.PI / 2; g.add(hub);
     mergeRigidGroup(g);
@@ -386,11 +386,13 @@ export class GameRenderer {
       }
       visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(); w.position.set(wp.x, wp.y, LANES[car.id] + (i < 2 ? .97 : -.97)); w.rotation.z = body.rotation(); });
       if (visual.tag) visual.tag.position.set(p.x, p.y + 1.72, LANES[car.id]);
-      if (sim.started && Math.abs(car.body.linvel().x) > .4 && this.frames % 3 === 0) {
+      if (sim.started && (car.water ? Math.abs(car.waterThrust) > .4 : Math.abs(car.body.linvel().x) > .4) && this.frames % 3 === 0) {
         const wp = car.wheels[0].translation(); const j = this.splashNext++ % 150;
         this.splashLife[j] = .6 + Math.random() * .45;
-        this.splashData[j * 3] = wp.x - .3; this.splashData[j * 3 + 1] = car.water ? -.02 : wp.y - .7; this.splashData[j * 3 + 2] = LANES[car.id] + 1;
-        this.splashVel[j * 3] = -Math.random() * 1.5; this.splashVel[j * 3 + 1] = car.water ? 1.5 + Math.random() : .5; this.splashVel[j * 3 + 2] = Math.random() * .5;
+        const level = sim.course.waters.find(w => wp.x > w.start && wp.x < w.end)?.level ?? -.1;
+        const strength = Math.min(1, Math.abs(car.waterThrust) / 12);
+        this.splashData[j * 3] = wp.x - .3; this.splashData[j * 3 + 1] = car.water ? level + .03 : wp.y - .7; this.splashData[j * 3 + 2] = LANES[car.id] + 1;
+        this.splashVel[j * 3] = -Math.random() * (car.water ? .5 + strength * 2 : 1.5); this.splashVel[j * 3 + 1] = car.water ? .4 + strength * (1 + Math.random()) : .5; this.splashVel[j * 3 + 2] = Math.random() * .5;
       }
     }
     for (let i = 0; i < 150; i++) {
@@ -409,7 +411,14 @@ export class GameRenderer {
     temp.set(this.viewX + (menu ? 4.8 : 4), y + .45, -3.3); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
     this.sun.position.set(this.viewX - 16, 25, 15); this.sun.target.position.set(this.viewX + 4, 0, -3);
     for (const rock of this.rocks) rock.visible = Math.abs(rock.position.x - this.viewX) < 78;
-    for (const water of this.waters) water.uniforms.time.value = this.clock;
+    for (const water of this.waters) {
+      water.uniforms.time.value = this.clock;
+      for (const car of sim.cars) {
+        const wake = water.uniforms.wakes.value[car.id] as THREE.Vector4;
+        const strength = car.water > .05 ? Math.min(1, Math.abs(car.waterThrust) / 12) : 0;
+        wake.set(car.body.translation().x, LANES[car.id], wake.z + (strength - wake.z) * (1 - Math.exp(-dt * 4)), 0);
+      }
+    }
     this.renderer.render(this.scene, this.camera);
   }
 

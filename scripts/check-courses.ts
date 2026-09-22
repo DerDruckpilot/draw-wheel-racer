@@ -10,7 +10,7 @@ for (let id = 0; id < 13; id++) {
     const car = sim.cars[0], p = car.body.translation();
     if (step % 15 === 0) {
       const zone = zoneAt(sim.course, p.x + 3);
-      const name: ShapeName = zone?.kind === 'tunnel' ? 'compact' : zone?.kind === 'steps' ? 'claw' : zone?.kind === 'lake' && p.x < zone.end - 4.5 ? 'paddle' : 'round';
+      const name: ShapeName = zone?.kind === 'tunnel' ? 'compact' : ['steps', 'ramp', 'logs'].includes(zone?.kind ?? '') ? 'grip' : zone?.kind === 'lake' && p.x < zone.end - 4.5 ? 'paddle' : 'round';
       if (name !== last && step - lastChange > 45) { sim.requestShape(preset(name)); last = name; lastChange = step; }
     }
     sim.tick();

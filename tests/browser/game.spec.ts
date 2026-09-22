@@ -11,11 +11,13 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
   await expect(page.locator('#drawing-canvas')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Gezackte Räder', exact: true }).click();
+  await expect(page.locator('[data-shape="grip"]')).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Kleine Räder für Durchfahrten', exact: true }).click();
   await expect(page.locator('[data-shape="compact"]')).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Runde Räder', exact: true }).click();
   await page.locator('#settings-button').click();
-  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.1');
+  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.2.0');
   await page.locator('#close-modal').click();
   await page.screenshot({ path: '.local/test-home.png' });
   const initial = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
@@ -53,6 +55,18 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('[data-level]')).toHaveCount(13);
   await page.locator('[data-level="0"]').click();
   expect(errors).toEqual([]);
+});
+
+test('countdown uses elapsed time when rendering has a low frame rate', async ({ page, browserName }) => {
+  test.skip(browserName !== 'webkit', 'One controlled renderer is sufficient for the UI clock regression.');
+  await page.addInitScript(() => {
+    localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false }));
+    window.requestAnimationFrame = callback => window.setTimeout(() => callback(performance.now()), 350);
+  });
+  await page.goto('./');
+  await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
+  await page.locator('#start-button').click();
+  await expect(page.locator('.game')).toHaveAttribute('data-state', 'racing', { timeout: 6500 });
 });
 
 test('production PWA restarts without network', async ({ page, context, browserName }) => {

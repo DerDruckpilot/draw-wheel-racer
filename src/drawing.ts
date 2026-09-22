@@ -10,7 +10,7 @@ export class DrawingPad {
   private width = 0;
   private height = 0;
   private ro: ResizeObserver;
-  constructor(public canvas: HTMLCanvasElement, public onShape: (shape: Point[]) => void, public feedback: (text: string) => void) {
+  constructor(public canvas: HTMLCanvasElement, public onShape: (shape: Point[]) => boolean, public feedback: (text: string) => void) {
     this.ctx = canvas.getContext('2d')!;
     this.ro = new ResizeObserver(() => this.resize()); this.ro.observe(canvas);
     canvas.addEventListener('pointerdown', e => this.down(e));
@@ -36,7 +36,7 @@ export class DrawingPad {
     const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
     for (const event of events.length ? events : [e]) {
       const p = this.point(event), prev = this.raw.at(-1)!;
-      if (Math.hypot(p.x - prev.x, p.y - prev.y) > .014 && this.raw.length < 4000) this.raw.push(p);
+      if (Math.hypot(p.x - prev.x, p.y - prev.y) > .002 && this.raw.length < 4000) this.raw.push(p);
     }
     this.render();
   }
@@ -44,12 +44,12 @@ export class DrawingPad {
     if (!this.active || e.pointerId !== this.pointer) return;
     this.raw.push(this.point(e)); this.active = false; this.pointer = null;
     const shape = sanitizeShape(this.raw);
-    if (shape) { this.previous = this.shape; this.shape = shape; this.onShape(shape); this.feedback('Neue Radform übernommen'); }
-    else this.feedback('Zeichne eine etwas längere, einfache Linie.');
+    if (shape && this.onShape(shape)) { this.previous = this.shape; this.shape = shape; this.feedback('Neue Radform übernommen'); }
+    else this.feedback('Linie zu kurz oder zu komplex. Zeichne sie etwas einfacher.');
     this.raw = []; this.render();
   }
   cancel() { this.active = false; this.pointer = null; this.raw = []; this.render(); }
-  set(shape: Point[], notify = true) { this.cancel(); this.previous = this.shape; this.shape = shape; if (notify) this.onShape(shape); this.render(); }
+  set(shape: Point[], notify = true) { this.cancel(); if (notify && !this.onShape(shape)) { this.feedback('Diese Kontur ist zu komplex. Vereinfache sie etwas.'); return; } this.previous = this.shape; this.shape = shape; this.render(); }
   usePreset(name: ShapeName) { this.set(preset(name)); }
   undo() { const p = this.previous; this.set(p); }
   render() {

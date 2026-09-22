@@ -65,7 +65,7 @@ document.querySelector('#app')!.innerHTML = `
   <section class="draw-panel" aria-label="Räder zeichnen">
     <div class="draw-heading"><div><span class="eyebrow dark">DEINE RADFORM</span><h2>Zeichne deinen Weg.</h2></div><div class="draw-tools"><button class="small-icon" id="undo-button" aria-label="Vorherige Radform">${svg('undo')}</button><button class="small-icon" id="save-shape" aria-label="Radform als Favorit speichern">${svg('save')}</button></div></div>
     <div class="drawing-field"><canvas id="drawing-canvas" aria-label="Zeichenfläche: Zeichne mit dem Finger eine Radform. Beim Loslassen werden die Räder ersetzt."></canvas><span class="draw-hint">FREIHAND · BEIM LOSLASSEN MONTIERT</span></div>
-    <div class="presets"><button data-shape="round" aria-label="Runde Räder">${shapeIcon('round')}<span>Rund</span></button><button data-shape="compact" aria-label="Kleine Räder für Durchfahrten">${shapeIcon('compact')}<span>Klein</span></button><button data-shape="claw" aria-label="Offene C-Räder">${shapeIcon('claw')}<span>Klaue</span></button><button data-shape="paddle" aria-label="Paddelräder">${shapeIcon('paddle')}<span>Paddel</span></button><button data-shape="triangle" aria-label="Dreieckige Räder">${shapeIcon('triangle')}<span>Dreieck</span></button><button id="load-shape" aria-label="Gespeicherte Radform laden">${svg('save')}<span>Favorit</span></button></div>
+    <div class="presets"><button data-shape="round" aria-label="Runde Räder">${shapeIcon('round')}<span>Rund</span></button><button data-shape="compact" aria-label="Kleine Räder für Durchfahrten">${shapeIcon('compact')}<span>Klein</span></button><button data-shape="claw" aria-label="Offene C-Räder">${shapeIcon('claw')}<span>Klaue</span></button><button data-shape="grip" aria-label="Gezackte Räder">${shapeIcon('grip')}<span>Zacken</span></button><button data-shape="paddle" aria-label="Paddelräder">${shapeIcon('paddle')}<span>Paddel</span></button><button data-shape="triangle" aria-label="Dreieckige Räder">${shapeIcon('triangle')}<span>Dreieck</span></button><button id="load-shape" aria-label="Gespeicherte Radform laden">${svg('save')}<span>Favorit</span></button></div>
   </section>
 </main>
 <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close small-icon" id="close-modal" aria-label="Dialog schließen">${svg('close')}</button><div id="modal-content"></div></div></dialog>
@@ -80,6 +80,7 @@ let currentLevel = saved.level;
 let state: 'loading' | 'home' | 'countdown' | 'racing' | 'paused' | 'finished' = 'loading';
 let resumeState: 'racing' | 'countdown' | null = null;
 let countdown = 3;
+let countdownUpdated = 0;
 let accumulator = 0;
 let toastTimer: ReturnType<typeof setTimeout>;
 let updateReady = false;
@@ -94,8 +95,9 @@ function toast(message: string) {
   $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3200);
 }
 const pad = new DrawingPad($<HTMLCanvasElement>('drawing-canvas'), shape => {
-  if (sim) sim.requestShape(shape);
+  if (sim && !sim.requestShape(shape)) return false;
   document.querySelectorAll('[data-shape]').forEach(b => b.classList.remove('selected'));
+  return true;
 }, toast);
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
@@ -103,6 +105,7 @@ const region = (id: number) => id === 12 ? 'EXPERIMENT' : id < 4 ? 'CANYON' : id
 
 function setState(next: typeof state) {
   state = next;
+  if (next === 'countdown') countdownUpdated = performance.now();
   const home = state === 'home' || state === 'loading';
   $('home-content').hidden = !home; $('race-hud').hidden = home; $('drive-info').hidden = home;
   $('pause-button').hidden = home || state === 'finished'; $('countdown').hidden = state !== 'countdown';
@@ -164,7 +167,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.1.1 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.2.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -180,7 +183,7 @@ function showInstall() {
   $('install-done').onclick = closeModal;
 }
 function showHelp() {
-  openModal(`<p class="eyebrow dark">KLEINE FORM. GROSSE WIRKUNG.</p><h2 id="modal-title">Dein Rad entscheidet.</h2><ol class="help-list"><li><strong>Zeichne eine Linie.</strong> Sie wird beim Loslassen zu allen vier Rädern. Das Rennen läuft weiter.</li><li><strong>Nutze die markierte Achse.</strong> Größere Formen ergeben größere Räder; mehr Material wiegt mehr. Der gestrichelte Kreis zeigt das Größenlimit.</li><li><strong>Wechsle vor dem Hindernis.</strong> Runde Räder rollen ruhig, Zacken können an Kanten greifen. Eis hat weniger Haftung.</li><li><strong>Werde zum Paddler.</strong> Dein Fahrzeug schwimmt. Im tiefen Wasser helfen Radabschnitte, die Wasser nach hinten schieben.</li><li><strong>Festgefahren?</strong> Zeichne neu oder tippe auf Bergen. Du startest am letzten Checkpoint.</li></ol><p class="modal-copy">Auf dem Testgelände gibt es in der Pause auch Zeitlupe. Speichere deine Lieblingsform mit dem Lesezeichen.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
+  openModal(`<p class="eyebrow dark">KLEINE FORM. GROSSE WIRKUNG.</p><h2 id="modal-title">Dein Rad entscheidet.</h2><ol class="help-list"><li><strong>Zeichne eine Linie.</strong> Sie wird beim Loslassen zu allen vier Rädern. Das Rennen läuft weiter.</li><li><strong>Nutze die markierte Achse.</strong> Größere Formen ergeben größere Räder; mehr Material wiegt mehr. Der gestrichelte Kreis zeigt das Größenlimit.</li><li><strong>Wechsle vor dem Hindernis.</strong> Glatte Räder rollen ruhig, rutschen an steilen Kanten aber durch. Tiefe und Abstand deiner Zacken entscheiden, ob sie greifen oder sich verhaken.</li><li><strong>Werde zum Paddler.</strong> Dein Fahrzeug schwimmt. Im tiefen Wasser helfen Radabschnitte, die Wasser nach hinten schieben.</li><li><strong>Festgefahren?</strong> Zeichne neu oder tippe auf Bergen. Du startest am letzten Checkpoint.</li></ol><p class="modal-copy">Auf dem Testgelände gibt es in der Pause auch Zeitlupe. Speichere deine Lieblingsform mit dem Lesezeichen.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
   $('help-done').onclick = closeModal;
 }
 
@@ -256,7 +259,9 @@ async function boot() {
       const dt = Math.min((now - previous) / 1000, .1); previous = now;
       if (!document.hidden) {
         if (state === 'countdown') {
-          const before = Math.ceil(countdown); countdown -= dt;
+          // The UI clock must not inherit the physics catch-up limit. A slow
+          // renderer previously stretched three seconds into a long countdown.
+          const before = Math.ceil(countdown); countdown -= Math.max(0, (now - countdownUpdated) / 1000); countdownUpdated = now;
           const n = Math.ceil(countdown); if (before !== n && n > 0) sound.beep(520, .09);
           $('countdown').textContent = String(Math.max(1, n));
           if (countdown <= 0) { setState('racing'); sound.beep(840, .2); }
@@ -308,9 +313,10 @@ function updateHud() {
     lastApproach = ahead.start;
     if (ahead.kind === 'tunnel') toast('Niedrige Durchfahrt: Zeichne kleine Räder.');
     else if (ahead.kind === 'steps') toast('Hohe Kanten: Kleine Räder haben es hier schwer.');
+    else if (ahead.kind === 'ramp') toast('Riffelrampe: Zacken greifen zwischen die Rippen.');
     else if (ahead.kind === 'ford') toast('Furt: Wasser bremst die eingetauchten Räder.');
   }
-  if (state === 'racing' && zone?.kind === 'lake' && sim.elapsed - lastWaterHint > 24) { toast('Tiefes Wasser: Probiere eine Form mit Paddeln.'); lastWaterHint = sim.elapsed; }
+  if (state === 'racing' && zone?.kind === 'lake' && sim.elapsed - lastWaterHint > 24) { toast('Tiefes Wasser: Flächen quer zur Drehrichtung schieben Wasser zurück.'); lastWaterHint = sim.elapsed; }
   if (state === 'racing' && car.resets > lastResetCount) { toast('Geborgen · zeichne eine neue Lösung.'); lastResetCount = car.resets; }
   $('rescue-button').classList.toggle('suggested', car.stuck > 3);
 }

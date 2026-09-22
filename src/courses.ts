@@ -45,10 +45,15 @@ export function createCourse(id: number): Course {
     } else if (f === 'rocks') {
       line(18, Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : Math.sin(i * 2.31 + id) * (.2 + c.difficulty * .025) + .24 })));
     } else if (f === 'steps') {
-      const h = .68 + c.difficulty * .04;
+      const h = .84 + c.difficulty * .015;
       line(16, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: h }, { x: 5, y: h }, { x: 5, y: h * 2 }, { x: 7, y: h * 2 }, { x: 7, y: h * 3 }, { x: 10, y: h * 3 }, { x: 16, y: 0 }]);
     } else if (f === 'ramp') {
-      line(22, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 12, y: 2.2 }, { x: 15, y: 2.2 }, { x: 22, y: 0 }]);
+      // A steep ribbed ascent: a smooth rim loses purchase; protrusions can
+      // bear against the risers. The normal contact forces provide the grip.
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 4, y: 0 }];
+      for (let i = 0; i < 8; i++) profile.push({ x: 4 + i + .7, y: i * .6 }, { x: 5 + i, y: (i + 1) * .6 });
+      profile.push({ x: 15, y: 4.8 }, { x: 22, y: 0 });
+      line(22, profile);
     } else if (f === 'gap') {
       line(19, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 7, y: 1.35 }, { x: 8, y: 1.35 }, { x: 10.1, y: -.3 }, { x: 14, y: -.3 }, { x: 19, y: 0 }], 'stone', [4]);
     } else if (f === 'ford' || f === 'lake') {

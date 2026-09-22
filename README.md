@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Rennspiel für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.1 – mehr Drehmoment, kniffligere Strecken und wirksamer Wasserwiderstand.**
+**Version 1.2.0 – präzisere Radkonturen, stabileres Paddeln und mehr Formrätsel.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -19,7 +19,7 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 
 - Zwölf Rennen in drei Landschaften und ein freies Testgelände.
 - Drei Computergegner auf eigenen Spuren, Checkpoints, Bestzeiten und Sterne.
-- Freihandräder, fünf Vorlagen einschließlich kleiner Räder für Durchfahrten, Rückgängig und gespeicherte Lieblingsform.
+- Freihandräder, sechs Vorlagen einschließlich kleiner Räder und flacher Zacken, Rückgängig und gespeicherte Lieblingsform.
 - Fels, Eis, Schlamm, Stufen, Rampen, Lücken, Wippen, Baumstämme und Durchfahrten.
 - Flache Furten und tiefe Seen: Der Buggy schwimmt, die gezeichneten Räder paddeln.
 - Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofile.
@@ -27,9 +27,9 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 
 Die Physik arbeitet im seitlichen Profil. Wasserkräfte sind angenähert; Schlamm nutzt Widerstand, kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
 
-Version 1.1 kombiniert schon in der ersten Strecke hohe Stufen, niedrige Durchfahrten, eine Furt und tiefes Wasser. Der Motor liefert knapp das dreifache bisherige Anfahrdrehmoment. Kleine Räder passen unter niedrige Dächer, größere greifende Formen helfen an Kanten und Paddelformen verdrängen Wasser wirksamer als ein glatter Ring. Die Wirkung entsteht aus Kontaktgeometrie und Wasserkräften, ohne Boni für bestimmte Formnamen. [Messwerte und Regressionstests](docs/BALANCING-1.1.md).
+Version 1.2 kombiniert hohe Stufen, niedrige Durchfahrten, Riffelrampen, Furten und tiefes Wasser. Der Motor besitzt rund 66 % mehr Spitzendrehmoment als in 1.1; die Grundhaftung des Radmaterials ist rund 70 % geringer. Zacken greifen geometrisch an Kanten. Konturabhängiges Volumen, Auftrieb, Druck und Oberflächenreibung lassen Paddelformen wirksamer arbeiten als einen glatten Ring. Die Paddelvorlage schwimmt im Vergleichstest etwa viermal so schnell wie der größtmögliche Rundreifen. [Messwerte, Verfahren und Grenzen](docs/BALANCING-1.2.md).
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Falls die Ansicht aus Version 1.0 danach noch offen bleibt, die PWA einmal vollständig schließen und neu öffnen. Die Einstellungen zeigen danach **FORMDRIVE 1.1.1**. Dieser zusätzliche Neustart ist ab 1.1.1 durch einen korrigierten Update-Ablauf abgesichert.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.2.0**. Eine noch geöffnete Ansicht aus 1.0/1.1 kann einmalig vollständiges Schließen und erneutes Öffnen benötigen. Spielstand und gespeicherte Radform bleiben erhalten.
 
 ## Lokal entwickeln
 
@@ -79,7 +79,7 @@ Die GitHub-Actions-Pipeline prüft Physik und vollständige Streckenfahrten, bau
 
 ## Technik
 
-Three.js für die 3D-Darstellung, Rapier für die Physik, TypeScript für die Spiellogik und Vite mit Workbox für den PWA-Build. Die Simulation hat feste Schritte von 1/120 Sekunde, begrenztes Motordrehmoment, gefederte Achsträger und strichbasierte Kollisionsformen.
+Three.js für die 3D-Darstellung, Rapier für die Physik, polygon-clipping für Konturvereinigungen, TypeScript für die Spiellogik und Vite mit Workbox für den PWA-Build. Die Simulation hat feste Schritte von 1/120 Sekunde, begrenztes Motordrehmoment, gefederte Achsträger und strichbasierte Kollisionsformen mit bis zu 128 Punkten.
 
 Fremdassets: Poly Haven, CC0. Bibliotheken und Lizenzhinweise: [Quellen & Physik](public/credits.html). Die Werbeabbildung diente als Referenz; sie und die Marken/Spielassets des beworbenen Spiels wurden nicht übernommen.
 

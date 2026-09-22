@@ -1,18 +1,27 @@
 export type Point = { x: number; y: number };
 export const STROKE_RADIUS = 0.095;
 export const MAX_RADIUS = 1.2;
-export type ShapeName = 'round' | 'compact' | 'claw' | 'paddle' | 'triangle';
+export const MAX_SHAPE_POINTS = 128;
+// About a fifth of a CSS pixel on the phone's drawing pad. Corners above
+// this tolerance survive; no uniform resampling cuts across them.
+export const SHAPE_TOLERANCE = .003;
+export const SPOKE_RADIUS = .006;
+export type ShapeName = 'round' | 'compact' | 'claw' | 'grip' | 'paddle' | 'triangle';
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export function preset(name: ShapeName): Point[] {
   if (name === 'compact') return preset('round').map(p => ({ x: p.x * .6, y: p.y * .6 }));
-  if (name === 'round') return Array.from({ length: 37 }, (_, i) => ({ x: Math.cos(i / 36 * Math.PI * 2) * 0.82, y: Math.sin(i / 36 * Math.PI * 2) * 0.82 }));
-  if (name === 'claw') return Array.from({ length: 29 }, (_, i) => ({ x: Math.cos((i / 28 * 1.65 + 0.175) * Math.PI) * 0.96, y: Math.sin((i / 28 * 1.65 + 0.175) * Math.PI) * 0.96 }));
-  if (name === 'triangle') return resample([{ x: 0, y: 1.04 }, { x: -.95, y: -.64 }, { x: .95, y: -.64 }, { x: 0, y: 1.04 }], 37);
-  return resample(Array.from({ length: 17 }, (_, i) => {
+  if (name === 'round') return Array.from({ length: 73 }, (_, i) => ({ x: Math.cos(i / 72 * Math.PI * 2) * 0.82, y: Math.sin(i / 72 * Math.PI * 2) * 0.82 }));
+  if (name === 'claw') return Array.from({ length: 65 }, (_, i) => ({ x: Math.cos((i / 64 * 1.65 + 0.175) * Math.PI) * 0.96, y: Math.sin((i / 64 * 1.65 + 0.175) * Math.PI) * 0.96 }));
+  if (name === 'triangle') return [{ x: 0, y: 1.04 }, { x: -.95, y: -.64 }, { x: .95, y: -.64 }, { x: 0, y: 1.04 }];
+  if (name === 'grip') return Array.from({ length: 17 }, (_, i) => {
+    const r = i % 2 === 0 ? 1.18 : .85;
+    return { x: Math.cos(i / 16 * Math.PI * 2) * r, y: Math.sin(i / 16 * Math.PI * 2) * r };
+  });
+  return Array.from({ length: 17 }, (_, i) => {
     const r = i % 2 === 0 ? 1.04 : .34;
     return { x: Math.cos(i / 16 * Math.PI * 2) * r, y: Math.sin(i / 16 * Math.PI * 2) * r };
-  }), 41);
+  });
 }
 
 export function resample(input: Point[], count: number): Point[] {
@@ -33,20 +42,35 @@ export function resample(input: Point[], count: number): Point[] {
 }
 
 export function sanitizeShape(raw: Point[]): Point[] | null {
-  if (!Array.isArray(raw) || raw.length < 2) return null;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 5000) return null;
   const filtered: Point[] = [];
   for (const p of raw.slice(0, 5000)) {
     if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
     const scale = Math.min(1, MAX_RADIUS / Math.max(.001, Math.hypot(p.x, p.y)));
     const q = { x: p.x * scale, y: p.y * scale };
     const prev = filtered.at(-1);
-    if (!prev || Math.hypot(q.x - prev.x, q.y - prev.y) > .025) filtered.push(q);
+    if (!prev || Math.hypot(q.x - prev.x, q.y - prev.y) > .0001) filtered.push(q);
   }
   let length = 0;
   for (let i = 1; i < filtered.length; i++) length += Math.hypot(filtered[i].x - filtered[i - 1].x, filtered[i].y - filtered[i - 1].y);
   if (length < .35 || length > 22) return null;
-  const points = resample(filtered, Math.min(48, Math.max(12, Math.ceil(length / .15))));
-  return points.length ? points : null;
+  // Iterative Ramer-Douglas-Peucker, including closed and self-crossing strokes.
+  const keep = new Set([0, filtered.length - 1]);
+  const stack = [[0, filtered.length - 1]];
+  while (stack.length) {
+    const [first, last] = stack.pop()!, a = filtered[first], b = filtered[last];
+    const dx = b.x - a.x, dy = b.y - a.y, length2 = dx * dx + dy * dy;
+    let max = SHAPE_TOLERANCE ** 2, index = -1;
+    for (let i = first + 1; i < last; i++) {
+      const p = filtered[i], t = length2 ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / length2, 0, 1) : 0;
+      const distance2 = (p.x - a.x - t * dx) ** 2 + (p.y - a.y - t * dy) ** 2;
+      if (distance2 > max) { max = distance2; index = i; }
+    }
+    if (index !== -1) { keep.add(index); stack.push([first, index], [index, last]); }
+  }
+  // Reject excessive complexity instead of silently flattening its details.
+  if (keep.size > MAX_SHAPE_POINTS) return null;
+  return [...keep].sort((a, b) => a - b).map(i => filtered[i]);
 }
 
 export function shapeLength(points: Point[]) {
@@ -58,7 +82,7 @@ export function shapeLength(points: Point[]) {
 export function restoreShape(raw: unknown): Point[] | null {
   // Saved strokes are already sampled. Validate them without rounding off
   // their corners again on every launch or PWA update.
-  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 48) return null;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_SHAPE_POINTS) return null;
   if (raw.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.hypot(p.x, p.y) > MAX_RADIUS + 1e-8)) return null;
   const length = shapeLength(raw);
   if (length < .35 || length > 22) return null;
@@ -66,3 +90,23 @@ export function restoreShape(raw: unknown): Point[] | null {
 }
 
 export function radiusOf(points: Point[]) { return Math.max(...points.map(p => Math.hypot(p.x, p.y))) + STROKE_RADIUS; }
+
+// Radial supports depend on the contour, not drawing speed or retracing a line.
+// An open side connects to its nearest extreme instead of closing the opening.
+export function spokeTips(shape: Point[]): Point[] {
+  return [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }].map(ray => {
+    let distance = -1;
+    for (let i = 1; i < shape.length; i++) {
+      const a = shape[i - 1], b = shape[i], dx = b.x - a.x, dy = b.y - a.y;
+      const cross = ray.x * dy - ray.y * dx;
+      if (Math.abs(cross) < 1e-10) {
+        if (Math.abs(a.x * ray.y - a.y * ray.x) < 1e-10) distance = Math.max(distance, a.x * ray.x + a.y * ray.y, b.x * ray.x + b.y * ray.y);
+        continue;
+      }
+      const along = (a.x * dy - a.y * dx) / cross, t = (a.x * ray.y - a.y * ray.x) / cross;
+      if (along >= 0 && t >= -1e-9 && t <= 1 + 1e-9) distance = Math.max(distance, along);
+    }
+    if (distance >= 0) return { x: ray.x * distance, y: ray.y * distance };
+    return shape.reduce((best, p) => p.x * ray.x + p.y * ray.y > best.x * ray.x + best.y * ray.y ? p : best);
+  });
+}

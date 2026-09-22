@@ -1,17 +1,20 @@
 import RAPIER from '@dimforge/rapier2d-compat';
-import type { Course, Obstacle } from './courses';
+import type { Course, Obstacle, Water } from './courses';
 import { groundAt, surfaceFriction, zoneAt } from './courses';
-import { clamp, preset, radiusOf, sanitizeShape, shapeLength, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
+import { clamp, preset, radiusOf, sanitizeShape, shapeLength, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
+import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
-export const DRIVE_TORQUE = 58;
+export const DRIVE_TORQUE = 96;
+export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
   changeCooldown: number; buoyancy: number; drive: number; aiShape: ShapeName;
+  hydro: HydroShape[]; motorTorques: number[]; displacedVolume: number; waterThrust: number; waterDragPower: number;
 }
 export interface Beam { body: RAPIER.RigidBody; obstacle: Obstacle; lane: number }
 let initialized: Promise<void> | undefined;
@@ -76,7 +79,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round' };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -84,26 +87,30 @@ export class Simulation {
   replaceColliders(car: Vehicle) {
     const group = ((2 << car.id) << 16) | 1 | (32 << car.id);
     const length = shapeLength(car.shape);
+    car.hydro = wheelHydro(car.shape);
+    const properties = wheelMassProperties(car.shape);
     for (const w of car.wheels) {
       const previousOmega = w.angvel();
       const previousInertia = w.principalInertia();
       while (w.numColliders()) this.world.removeCollider(w.collider(0), true);
-      this.world.createCollider(RAPIER.ColliderDesc.ball(.15).setMass(.24).setFriction(.8).setCollisionGroups(group), w);
+      this.world.createCollider(RAPIER.ColliderDesc.ball(.15).setMass(0).setFriction(TYRE_FRICTION).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setCollisionGroups(group), w);
       for (let i = 1; i < car.shape.length; i++) {
         const a = car.shape[i - 1], b = car.shape[i];
         const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
-        if (len < .005) continue;
+        if (len < .0001) continue;
         const desc = RAPIER.ColliderDesc.capsule(len / 2, STROKE_RADIUS)
           .setTranslation((a.x + b.x) / 2, (a.y + b.y) / 2).setRotation(Math.atan2(dy, dx) - Math.PI / 2)
-          .setMass(len * .26).setFriction(1.15).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setRestitution(.015).setCollisionGroups(group);
+          .setMass(0).setFriction(TYRE_FRICTION).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setRestitution(.005).setCollisionGroups(group);
         this.world.createCollider(desc, w);
       }
       // A minimal rigid spoke is both visible and physical; density is intentionally low.
-      for (let spoke = 0; spoke < 4; spoke++) {
-        const tip = car.shape[Math.floor(spoke * (car.shape.length - 1) / 4)];
+      for (const tip of spokeTips(car.shape)) {
         const distance = Math.hypot(tip.x, tip.y);
-        if (distance > .2) this.world.createCollider(RAPIER.ColliderDesc.capsule(distance / 2, .025).setTranslation(tip.x / 2, tip.y / 2).setRotation(Math.atan2(tip.y, tip.x) - Math.PI / 2).setMass(.035 * distance).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setCollisionGroups(group), w);
+        if (distance > .2) this.world.createCollider(RAPIER.ColliderDesc.capsule(distance / 2, SPOKE_RADIUS).setTranslation(tip.x / 2, tip.y / 2).setRotation(Math.atan2(tip.y, tip.x) - Math.PI / 2).setMass(0).setFriction(TYRE_FRICTION).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setCollisionGroups(group), w);
       }
+      // Area moments of the welded contour include holes and eccentricity.
+      // Extra input samples and retracing a rim no longer add phantom mass.
+      w.setAdditionalMassProperties(properties.mass, properties.center, properties.inertia, true);
       w.recomputeMassPropertiesFromColliders();
       // Never introduce rotational kinetic energy just by replacing a shape.
       const inertia = w.principalInertia();
@@ -117,6 +124,8 @@ export class Simulation {
   requestShape(points: Point[], id = 0) {
     const shape = sanitizeShape(points);
     if (!shape) return false;
+    // Reject a numerically invalid contour before replacing a working wheel.
+    try { wheelHydro(shape); } catch { return false; }
     this.cars[id].desiredShape = shape;
     if (!this.started) { this.cars[id].changeCooldown = 0; this.applyPending(this.cars[id]); }
     return true;
@@ -169,6 +178,7 @@ export class Simulation {
       const carrier = car.carriers[i]; carrier.setTranslation({ x: x + AXLES[i], y: y + AXLE_Y }, true); carrier.setRotation(0, true); carrier.setLinvel({ x: 0, y: 0 }, true); carrier.setAngvel(0, true);
     });
     car.stuck = 0;
+    car.motorTorques.fill(0);
     if (countReset) car.resets++;
   }
 
@@ -189,26 +199,34 @@ export class Simulation {
         car.aiTimer -= FIXED_DT;
         if (car.aiTimer <= 0) {
           const ahead = zoneAt(this.course, p.x + 4);
-          const shape = ahead?.kind === 'tunnel' ? 'compact' : ahead?.kind === 'steps' ? 'claw' : ahead?.kind === 'lake' && p.x < ahead.end - 4.5 ? 'paddle' : 'round';
+          const shape = ahead?.kind === 'tunnel' ? 'compact' : ['steps', 'ramp', 'logs'].includes(ahead?.kind ?? '') ? 'grip' : ahead?.kind === 'lake' && p.x < ahead.end - 4.5 ? 'paddle' : 'round';
           if (shape !== car.aiShape) { car.desiredShape = preset(shape); car.aiShape = shape; }
           car.aiTimer = .45 + car.id * .12;
         }
       }
-      const water = this.course.waters.find(w => p.x > w.start && p.x < w.end);
+      const water = this.course.waters.find(w => p.x + 2.7 > w.start && p.x - 2.7 < w.end);
       car.water = water ? clamp(water.level - (p.y - .65), 0, 1) : 0;
-      car.buoyancy = 0;
-      if (water) this.applyWater(car, water.level);
+      car.buoyancy = 0; car.displacedVolume = 0; car.waterThrust = 0; car.waterDragPower = 0;
+      if (water) this.applyWater(car, water);
       if (zone?.kind === 'mud') {
         const v = car.body.linvel();
         car.body.addForce({ x: -v.x * Math.abs(v.x) * .7, y: 0 }, true);
       }
-      const throttle = car.finished ? 0 : car.drive;
-      const speed = (car.water > .3 ? 8.5 : 6.5) - car.id * .18;
-      for (const w of car.wheels) {
+      // A real throttle intervention, not an artificial upright torque: unload
+      // the motor when nose-up pitch and pitch rate predict an imminent wheelie.
+      // Full stall torque remains available against a step with a stable chassis.
+      const pitch = Math.atan2(Math.sin(car.body.rotation()), Math.cos(car.body.rotation()));
+      const wheelieControl = clamp((1.05 - pitch - Math.max(0, car.body.angvel()) * .3) / .35, 0, 1);
+      const throttle = car.finished ? 0 : car.drive * wheelieControl;
+      const speed = 6.5 - car.id * .18;
+      for (const [index, w] of car.wheels.entries()) {
         const rel = w.angvel() - car.body.angvel();
         // High starting torque lifts an irregular wheel onto its next contact.
         // The unchanged target speed still limits the smooth wheel's top speed.
-        const torque = clamp((-speed - rel) * 12, -DRIVE_TORQUE, 24) * throttle;
+        const target = clamp((-speed - rel) * 18, -DRIVE_TORQUE, 36) * throttle;
+        // Finite torque rise prevents a newly mounted/immersed paddle from
+        // delivering a one-frame hammer blow. Reaction torque is conserved.
+        const torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], -360 * FIXED_DT, 360 * FIXED_DT);
         w.addTorque(torque, true);
         car.body.addTorque(-torque, true);
       }
@@ -222,38 +240,14 @@ export class Simulation {
     this.world.step();
   }
 
-  applyWater(car: Vehicle, level: number) {
-    const body = car.body, angle = body.rotation(), co = Math.cos(angle), si = Math.sin(angle);
-    const pos = body.translation(), vel = body.linvel();
-    // Six pontoons sample displaced volume. Their separated lift also supplies roll-restoring torque.
-    for (let i = 0; i < 6; i++) {
-      const lx = -1.05 + i * .42, ly = -.25;
-      const rx = lx * co - ly * si, ry = lx * si + ly * co;
-      const submerged = clamp((level - (pos.y + ry) + .22) / .44, 0, 1);
-      const localVy = vel.y + body.angvel() * rx;
-      const lift = clamp(submerged * 35 - localVy * submerged * 8, -20, 60);
-      const localVx = vel.x - body.angvel() * ry;
-      body.addForceAtPoint({ x: -(localVx * Math.abs(localVx) * 1.1 + localVx * .4) * submerged, y: lift }, { x: pos.x + rx, y: pos.y + ry }, true);
-      car.buoyancy += submerged * 35;
-    }
-    for (const w of car.wheels) {
-      const wp = w.translation(), r = w.rotation(), c = Math.cos(r), s = Math.sin(r), velocity = w.linvel(), omega = w.angvel();
-      for (let i = 1; i < car.shape.length; i++) {
-        const a = car.shape[i - 1], b = car.shape[i], length = Math.hypot(b.x - a.x, b.y - a.y);
-        const lx = (a.x + b.x) / 2, ly = (a.y + b.y) / 2;
-        const rx = lx * c - ly * s, ry = lx * s + ly * c;
-        const depth = clamp((level - wp.y - ry + STROKE_RADIUS) / (2 * STROKE_RADIUS), 0, 1);
-        if (!depth || length < .001) continue;
-        const tx = ((b.x - a.x) * c - (b.y - a.y) * s) / length;
-        const ty = ((b.x - a.x) * s + (b.y - a.y) * c) / length;
-        const nx = -ty, ny = tx;
-        const vx = velocity.x - omega * ry, vy = velocity.y + omega * rx;
-        const normal = vx * nx + vy * ny, tangent = vx * tx + vy * ty;
-        // Broadside pressure propels paddles; the smooth rim has little skin
-        // friction and cannot behave like an equally effective paddle wheel.
-        const pressure = -normal * Math.abs(normal) * length * depth * 3.2;
-        const skin = -tangent * Math.abs(tangent) * length * depth * .008;
-        w.addForceAtPoint({ x: clamp(nx * pressure + tx * skin, -35, 35), y: clamp(ny * pressure + ty * skin + length * depth * 2, -35, 35) }, { x: wp.x + rx, y: wp.y + ry }, true);
+  applyWater(car: Vehicle, water: Water) {
+    for (const body of [car.body, ...car.wheels]) {
+      const pose = { position: body.translation(), center: body.worldCom(), angle: body.rotation(), velocity: body.linvel(), omega: body.angvel(), invMass: body.invMass(), invInertia: body.invPrincipalInertia() };
+      for (const shape of body === car.body ? HULL_HYDRO : car.hydro) {
+        const force = waterForces(shape, pose, water, FIXED_DT);
+        body.addForce({ x: force.x, y: force.y }, true); body.addTorque(force.torque, true);
+        car.buoyancy += force.buoyancy; car.displacedVolume += force.volume; car.waterDragPower += force.dragPower;
+        if (body !== car.body) car.waterThrust += force.dragX;
       }
     }
   }
