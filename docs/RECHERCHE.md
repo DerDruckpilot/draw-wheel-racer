@@ -59,3 +59,9 @@ Vorgeschlagene Prüfungen auf dem tatsächlichen iPhone: Start aus Safari und vo
 - Wie schnell wird die Zeichnung übernommen, einschließlich aufwendiger Formen?
 
 Diese Punkte sind spätere Prototypaufgaben. Aus der Dokumentationsrecherche allein lassen sie sich nicht beantworten.
+
+## 8. Ergänzung nach der Rückmeldung
+
+Zielgerät ist laut Auftraggeber ein iPhone 16 Pro Max mit iOS 27. Wasser wird ein verbindlicher Streckenbestandteil; sein genaues Spielverhalten ist noch abzustimmen. Die Grafik soll möglichst realistisch und detailliert werden. Die ursprüngliche Empfehlung eines freundlichen stilisierten Looks ist damit ersetzt.
+
+Der Auftraggeber erlaubt ein öffentliches Repository. [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages) kann statische Webanwendungen aus einem Repository bereitstellen und ist bei GitHub Free für öffentliche Repositories verfügbar. Das ist ein geeigneter Kandidat für die spätere Spielveröffentlichung. Nach den [PWA-Installationsanforderungen](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable) wird eine geeignete Webanwendung über HTTPS benötigt. Eine Änderung der Repository-Sichtbarkeit allein veröffentlicht daher noch kein installierbares Spiel. Bei einem Hosting unter einem Unterpfad müssen Assetpfade, Manifest und Service-Worker-Bereich darauf abgestimmt werden.

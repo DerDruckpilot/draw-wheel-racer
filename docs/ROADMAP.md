@@ -4,13 +4,13 @@ Entwurf vom 22. September 2026. Noch keine Umsetzung oder Tests durchgeführt.
 
 ## Phase 0 – Recherche und Klärung
 
-- Privates Repository anlegen.
+- Repository anlegen; öffentliche Sichtbarkeit wurde inzwischen vom Auftraggeber freigegeben.
 - Technische Optionen, Quellen, Grenzen und Ideen dokumentieren.
 - Produktfragen beantworten lassen und daraus den tatsächlichen Umfang festlegen.
 
 ## Phase 1 – Physikprototyp
 
-Ein Fahrzeug, Zeichenfeld, flacher Boden, Rampe und Stufe. Zuerst prüfen, ob beliebige Formen verlässlich fahren, bevor weitere Inhalte entstehen.
+Ein Fahrzeug, Zeichenfeld, flacher Boden, Rampe und Stufe. Zuerst prüfen, ob beliebige Formen verlässlich fahren, bevor weitere Inhalte entstehen. Anschließend früh eine Wasserpassage nach der noch ausstehenden Entscheidung prüfen; Wasser ist verbindlicher Bestandteil.
 
 Geplante Nachweise:
 
@@ -25,7 +25,7 @@ Geplante Nachweise:
 
 ## Phase 2 – Spielbare iPhone-PWA
 
-Hochformatoberfläche, Installierbarkeit, lokaler Spielstand, Offline-Ressourcen, Pause, Neustart und erste fertige Strecke. Konkretes Zielgerät aus der Antwort des Auftraggebers verwenden.
+Hochformatoberfläche, Installierbarkeit, lokaler Spielstand, Offline-Ressourcen, Pause, Neustart und erste fertige Strecke. Zielgerät: iPhone 16 Pro Max mit iOS 27 laut Auftraggeber. Die erste gestaltete Strecke soll die realistische Grafikrichtung mit passenden hochwertigen Modellen und Materialien zeigen.
 
 Geplante Nachweise:
 
@@ -38,11 +38,11 @@ Geplante Nachweise:
 
 ## Phase 3 – Bestätigter Spielumfang
 
-Gegner oder Zeitfahren gemäß Entscheidung, zusätzliche Untergründe und Hindernisse, Strecken, Sound und Fortschritt. Gegner sollen denselben bestätigten Physikregeln folgen. Bodenmodelle werden isoliert verglichen, bevor Strecken davon abhängen.
+Gegner gemäß Arbeitsannahme, zusätzliche Untergründe und Hindernisse einschließlich Wasser, Strecken, Sound und Fortschritt. Gegner sollen denselben Physikregeln folgen. Boden- und Wassermodelle werden isoliert verglichen, bevor Strecken davon abhängen.
 
 ## Phase 4 – Bereitstellung
 
-HTTPS-Hosting, kurze Installationsanleitung, dokumentierte Quellen und Lizenzhinweise, abschließender Test auf dem Zielgerät. Veröffentlichung und Zugriffsmodell richten sich nach dem bestätigten Verwendungszweck. Hostingkosten sind aktuell nicht autorisiert.
+HTTPS-Hosting, kurze Installationsanleitung, dokumentierte Quellen und Lizenzhinweise, abschließender Test auf dem Zielgerät. Der Auftraggeber möchte das Spiel auf dem eigenen iPhone installieren und testen und erlaubt ein öffentliches Repository. GitHub Pages ist ein Kandidat für kostenfreies Hosting der gebauten Anwendung. Repository und Spielveröffentlichung sind getrennte Schritte; die Sichtbarkeit allein macht das Projekt nicht installierbar. Hostingkosten sind aktuell nicht autorisiert.
 
 ## Technische Risiken und zugehörige Versuche
 
@@ -53,6 +53,8 @@ HTTPS-Hosting, kurze Installationsanleitung, dokumentierte Quellen und Lizenzhin
 | Zu viele Körper bei Gegnern und Geröll | Längere Session mit endgültiger Fahrzeugzahl auf dem Zielgerät |
 | Schlechte Verständlichkeit der Formwirkung | Einfache Vergleichsstrecke mit identischen Startbedingungen |
 | Weicher Boden fühlt sich nur wie Geschwindigkeitsmalus an | Einsinken, Schlupf und Widerstand getrennt beobachten und abstimmen |
+| Wasser reagiert unabhängig von der Radform | Je nach bestätigtem Modus: gleiche Form bei verschiedener Eintauchtiefe sowie verschiedene Formen unter gleichen Wasserbedingungen vergleichen |
+| Detaillierte Grafik überlastet das iPhone | Längere Sessions mit endgültigen Materialien, Wasser und Gegnern; Detailstufen anhand gemessener Bildzeiten abstimmen |
 | Offline-App lädt einzelne Ressourcen nach | Flugmodus-Neustart nach Erstdownload einschließlich WASM und Audio |
 
 Die Testliste beschreibt spätere Verifikation. Ein fertiger Prototyp oder bestandene Tests werden damit nicht behauptet.

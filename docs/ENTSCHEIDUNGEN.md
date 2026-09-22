@@ -1,6 +1,33 @@
-# Offene Entscheidungen vor dem Coding
+# Entscheidungen vor dem Coding
 
-Stand: 22. September 2026. Alle folgenden Produktentscheidungen sind noch offen. Die rechte Spalte ist eine Empfehlung, keine Zustimmung des Auftraggebers.
+Stand: 22. September 2026, nach der ersten Rückmeldung. Weiterhin Konzeptphase ohne Spielcode.
+
+## Aktueller Stand
+
+- Ausdrücklich genanntes Zielgerät: iPhone 16 Pro Max mit iOS 27.
+- Wasser wird verbindlicher Streckenbestandteil.
+- Möglichst detaillierte, realistische 3D-Grafik; hochwertige kostenlose Modelle und Texturen sind erwünscht. Dies ersetzt den ursprünglichen Vorschlag eines freundlichen stilisierten Looks.
+- Das Repository darf öffentlich werden; die PWA soll auf dem eigenen iPhone installiert und getestet werden können.
+
+Der Auftraggeber hat Abweichungen zu den Punkten 3, 8, 10 und 12 genannt. Die übrigen Empfehlungen werden als Arbeitsannahmen weitergeführt und in der Antwort transparent benannt. Es handelt sich nicht um separat protokollierte ausdrückliche Antworten auf jede frühere Frage.
+
+Diese Arbeitsannahmen sind: automatische Fahrt auf fester Spur; verdickter offener Zeichenstrich; Radwechsel beim Loslassen bei weiterlaufendem Rennen; eine Form für alle Räder; gezeichnete Größe und Materialmenge wirken auf Größe und Gewicht; drei Computergegner und Teststrecke; fairer Checkpoint-Neustart; zunächst Physikprototyp, anschließend zwölf kurze Strecken in Canyon/Eis/Baustelle; offline nach Erstdownload, lokale Spielstände, Deutsch, abschaltbarer Ton, keine Werbung oder Kontopflicht; freie Assets und kostenfreies Hosting.
+
+## Noch offene Frage: Wasser
+
+Soll es flache Furten und tiefes Wasser geben, auf dem das Fahrzeug schwimmt und die gezeichneten Räder wie Paddel wirken? Oder ausschließlich flaches Wasser beziehungsweise tiefes Wasser als Absturzhindernis?
+
+Empfehlung: flache und tiefe Abschnitte, schwimmfähiges Chassis und durch die gezeichneten Räder erzeugter Vortrieb. Dann benötigen untergetauchte Teile Auftrieb und Widerstandskräfte. Das wäre ein vereinfachtes Wasserphysikmodell; die visuelle Wasseroberfläche wird getrennt davon dargestellt. Die Antwort steht noch aus.
+
+## Bereitstellung
+
+Ein öffentliches Repository allein stellt keine PWA bereit. Die gebaute Anwendung benötigt eine HTTPS-Veröffentlichung. GitHub Pages ist dafür ein Kandidat; heute wird noch kein Spiel veröffentlicht. Eine öffentliche Repository-Sichtbarkeit ist außerdem keine Entscheidung für eine bestimmte Open-Source-Lizenz. Es werden keine kostenpflichtigen Dienste gebucht.
+
+Die Zielangabe iOS 27 stammt vom Auftraggeber; Kompatibilität und Leistung gelten erst nach einem Test auf dem tatsächlichen Gerät als nachgewiesen.
+
+## Ursprünglicher Fragenkatalog (historischer Stand)
+
+Die folgende Tabelle dokumentiert die ursprünglich gestellten Fragen und Empfehlungen. Der aktuelle Stand oben hat Vorrang; die Tabelle ist keine Liste erneut zu beantwortender Fragen.
 
 Die ersten drei Fragen wurden bereits als Eingabefragen gestellt. Die vollständige Liste dient dazu, die restlichen Unklarheiten vor Implementierungsbeginn gesammelt zu beantworten. Technische Details wie Datenstrukturen, Dateinamen oder Solverparameter entscheidet die Entwicklung anschließend anhand dieser Ziele und Messungen.
 
@@ -32,4 +59,4 @@ Antwortformat: Nummern mit eigenen Antworten; für alle anderen Punkte kann ausd
 
 ## Noch nicht entschieden
 
-Die Engine-Auswahl bleibt bis zur Klärung von Fahrfreiheit und Physikanspruch vorläufig. Es wird kein Hosting angelegt und keine Softwarelizenz für das Gesamtprojekt ausgewählt, bevor der Verwendungszweck feststeht. Antworten und daraus folgende Entscheidungen werden hier nachgetragen.
+Three.js und Rapier bleiben die bevorzugte Richtung für die als Arbeitsannahme übernommene feste Fahrspur. Die noch ausstehende Wasserentscheidung wird vor dem Coding nachgetragen. Eine Softwarelizenz für das Gesamtprojekt wurde noch nicht ausgewählt; diese Entscheidung ist für den Physikprototyp nicht erforderlich.

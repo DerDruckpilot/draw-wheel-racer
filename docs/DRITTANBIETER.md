@@ -9,6 +9,8 @@ Recherche vom 22. September 2026. Bisher wurden keine Bibliotheken oder Assets i
 | Kenney Racing Kit | Einfache Fahrzeuge, Streckendekoration und mögliche Ausgangsmodelle | [CC0, Asset-Seite](https://kenney.nl/assets/racing-kit) |
 | Poly Haven | Fels-/Bodenmaterialien, ausgewählte Modelle oder Beleuchtungsreferenzen | [CC0 für Assets, Anbieterangaben](https://polyhaven.com/license) |
 
+Nach der Rückmeldung ist realistische, möglichst detaillierte Grafik die gestalterische Vorgabe. Entsprechend haben hochwertige Materialien und realistische Modelle Vorrang. Das stilisierte Kenney Racing Kit bleibt höchstens ein Kandidat für vorläufige Prototypobjekte und ist keine Referenz für die endgültige Grafik.
+
 Für die iPhone-Fassung sollen ausgewählte Modelle und Texturen vereinfacht und lokal mit ausgeliefert werden. Ein hochaufgelöstes Asset ist nicht automatisch für eine mobile PWA geeignet. Die gezeichneten Räder werden aus der Eingabe erzeugt; dafür wird kein fertiges Radmodell benötigt.
 
 Bei tatsächlicher Übernahme werden exakte Quelle, Autor, Version oder Downloadstand, Lizenzdatei, lokale Dateinamen und Änderungen dokumentiert. Bibliotheks-Lizenzhinweise werden in der ausgelieferten Anwendung berücksichtigt. Die Tabelle vergibt keine Lizenz für das Gesamtprojekt.

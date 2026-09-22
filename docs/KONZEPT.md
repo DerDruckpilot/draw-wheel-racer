@@ -1,6 +1,6 @@
 # Spielkonzept und Physikentwurf
 
-Unbestätigter Vorschlag vom 22. September 2026. Die Antworten in ENTSCHEIDUNGEN.md bestimmen den tatsächlichen Umfang.
+Konzeptstand vom 22. September 2026 nach der ersten Rückmeldung. Zielgerät, Wasser und realistische Grafik sind bestätigt. Weitere Empfehlungen werden als Arbeitsannahmen geführt; das konkrete Wasserverhalten ist noch offen. Details stehen in ENTSCHEIDUNGEN.md.
 
 ## Spielerlebnis
 
@@ -8,7 +8,7 @@ Oben läuft ein gut lesbares 3D-Rennen mit schräger Seitenansicht. Unten bleibt
 
 Die Grundschleife: Gelände ansehen, Form zeichnen, Fahrverhalten beobachten, Form anpassen. Fortschritt soll durch bessere Entscheidungen entstehen. Vorschlag: automatischer Antrieb, kurze Strecken, sofortiger Neustart und gespeicherte Lieblingsformen. Eine frei zugängliche Teststrecke macht Zusammenhänge leichter verständlich.
 
-Der erste inhaltliche Vorschlag sind drei Themenwelten mit je vier kurzen Strecken: Canyon, Eis und Baustelle. Diese Zahl ist ein Umfangsvorschlag, keine bereits zugesagte Lieferung. Computergesteuerte Gegner, Zeitfahren und freies Experimentieren sind noch abzustimmen.
+Die Arbeitsannahme sind drei Themenwelten mit je vier kurzen Strecken: Canyon, Eis und Baustelle, einschließlich Wasserpassagen. Vorgesehen sind Rennen gegen drei Computerfahrzeuge und eine freie Teststrecke. Zunächst wird die Radphysik in einem kleinen Prototyp geprüft.
 
 ## Untergründe und Hindernisse
 
@@ -22,6 +22,7 @@ Der erste inhaltliche Vorschlag sind drei Themenwelten mit je vier kurzen Streck
 | Balken und niedrige Durchfahrt | Platz nach oben und unten ist begrenzt | Größere Räder haben hier einen Nachteil |
 | Wippe oder beweglicher Balken | Dynamischer Untergrund verändert die Lage | Kontakt und Balance halten |
 | Sand oder Schlamm | Optionales Modell für Einsinken und Widerstand | Kontaktverteilung und Traktion untersuchen |
+| Wasser (verbindlicher Inhalt) | Je nach ausstehender Antwort: Furten, Schwimmen mit Auftrieb und Paddelwirkung oder tiefes Wasser als Hindernis | Radformen auch für Wasserpassagen anpassen |
 
 Die Effekte sind Entwurfsziele. „Stern ist auf Fels immer schneller“ oder ähnliche feste Zuordnungen sind nicht vorgesehen. Ob eine Form hilft, hängt von Geometrie, Antrieb, Gewicht, Reibung und Hindernisgröße ab. Auf hartem Untergrund erzeugt eine größere Auflagefläche allein keinen pauschalen Haftungsbonus.
 
@@ -49,7 +50,7 @@ Entwurfsziel sind feste Physikschritte, getrennt von der Darstellung: zunächst 
 
 ## Radwechsel und Grenzen der Simulation
 
-Empfehlung zur Eingabe: Der neue Strich erscheint während des Zeichnens unmittelbar im Feld; die Räder wechseln beim Loslassen. Eine Änderung bereits während jeder Fingerbewegung ist möglich, führt aber ständig zu unfertigen und wechselnden Kollisionsformen. Der gewünschte Modus muss ausdrücklich geklärt werden.
+Arbeitsannahme zur Eingabe: Der neue Strich erscheint während des Zeichnens unmittelbar im Feld; die Räder wechseln beim Loslassen. Eine Änderung bereits während jeder Fingerbewegung würde ständig unfertige und wechselnde Kollisionsformen erzeugen und ist deshalb derzeit nicht vorgesehen.
 
 Für den Wechsel werden Radkörper möglichst beibehalten und die zugehörigen Formen kontrolliert ersetzt. Der Entwurf muss festlegen, wie vorhandene Geschwindigkeit und neue Trägheit zusammengeführt werden. Gleichzeitig Drehzahl, Drehimpuls und Rotationsenergie zu erhalten, ist bei geänderter Trägheit im Allgemeinen unmöglich.
 
@@ -59,7 +60,9 @@ Für die Masse wird konstante Materialdichte bei gleicher Strichdicke vorgeschla
 
 ## Oberfläche und Darstellung
 
-- Eigenständiger, heller 3D-Stil mit klaren Silhouetten und sichtbarem Bodenkontakt.
+- Möglichst detaillierte, realistische 3D-Grafik mit hochwertigen kostenlosen Modellen und physikalisch basierten Materialien; kein vereinfachter Cartoonstil als gestalterisches Ziel.
+- Detaillierte Felsen und Bodenoberflächen, passende Rauheit und Normalen, abgestimmte Beleuchtung und sichtbarer Bodenkontakt. Optische Wassereffekte werden mit dem Physikzustand verbunden.
+- Zielgerät: iPhone 16 Pro Max mit iOS 27 laut Auftraggeber. Angepasste Detailstufen, Texturauflösungen und Renderauflösung sollen die Bedienbarkeit während des Zeichnens erhalten; Qualität und Bildrate werden am Gerät gemessen.
 - Großer Zeichenbereich mit Achsmarkierung, letzter gültiger Form und Rückgängig/Neu-Zeichnen-Funktion.
 - Fortschritt, Zeit oder Platzierung; wenige Bedienelemente außerhalb der Zeichenfläche.
 - Pause und Neustart; im Experimentiermodus optional Zeitlupe.
