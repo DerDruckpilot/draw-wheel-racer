@@ -55,4 +55,14 @@ export function shapeLength(points: Point[]) {
   return length;
 }
 
+export function restoreShape(raw: unknown): Point[] | null {
+  // Saved strokes are already sampled. Validate them without rounding off
+  // their corners again on every launch or PWA update.
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 48) return null;
+  if (raw.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.hypot(p.x, p.y) > MAX_RADIUS + 1e-8)) return null;
+  const length = shapeLength(raw);
+  if (length < .35 || length > 22) return null;
+  return raw.map(p => ({ x: p.x, y: p.y }));
+}
+
 export function radiusOf(points: Point[]) { return Math.max(...points.map(p => Math.hypot(p.x, p.y))) + STROKE_RADIUS; }

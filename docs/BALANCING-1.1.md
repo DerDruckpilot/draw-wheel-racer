@@ -12,6 +12,7 @@ Auslöser: Unrunde Räder hatten zu wenig Anfahrkraft; große Rundräder erledig
 - Mehr Rumpfwiderstand; mehr Druckwiderstand quer zu Radsegmenten und deutlich weniger tangentiale Reibung. Die Radform bestimmt die Paddelwirkung geometrisch. Es gibt keine Abfrage, die runde Formen pauschal bestraft oder benannte Paddelvorlagen bevorzugt.
 - Neue Vorlage „Klein“ und Hinweise vor Stufen, Furten und niedrigen Durchfahrten. Computergegner wechseln ihre Formen passend zur Strecke und unterliegen derselben Physik.
 - Bestehende lokale Spielstände bleiben erhalten. Frühere Bestzeiten können aus den leichteren Strecken von Version 1.0 stammen.
+- Patch 1.1.1: Ein bestätigtes PWA-Update lädt auch dann zuverlässig neu, wenn der bisherige Service Worker erst während desselben Seitenbesuchs installiert wurde. Ohne Bestätigung wird ein laufendes Spiel nicht neu geladen. Bereits geöffnete Ansichten aus 1.0/1.1 können nach dem ersten Update noch ein manuelles Schließen und Öffnen benötigen.
 
 ## Gemessene Vergleiche
 
@@ -29,7 +30,7 @@ Das Durchqueren derselben Furt mit maximal großen Rundrädern dauert trocken 2,
 
 ## Abgesicherte Spielbarkeit
 
-- Elf Physiktests prüfen unter anderem, dass Dreiecksräder auf ebener Strecke nicht mehr stehen bleiben, die Furt messbar bremst und Paddelformen einen deutlichen Vorteil gegenüber großen Ringen besitzen.
+- Zwölf Physik- und Geometrietests prüfen unter anderem, dass Dreiecksräder auf ebener Strecke nicht mehr stehen bleiben, die Furt messbar bremst und Paddelformen einen deutlichen Vorteil gegenüber großen Ringen besitzen.
 - An einer echten Durchfahrt bleibt das große Rundrad hängen; an echten Stufen das kleine Rad. Eine passende neue Zeichnung befreit das Fahrzeug jeweils ohne Bergung.
 - Alle zwölf Rennen und das Testgelände sind mit einer einfachen Formwechselstrategie ohne Bergung durchfahrbar. Die Fahrzeiten liegen bei 62,5 bis 109,8 Sekunden.
 - Physische Kollisionen und Wasserkräfte bleiben die Ursache für Vor- und Nachteile. Neue ungewöhnliche Zeichnungen können weitere brauchbare Lösungen ergeben; es gibt keine vorgeschriebene einzig richtige Form.

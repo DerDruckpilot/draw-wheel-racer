@@ -29,7 +29,7 @@ Die Physik arbeitet im seitlichen Profil. Wasserkräfte sind angenähert; Schlam
 
 Version 1.1 kombiniert schon in der ersten Strecke hohe Stufen, niedrige Durchfahrten, eine Furt und tiefes Wasser. Der Motor liefert knapp das dreifache bisherige Anfahrdrehmoment. Kleine Räder passen unter niedrige Dächer, größere greifende Formen helfen an Kanten und Paddelformen verdrängen Wasser wirksamer als ein glatter Ring. Die Wirkung entsteht aus Kontaktgeometrie und Wasserkräften, ohne Boni für bestimmte Formnamen. [Messwerte und Regressionstests](docs/BALANCING-1.1.md).
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Die Einstellungen zeigen danach **FORMDRIVE 1.1**.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Falls die Ansicht aus Version 1.0 danach noch offen bleibt, die PWA einmal vollständig schließen und neu öffnen. Die Einstellungen zeigen danach **FORMDRIVE 1.1.1**. Dieser zusätzliche Neustart ist ab 1.1.1 durch einen korrigierten Update-Ablauf abgesichert.
 
 ## Lokal entwickeln
 

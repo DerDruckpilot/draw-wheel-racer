@@ -48,10 +48,10 @@ Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet 
 
 - `npm test`: Eingabegrenzen, Vortrieb über Kontakt, Eis-Traktion, Energieverhalten ohne Antrieb, offene Formen, wiederholte Radwechsel, Auftrieb/Paddelantrieb und Instanziierung aller Strecken. Dazu Regressionstests für Anfahren mit Dreiecksrädern, den Vergleich Paddel/Rundrad in tiefem Wasser, die Durchquerungszeit einer Furt und gegensätzliche Formanforderungen an Stufen/Durchfahrten einschließlich Befreiung durch Zeichnen. Ein weiterer Test prüft das zurückgestellte Vergrößern unter einem niedrigen Dach bis zur sicheren Ausfahrt.
 - `npm run test:courses`: vollständige Fahrten aller zwölf Rennen und des Testgeländes mit einer Wechselstrategie zwischen Rundrad, Klaue, kleinen Rädern und Paddeln. Erwartet Zielankunft ohne Bergung; protokolliert Zeit, Lage und Bergungen.
-- `npm run test:browser`: produktiver Build in Chromium und WebKit mit 440 × 956 CSS-Pixeln; Zeichnen, Favoriten, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Ein separater Chromium-Test prüft den vollständigen Neustart ohne Netzwerk.
+- `npm run test:browser`: produktiver Build in Chromium und WebKit mit 440 × 956 CSS-Pixeln; Zeichnen, Favoriten, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Separate Chromium-Tests prüfen den vollständigen Neustart ohne Netzwerk und das bestätigte Update nach einer Installation während desselben Seitenbesuchs, einschließlich Erhalt der Lieblingsform.
 - `npm run build`: strenge TypeScript-Prüfung, Produktionsbuild und PWA-Precache-Erzeugung.
 
-Alle 13 Strecken wurden mit echten Simulationsschritten bis zum Ziel gefahren, ohne Bergungen; die Fahrzeiten lagen nach dem Balancing zwischen 62,5 und 109,8 Sekunden. Die elf automatischen Physiktests bestanden. Vergleichswerte und Änderungen stehen in [BALANCING-1.1.md](BALANCING-1.1.md).
+Alle 13 Strecken wurden mit echten Simulationsschritten bis zum Ziel gefahren, ohne Bergungen; die Fahrzeiten lagen nach dem Balancing zwischen 62,5 und 109,8 Sekunden. Die zwölf automatischen Tests bestanden. Vergleichswerte und Änderungen stehen in [BALANCING-1.1.md](BALANCING-1.1.md).
 
 Playwrights Windows-WebKit bricht die simulierte Offline-Navigation mit einem internen Browserfehler ab. Die [Playwright-Dokumentation](https://playwright.dev/docs/service-workers) unterstützt Service-Worker-Werkzeuge ausschließlich für Chromium; der Offline-Test wird daher für WebKit ausdrücklich übersprungen. Das ist keine Bestätigung des Offlinebetriebs auf iOS.
 

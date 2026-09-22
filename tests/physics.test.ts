@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initPhysics, Simulation, FIXED_DT } from '../src/physics.ts';
 import { createCourse, type Course } from '../src/courses.ts';
-import { preset, sanitizeShape, radiusOf, type Point } from '../src/shapes.ts';
+import { preset, sanitizeShape, restoreShape, radiusOf, type Point } from '../src/shapes.ts';
 await initPhysics();
 const flat = (): Course => ({ ...createCourse(0), obstacles: [], waters: [], zones: [], checkpoints: [2], length: 500, segments: [{ a: { x: -20, y: 0 }, b: { x: 600, y: 0 }, surface: 'stone' }] });
 const largeRound = () => preset('round').map(p => ({ x: p.x * 1.2 / .82, y: p.y * 1.2 / .82 }));
@@ -14,6 +14,14 @@ test('invalid and extreme strokes cannot poison the physics world', () => {
   const shape = sanitizeShape([{ x: -100, y: 0 }, { x: 100, y: 0 }])!;
   assert.ok(shape.length <= 48);
   assert.ok(radiusOf(shape) <= 1.3);
+});
+
+test('saved favorites keep their exact outline across repeated launches', () => {
+  const original = preset('triangle'); let shape: Point[] | null = original;
+  for (let i = 0; i < 20; i++) shape = restoreShape(JSON.parse(JSON.stringify(shape)));
+  assert.deepEqual(shape, original);
+  assert.equal(restoreShape([{ x: NaN, y: 0 }, { x: 1, y: 0 }]), null);
+  assert.equal(restoreShape([{ x: -100, y: 0 }, { x: 100, y: 0 }]), null);
 });
 
 test('wheel-ground contact drives the car; low friction removes traction', () => {

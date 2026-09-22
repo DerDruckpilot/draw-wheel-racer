@@ -5,7 +5,7 @@ import { DrawingPad } from './drawing';
 import { GameAudio } from './audio';
 import { GameRenderer } from './renderer';
 import { initPhysics, Simulation, FIXED_DT } from './physics';
-import { clamp, preset, sanitizeShape, type Point, type ShapeName } from './shapes';
+import { clamp, preset, restoreShape, type Point, type ShapeName } from './shapes';
 
 const icons = {
   arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
@@ -33,7 +33,7 @@ try {
     saved.level = Number.isInteger(raw.level) ? clamp(raw.level, 0, 12) : 0;
     saved.sound = raw.sound === true; saved.tutorial = raw.tutorial === true;
     if (['auto', 'high', 'eco'].includes(raw.quality)) saved.quality = raw.quality;
-    if (raw.favorite) saved.favorite = sanitizeShape(raw.favorite);
+    if (raw.favorite) saved.favorite = restoreShape(raw.favorite);
     if (raw.best && typeof raw.best === 'object') for (const [id, value] of Object.entries(raw.best) as [string, { time: number; stars: number }][]) {
       if (+id >= 0 && +id < 13 && Number.isFinite(value?.time) && value.time > 0) saved.best[+id] = { time: value.time, stars: clamp(value.stars || 1, 1, 3) };
     }
@@ -83,6 +83,7 @@ let countdown = 3;
 let accumulator = 0;
 let toastTimer: ReturnType<typeof setTimeout>;
 let updateReady = false;
+let updateRequested = false;
 let lastTerrain = '';
 let lastResetCount = 0;
 let lastWaterHint = -60;
@@ -163,7 +164,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.1 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.1.1 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -171,7 +172,7 @@ function showSettings() {
   });
   $('install-help').onclick = showInstall;
   $('help-button').onclick = showHelp;
-  if (updateReady) $('apply-update').onclick = () => { resumeState = null; updateSW(true); };
+  if (updateReady) $('apply-update').onclick = applyGameUpdate;
 }
 
 function showInstall() {
@@ -211,12 +212,34 @@ window.addEventListener('keydown', e => { if (e.code === 'Space' && !modal.open 
 window.addEventListener('offline', () => toast('Offline unterwegs · dein Spiel läuft weiter.'));
 
 function offlineReady() { $('offline-status').innerHTML = '<i class="ready"></i> OFFLINE BEREIT'; }
+function reloadForUpdate() {
+  if (!updateRequested) return;
+  updateRequested = false; location.reload();
+}
+async function applyGameUpdate() {
+  resumeState = null;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    // Another tab may already have activated the update while this view was open.
+    if (!registration?.waiting) { location.reload(); return; }
+    updateRequested = true;
+    await updateSW(true);
+  } catch {
+    updateRequested = false; toast('Das Update konnte nicht geladen werden. Versuche es erneut.');
+  }
+}
 const updateSW = registerSW({
   onOfflineReady: offlineReady,
+  onNeedReload: reloadForUpdate,
   onNeedRefresh() { updateReady = true; toast('Neue Version verfügbar · in den Einstellungen laden.'); },
   onRegisterError(error) { console.error('Offline installation failed', error); $('offline-status').textContent = 'ONLINE-MODUS'; }
 });
-if ('serviceWorker' in navigator) navigator.serviceWorker.ready.then(offlineReady).catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(offlineReady).catch(() => {});
+  // Workbox can classify an update to a worker installed during this same
+  // document as a first installation. Native controllerchange covers it too.
+  navigator.serviceWorker.addEventListener('controllerchange', reloadForUpdate);
+}
 
 async function boot() {
   try {
