@@ -1,6 +1,6 @@
 # Entscheidungen vor dem Coding
 
-Stand: 22. September 2026, nach der ersten Rückmeldung. Weiterhin Konzeptphase ohne Spielcode.
+Stand: 22. September 2026, nach der abschließenden Rückmeldung und dem Implementierungsauftrag. Die Spielentwicklung und Veröffentlichung sind beauftragt.
 
 ## Aktueller Stand
 
@@ -13,15 +13,15 @@ Der Auftraggeber hat Abweichungen zu den Punkten 3, 8, 10 und 12 genannt. Die ü
 
 Diese Arbeitsannahmen sind: automatische Fahrt auf fester Spur; verdickter offener Zeichenstrich; Radwechsel beim Loslassen bei weiterlaufendem Rennen; eine Form für alle Räder; gezeichnete Größe und Materialmenge wirken auf Größe und Gewicht; drei Computergegner und Teststrecke; fairer Checkpoint-Neustart; zunächst Physikprototyp, anschließend zwölf kurze Strecken in Canyon/Eis/Baustelle; offline nach Erstdownload, lokale Spielstände, Deutsch, abschaltbarer Ton, keine Werbung oder Kontopflicht; freie Assets und kostenfreies Hosting.
 
-## Noch offene Frage: Wasser
+## Bestätigte Entscheidung: Wasser
 
-Soll es flache Furten und tiefes Wasser geben, auf dem das Fahrzeug schwimmt und die gezeichneten Räder wie Paddel wirken? Oder ausschließlich flaches Wasser beziehungsweise tiefes Wasser als Absturzhindernis?
+Der Auftraggeber wünscht sowohl flache Furten als auch tiefe Abschnitte, in denen die Fahrzeuge schwimmen.
 
-Empfehlung: flache und tiefe Abschnitte, schwimmfähiges Chassis und durch die gezeichneten Räder erzeugter Vortrieb. Dann benötigen untergetauchte Teile Auftrieb und Widerstandskräfte. Das wäre ein vereinfachtes Wasserphysikmodell; die visuelle Wasseroberfläche wird getrennt davon dargestellt. Die Antwort steht noch aus.
+Umgesetzt werden Auftrieb am Chassis und von Bewegung und Ausrichtung abhängige Widerstandskräfte an den untergetauchten Radsegmenten. Die Räder können dadurch paddeln. Das Wasserphysikmodell ist vereinfacht; die visuelle Wasseroberfläche wird getrennt dargestellt.
 
 ## Bereitstellung
 
-Ein öffentliches Repository allein stellt keine PWA bereit. Die gebaute Anwendung benötigt eine HTTPS-Veröffentlichung. GitHub Pages ist dafür ein Kandidat; heute wird noch kein Spiel veröffentlicht. Eine öffentliche Repository-Sichtbarkeit ist außerdem keine Entscheidung für eine bestimmte Open-Source-Lizenz. Es werden keine kostenpflichtigen Dienste gebucht.
+GitHub Pages wird für die ausdrücklich beauftragte HTTPS-Veröffentlichung verwendet. Quellcode und lokale Spielassets liegen im öffentlichen Repository. Eine öffentliche Repository-Sichtbarkeit ist keine Entscheidung für eine bestimmte Open-Source-Lizenz des Gesamtprojekts. Es werden keine kostenpflichtigen Dienste gebucht.
 
 Die Zielangabe iOS 27 stammt vom Auftraggeber; Kompatibilität und Leistung gelten erst nach einem Test auf dem tatsächlichen Gerät als nachgewiesen.
 
@@ -59,4 +59,4 @@ Antwortformat: Nummern mit eigenen Antworten; für alle anderen Punkte kann ausd
 
 ## Noch nicht entschieden
 
-Three.js und Rapier bleiben die bevorzugte Richtung für die als Arbeitsannahme übernommene feste Fahrspur. Die noch ausstehende Wasserentscheidung wird vor dem Coding nachgetragen. Eine Softwarelizenz für das Gesamtprojekt wurde noch nicht ausgewählt; diese Entscheidung ist für den Physikprototyp nicht erforderlich.
+Three.js und Rapier werden für die feste Fahrspur verwendet. Die Wasserentscheidung ist geklärt. Interne Umsetzung, Tests und bekannte Grenzen stehen in IMPLEMENTIERUNG.md. Eine Softwarelizenz für das Gesamtprojekt wurde noch nicht ausgewählt; diese Entscheidung ist für die Bereitstellung des beauftragten Spiels nicht erforderlich.
