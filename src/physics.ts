@@ -1,16 +1,17 @@
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle } from './courses';
 import { groundAt, surfaceFriction, zoneAt } from './courses';
-import { clamp, preset, radiusOf, sanitizeShape, shapeLength, STROKE_RADIUS, type Point } from './shapes';
+import { clamp, preset, radiusOf, sanitizeShape, shapeLength, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
+export const DRIVE_TORQUE = 58;
 const AXLE_Y = -.25;
 export interface Vehicle {
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
-  changeCooldown: number; buoyancy: number; drive: number;
+  changeCooldown: number; buoyancy: number; drive: number; aiShape: ShapeName;
 }
 export interface Beam { body: RAPIER.RigidBody; obstacle: Obstacle; lane: number }
 let initialized: Promise<void> | undefined;
@@ -75,7 +76,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round' };
     this.replaceColliders(car);
     return car;
   }
@@ -133,9 +134,17 @@ export class Simulation {
           lift = Math.max(lift, groundAt(this.course, px) + STROKE_RADIUS + .02 - py);
         }
       }
-      // Defer a growth that cannot fit under a ceiling. No repeated overlap explosions.
-      const ceiling = this.course.obstacles.find(o => o.kind === 'ceiling' && Math.abs(o.x - car.body.translation().x) < o.width / 2 + 1.5);
-      if (ceiling && car.body.translation().y + lift + .6 > ceiling.y - ceiling.height / 2) return;
+      // Check the full cage and both wheels, including the rear wheel while
+      // leaving a low roof. The old chassis-center check grew wheels too early.
+      const shift = Math.min(lift, .65), bodyPos = car.body.translation(), angle = car.body.rotation();
+      const co = Math.cos(angle), si = Math.sin(angle);
+      const cage = { x: bodyPos.x - .05 * co - .6 * si, y: bodyPos.y - .05 * si + .6 * co + shift };
+      for (const roof of this.course.obstacles.filter(o => o.kind === 'ceiling')) {
+        const overlaps = (x: number, y: number, hx: number, hy: number) =>
+          Math.abs(x - roof.x) < hx + roof.width / 2 + .02 && Math.abs(y - roof.y) < hy + roof.height / 2 + .02;
+        if (overlaps(cage.x, cage.y, Math.abs(co) * .675 + Math.abs(si) * .415, Math.abs(si) * .675 + Math.abs(co) * .415)) return;
+        if (car.wheels.some(w => overlaps(w.translation().x, w.translation().y + shift, newRadius, newRadius))) return;
+      }
     }
     car.shape = car.desiredShape; car.desiredShape = null;
     this.replaceColliders(car);
@@ -180,8 +189,9 @@ export class Simulation {
         car.aiTimer -= FIXED_DT;
         if (car.aiTimer <= 0) {
           const ahead = zoneAt(this.course, p.x + 4);
-          const shape = ahead?.kind === 'lake' && p.x < ahead.end - 7 ? 'paddle' : 'round';
-          car.desiredShape = preset(shape); car.aiTimer = 3.5 + car.id * .6;
+          const shape = ahead?.kind === 'tunnel' ? 'compact' : ahead?.kind === 'steps' ? 'claw' : ahead?.kind === 'lake' && p.x < ahead.end - 4.5 ? 'paddle' : 'round';
+          if (shape !== car.aiShape) { car.desiredShape = preset(shape); car.aiShape = shape; }
+          car.aiTimer = .45 + car.id * .12;
         }
       }
       const water = this.course.waters.find(w => p.x > w.start && p.x < w.end);
@@ -196,7 +206,9 @@ export class Simulation {
       const speed = (car.water > .3 ? 8.5 : 6.5) - car.id * .18;
       for (const w of car.wheels) {
         const rel = w.angvel() - car.body.angvel();
-        const torque = clamp((-speed - rel) * 5.2, -20, 12) * throttle;
+        // High starting torque lifts an irregular wheel onto its next contact.
+        // The unchanged target speed still limits the smooth wheel's top speed.
+        const torque = clamp((-speed - rel) * 12, -DRIVE_TORQUE, 24) * throttle;
         w.addTorque(torque, true);
         car.body.addTorque(-torque, true);
       }
@@ -220,7 +232,8 @@ export class Simulation {
       const submerged = clamp((level - (pos.y + ry) + .22) / .44, 0, 1);
       const localVy = vel.y + body.angvel() * rx;
       const lift = clamp(submerged * 35 - localVy * submerged * 8, -20, 60);
-      body.addForceAtPoint({ x: -vel.x * Math.abs(vel.x) * submerged * .08, y: lift }, { x: pos.x + rx, y: pos.y + ry }, true);
+      const localVx = vel.x - body.angvel() * ry;
+      body.addForceAtPoint({ x: -(localVx * Math.abs(localVx) * 1.1 + localVx * .4) * submerged, y: lift }, { x: pos.x + rx, y: pos.y + ry }, true);
       car.buoyancy += submerged * 35;
     }
     for (const w of car.wheels) {
@@ -236,8 +249,10 @@ export class Simulation {
         const nx = -ty, ny = tx;
         const vx = velocity.x - omega * ry, vy = velocity.y + omega * rx;
         const normal = vx * nx + vy * ny, tangent = vx * tx + vy * ty;
-        const pressure = -normal * Math.abs(normal) * length * depth * 2.2;
-        const skin = -tangent * Math.abs(tangent) * length * depth * .055;
+        // Broadside pressure propels paddles; the smooth rim has little skin
+        // friction and cannot behave like an equally effective paddle wheel.
+        const pressure = -normal * Math.abs(normal) * length * depth * 3.2;
+        const skin = -tangent * Math.abs(tangent) * length * depth * .008;
         w.addForceAtPoint({ x: clamp(nx * pressure + tx * skin, -35, 35), y: clamp(ny * pressure + ty * skin + length * depth * 2, -35, 35) }, { x: wp.x + rx, y: wp.y + ry }, true);
       }
     }

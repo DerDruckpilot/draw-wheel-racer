@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Rennspiel für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.0 – iPhone-PWA mit 3D-Grafik, echter Radgeometrie und Wasserpassagen.**
+**Version 1.1 – mehr Drehmoment, kniffligere Strecken und wirksamer Wasserwiderstand.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -19,13 +19,17 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 
 - Zwölf Rennen in drei Landschaften und ein freies Testgelände.
 - Drei Computergegner auf eigenen Spuren, Checkpoints, Bestzeiten und Sterne.
-- Freihandräder, vier Vorlagen, Rückgängig und gespeicherte Lieblingsform.
+- Freihandräder, fünf Vorlagen einschließlich kleiner Räder für Durchfahrten, Rückgängig und gespeicherte Lieblingsform.
 - Fels, Eis, Schlamm, Stufen, Rampen, Lücken, Wippen, Baumstämme und Durchfahrten.
 - Flache Furten und tiefe Seen: Der Buggy schwimmt, die gezeichneten Räder paddeln.
 - Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofile.
 - Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
 
 Die Physik arbeitet im seitlichen Profil. Wasserkräfte sind angenähert; Schlamm nutzt Widerstand, kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
+
+Version 1.1 kombiniert schon in der ersten Strecke hohe Stufen, niedrige Durchfahrten, eine Furt und tiefes Wasser. Der Motor liefert knapp das dreifache bisherige Anfahrdrehmoment. Kleine Räder passen unter niedrige Dächer, größere greifende Formen helfen an Kanten und Paddelformen verdrängen Wasser wirksamer als ein glatter Ring. Die Wirkung entsteht aus Kontaktgeometrie und Wasserkräften, ohne Boni für bestimmte Formnamen. [Messwerte und Regressionstests](docs/BALANCING-1.1.md).
+
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Die Einstellungen zeigen danach **FORMDRIVE 1.1**.
 
 ## Lokal entwickeln
 

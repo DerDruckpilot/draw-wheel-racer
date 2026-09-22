@@ -207,7 +207,11 @@ export class GameRenderer {
         mesh.rotation.x = Math.PI / 2; mesh.position.set(o.x, o.y, -3.9); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       } else {
         const ceiling = box(o.width, o.height, 14.2, this.cliffMat, o.x, o.y, -3.9); ceiling.castShadow = true; ceiling.receiveShadow = true; this.terrain.add(ceiling);
-        for (const z of [-10.8, 3]) { const pillar = box(.4, 2.6, .4, metal, o.x + o.width / 2 - .2, 1.3, z); pillar.castShadow = true; this.terrain.add(pillar); }
+        const clearance = o.y - o.height / 2;
+        for (const z of [-10.8, 3]) { const pillar = box(.4, clearance, .4, metal, o.x + o.width / 2 - .2, clearance / 2, z); pillar.castShadow = true; this.terrain.add(pillar); }
+        const warning = new THREE.MeshStandardMaterial({ color: 0xe6af45, roughness: .7 });
+        // Mark the entrance and the clearance, visible before the roof hides it.
+        this.terrain.add(box(.12, .14, 14.3, warning, o.x - o.width / 2 - .04, clearance + .08, -3.9));
       }
     }
     for (const car of sim.cars) this.cars.push(this.makeCar(car));

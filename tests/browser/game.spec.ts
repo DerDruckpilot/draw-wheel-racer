@@ -11,6 +11,12 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
   await expect(page.locator('#drawing-canvas')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Kleine Räder für Durchfahrten', exact: true }).click();
+  await expect(page.locator('[data-shape="compact"]')).toHaveClass(/selected/);
+  await page.getByRole('button', { name: 'Runde Räder', exact: true }).click();
+  await page.locator('#settings-button').click();
+  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.1');
+  await page.locator('#close-modal').click();
   await page.screenshot({ path: '.local/test-home.png' });
   const initial = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
   const canvas = page.locator('#drawing-canvas'); const bounds = (await canvas.boundingBox())!;

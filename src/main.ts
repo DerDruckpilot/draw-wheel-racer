@@ -65,7 +65,7 @@ document.querySelector('#app')!.innerHTML = `
   <section class="draw-panel" aria-label="Räder zeichnen">
     <div class="draw-heading"><div><span class="eyebrow dark">DEINE RADFORM</span><h2>Zeichne deinen Weg.</h2></div><div class="draw-tools"><button class="small-icon" id="undo-button" aria-label="Vorherige Radform">${svg('undo')}</button><button class="small-icon" id="save-shape" aria-label="Radform als Favorit speichern">${svg('save')}</button></div></div>
     <div class="drawing-field"><canvas id="drawing-canvas" aria-label="Zeichenfläche: Zeichne mit dem Finger eine Radform. Beim Loslassen werden die Räder ersetzt."></canvas><span class="draw-hint">FREIHAND · BEIM LOSLASSEN MONTIERT</span></div>
-    <div class="presets"><span>STARTE MIT</span><button data-shape="round" aria-label="Runde Räder">${shapeIcon('round')}<span>Rund</span></button><button data-shape="claw" aria-label="Offene C-Räder">${shapeIcon('claw')}<span>Klaue</span></button><button data-shape="paddle" aria-label="Paddelräder">${shapeIcon('paddle')}<span>Paddel</span></button><button data-shape="triangle" aria-label="Dreieckige Räder">${shapeIcon('triangle')}<span>Dreieck</span></button><button id="load-shape" aria-label="Gespeicherte Radform laden">${svg('save')}<span>Favorit</span></button></div>
+    <div class="presets"><button data-shape="round" aria-label="Runde Räder">${shapeIcon('round')}<span>Rund</span></button><button data-shape="compact" aria-label="Kleine Räder für Durchfahrten">${shapeIcon('compact')}<span>Klein</span></button><button data-shape="claw" aria-label="Offene C-Räder">${shapeIcon('claw')}<span>Klaue</span></button><button data-shape="paddle" aria-label="Paddelräder">${shapeIcon('paddle')}<span>Paddel</span></button><button data-shape="triangle" aria-label="Dreieckige Räder">${shapeIcon('triangle')}<span>Dreieck</span></button><button id="load-shape" aria-label="Gespeicherte Radform laden">${svg('save')}<span>Favorit</span></button></div>
   </section>
 </main>
 <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close small-icon" id="close-modal" aria-label="Dialog schließen">${svg('close')}</button><div id="modal-content"></div></div></dialog>
@@ -86,6 +86,7 @@ let updateReady = false;
 let lastTerrain = '';
 let lastResetCount = 0;
 let lastWaterHint = -60;
+let lastApproach = -1;
 let lastHud = 0;
 let slow = false;
 function toast(message: string) {
@@ -112,7 +113,8 @@ function setState(next: typeof state) {
 function loadLevel(id: number, stayHome = true) {
   sim?.dispose(); currentLevel = id; saved.level = id;
   sim = new Simulation(createCourse(id), id === 12 ? 1 : 4); renderer.setCourse(sim); sim.requestShape(pad.shape);
-  accumulator = 0; lastResetCount = 0; lastTerrain = ''; lastWaterHint = -60; slow = false;
+  accumulator = 0; lastResetCount = 0; lastTerrain = ''; lastWaterHint = -60; lastApproach = -1; slow = false;
+  clearTimeout(toastTimer); $('toast').classList.remove('visible');
   $('course-number').textContent = id === 12 ? '∞' : (id + 1).toString().padStart(2, '0');
   $('course-region').textContent = `${region(id)} COLLECTION`;
   $('course-name').textContent = sim.course.name;
@@ -161,7 +163,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.1 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -278,6 +280,13 @@ function updateHud() {
   $('progress-fill').style.width = `${progress}%`; $('progress-dot').style.left = `${progress}%`;
   const zone = zoneAt(sim.course, p.x); const terrain = zone?.label || 'FESTER BODEN';
   if (terrain !== lastTerrain) { $('terrain-label').textContent = terrain; lastTerrain = terrain; document.querySelector('.terrain-chip')!.classList.toggle('water', zone?.kind === 'lake' || zone?.kind === 'ford'); }
+  const ahead = zoneAt(sim.course, p.x + 6);
+  if (state === 'racing' && ahead && ahead.start !== lastApproach) {
+    lastApproach = ahead.start;
+    if (ahead.kind === 'tunnel') toast('Niedrige Durchfahrt: Zeichne kleine Räder.');
+    else if (ahead.kind === 'steps') toast('Hohe Kanten: Kleine Räder haben es hier schwer.');
+    else if (ahead.kind === 'ford') toast('Furt: Wasser bremst die eingetauchten Räder.');
+  }
   if (state === 'racing' && zone?.kind === 'lake' && sim.elapsed - lastWaterHint > 24) { toast('Tiefes Wasser: Probiere eine Form mit Paddeln.'); lastWaterHint = sim.elapsed; }
   if (state === 'racing' && car.resets > lastResetCount) { toast('Geborgen · zeichne eine neue Lösung.'); lastResetCount = car.resets; }
   $('rescue-button').classList.toggle('suggested', car.stuck > 3);

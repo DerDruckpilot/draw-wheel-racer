@@ -1,10 +1,11 @@
 export type Point = { x: number; y: number };
 export const STROKE_RADIUS = 0.095;
 export const MAX_RADIUS = 1.2;
-export type ShapeName = 'round' | 'claw' | 'paddle' | 'triangle';
+export type ShapeName = 'round' | 'compact' | 'claw' | 'paddle' | 'triangle';
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export function preset(name: ShapeName): Point[] {
+  if (name === 'compact') return preset('round').map(p => ({ x: p.x * .6, y: p.y * .6 }));
   if (name === 'round') return Array.from({ length: 37 }, (_, i) => ({ x: Math.cos(i / 36 * Math.PI * 2) * 0.82, y: Math.sin(i / 36 * Math.PI * 2) * 0.82 }));
   if (name === 'claw') return Array.from({ length: 29 }, (_, i) => ({ x: Math.cos((i / 28 * 1.65 + 0.175) * Math.PI) * 0.96, y: Math.sin((i / 28 * 1.65 + 0.175) * Math.PI) * 0.96 }));
   if (name === 'triangle') return resample([{ x: 0, y: 1.04 }, { x: -.95, y: -.64 }, { x: .95, y: -.64 }, { x: 0, y: 1.04 }], 37);

@@ -8,17 +8,17 @@ export interface Water { start: number; end: number; level: number; deep: boolea
 export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' }
 export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number }
 const specs: [string, string, Feature[]][] = [
-  ['Erste Spuren', 'Finde deinen Rhythmus.', ['flat', 'rocks', 'ramp', 'ford', 'steps', 'flat']],
-  ['Rote Klippen', 'Kanten brauchen Charakter.', ['rocks', 'steps', 'ramp', 'gap', 'ford', 'rocks']],
-  ['Tiefenwasser', 'Aus Rädern werden Paddel.', ['ramp', 'ford', 'lake', 'steps', 'lake', 'flat']],
+  ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'rocks']],
+  ['Rote Klippen', 'Kanten brauchen Charakter.', ['rocks', 'steps', 'tunnel', 'ramp', 'gap', 'lake']],
+  ['Tiefenwasser', 'Aus Rädern werden Paddel.', ['ramp', 'ford', 'lake', 'tunnel', 'steps', 'lake']],
   ['Canyon-Expedition', 'Deine Form. Dein Weg.', ['steps', 'gap', 'lake', 'seesaw', 'rocks', 'tunnel']],
-  ['Frostlinie', 'Wenig Halt. Viel Gefühl.', ['flat', 'ice', 'ramp', 'ice', 'ford', 'steps']],
-  ['Gletschersee', 'Kalt wird es unter den Rädern.', ['ice', 'ford', 'lake', 'ice', 'ramp', 'rocks']],
+  ['Frostlinie', 'Wenig Halt. Viel Gefühl.', ['flat', 'ice', 'steps', 'tunnel', 'ford', 'lake']],
+  ['Gletschersee', 'Kalt wird es unter den Rädern.', ['ice', 'ford', 'lake', 'tunnel', 'ramp', 'steps']],
   ['Eiskante', 'Präzision vor Geschwindigkeit.', ['steps', 'ice', 'gap', 'seesaw', 'lake', 'tunnel']],
-  ['Nordpass', 'Jeder Meter zählt.', ['ice', 'steps', 'lake', 'gap', 'rocks', 'seesaw', 'ice']],
-  ['Schotterwerk', 'Über Stock und Stein.', ['rocks', 'logs', 'mud', 'ramp', 'ford', 'flat']],
+  ['Nordpass', 'Jeder Meter zählt.', ['ice', 'steps', 'lake', 'gap', 'tunnel', 'seesaw', 'ice']],
+  ['Schotterwerk', 'Über Stock und Stein.', ['rocks', 'logs', 'mud', 'steps', 'tunnel', 'ford', 'lake']],
   ['Balanceakt', 'Bleib in Bewegung.', ['seesaw', 'logs', 'tunnel', 'lake', 'steps', 'seesaw']],
-  ['Flutgrube', 'Land und Wasser im Wechsel.', ['mud', 'lake', 'logs', 'ford', 'gap', 'seesaw']],
+  ['Flutgrube', 'Land und Wasser im Wechsel.', ['mud', 'lake', 'logs', 'tunnel', 'ford', 'gap', 'seesaw']],
   ['Die letzte Etappe', 'Alles, was du gelernt hast.', ['steps', 'ice', 'gap', 'lake', 'mud', 'logs', 'seesaw', 'tunnel']]
 ];
 const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'EIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT' };
@@ -43,9 +43,9 @@ export function createCourse(id: number): Course {
       const surface = f === 'ice' ? 'ice' : f === 'mud' ? 'mud' : 'road';
       line(20, [{ x: 0, y: 0 }, { x: 5, y: -.1 }, { x: 11, y: f === 'ice' ? .4 : -.1 }, { x: 20, y: 0 }], surface);
     } else if (f === 'rocks') {
-      line(18, Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : Math.sin(i * 2.31 + id) * .14 + .15 })));
+      line(18, Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : Math.sin(i * 2.31 + id) * (.2 + c.difficulty * .025) + .24 })));
     } else if (f === 'steps') {
-      const h = .27 + c.difficulty * .035;
+      const h = .68 + c.difficulty * .04;
       line(16, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: h }, { x: 5, y: h }, { x: 5, y: h * 2 }, { x: 7, y: h * 2 }, { x: 7, y: h * 3 }, { x: 10, y: h * 3 }, { x: 16, y: 0 }]);
     } else if (f === 'ramp') {
       line(22, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 12, y: 2.2 }, { x: 15, y: 2.2 }, { x: 22, y: 0 }]);
@@ -53,9 +53,9 @@ export function createCourse(id: number): Course {
       line(19, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 7, y: 1.35 }, { x: 8, y: 1.35 }, { x: 10.1, y: -.3 }, { x: 14, y: -.3 }, { x: 19, y: 0 }], 'stone', [4]);
     } else if (f === 'ford' || f === 'lake') {
       const deep = f === 'lake';
-      const depth = deep ? 3.4 : .58;
-      const len = deep ? 38 : 19;
-      const shore = deep ? 11 : 7;
+      const depth = deep ? 3.4 : .92 + c.difficulty * .05;
+      const len = deep ? 42 + c.difficulty * 2 : 24;
+      const shore = deep ? 11 : 8;
       line(len, [{ x: 0, y: 0 }, { x: 3, y: -.1 }, { x: shore, y: -depth }, { x: len - shore, y: -depth }, { x: len - 3, y: -.1 }, { x: len, y: 0 }]);
       c.waters.push({ start: start + 3, end: start + len - 3, level: -.1, deep });
     } else if (f === 'seesaw') {
@@ -63,10 +63,10 @@ export function createCourse(id: number): Course {
       c.obstacles.push({ x: start + 9.5, y: .08, width: 9, height: .18, kind: 'beam' });
     } else if (f === 'logs') {
       line(19, [{ x: 0, y: 0 }, { x: 19, y: 0 }]);
-      for (let j = 0; j < 3; j++) c.obstacles.push({ x: start + 5 + j * 3.5, y: .18, width: .55, height: .55, kind: 'log' });
+      for (let j = 0; j < 3; j++) c.obstacles.push({ x: start + 5 + j * 3.5, y: .26, width: .76 + c.difficulty * .04, height: .76 + c.difficulty * .04, kind: 'log' });
     } else {
       line(17, [{ x: 0, y: 0 }, { x: 17, y: 0 }]);
-      c.obstacles.push({ x: start + 8, y: 2.65, width: 5, height: .4, kind: 'ceiling' });
+      c.obstacles.push({ x: start + 8.5, y: 2.01, width: 8, height: .4, kind: 'ceiling' });
     }
     c.zones.push({ start, end: x, kind: f, label: labels[f] });
     line(6, [{ x: 0, y: 0 }, { x: 6, y: 0 }], 'road');
