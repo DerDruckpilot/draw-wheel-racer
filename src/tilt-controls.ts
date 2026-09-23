@@ -6,7 +6,9 @@ const radians=Math.PI/180;
 export function screenTilt({beta,gamma,angle}:TiltSample){
   const b=beta*radians,g=gamma*radians,a=angle*radians;
   const x=-Math.cos(b)*Math.sin(g),y=Math.sin(b),z=Math.cos(b)*Math.cos(g);
-  const sx=x*Math.cos(a)+y*Math.sin(a),sy=-x*Math.sin(a)+y*Math.cos(a);
+  // Screen angle is counter-clockwise from portrait: at 90°, screen-right
+  // points toward device -Y. Project earth-up into that screen frame.
+  const sx=x*Math.cos(a)-y*Math.sin(a),sy=x*Math.sin(a)+y*Math.cos(a);
   return {roll:Math.atan2(sx,Math.hypot(sy,z))/radians,pitch:Math.atan2(sy,z)/radians};
 }
 const difference=(a:number,b:number)=>((a-b+540)%360)-180;

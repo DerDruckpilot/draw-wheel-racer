@@ -25,7 +25,7 @@ test('vertical axle sliders stay outside the glass and gyro permission, calibrat
   await page.locator('#tune-button').click();await page.locator('#gyro-enable').click();expect(await page.evaluate(()=>(window as any).__sensorRequests)).toBe(1);
   await page.evaluate(()=>window.dispatchEvent(Object.assign(new Event('deviceorientation'),{beta:0,gamma:0})));
   await expect(page.locator('#gyro-status')).toHaveText('Aktiv');await page.locator('#close-tune').click();
-  await page.evaluate(()=>{(window as any).__motion=setInterval(()=>window.dispatchEvent(Object.assign(new Event('deviceorientation'),{beta:-24,gamma:18})),40);});
+  await page.evaluate(()=>{(window as any).__motion=setInterval(()=>window.dispatchEvent(Object.assign(new Event('deviceorientation'),{beta:24,gamma:-18})),40);});
   await expect.poll(async()=>(await snapshot(page)).tuning.ballastTarget).toBeGreaterThan(.9);
   await expect.poll(async()=>(await snapshot(page)).tuning.lateral.input).toBeGreaterThan(.5);
   await page.locator('#tune-button').click();await page.locator('#gyro-calibrate').click();

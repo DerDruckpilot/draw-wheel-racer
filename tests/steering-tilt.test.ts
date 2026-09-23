@@ -12,16 +12,18 @@ function track(feature?:'sluice'|'countergate'):Course{
   c.length=x+45;c.segments.push({a:{x,y:0},b:{x:x+90,y:0},surface:'stone'});return c;
 }
 function run(sim:Simulation,seconds:number,control?:(sim:Simulation)=>void){sim.started=true;for(let i=0;i<seconds*120;i++){control?.(sim);sim.tick();}}
-test('both landscape orientations map the same physical screen tilt to the same two controls',()=>{
-  const outputs=[];for(const angle of [90,270]){const f=new TiltFilter();f.calibrate({angle,beta:0,gamma:0});for(let i=0;i<100;i++)f.update({angle,beta:angle===90?-20:20,gamma:0},1/60);outputs.push(f.weight);assert.ok(Math.abs(f.steer)<.001);}
+test('lowering the screen-right edge shifts weight right in both landscape orientations',()=>{
+  // At 90° the physical portrait top is on the left; lifting it (beta > 0)
+  // lowers screen-right. The signs reverse with the phone turned the other way.
+  const outputs=[];for(const angle of [90,270]){const f=new TiltFilter();f.calibrate({angle,beta:0,gamma:0});for(let i=0;i<100;i++)f.update({angle,beta:angle===90?20:-20,gamma:0},1/60);outputs.push(f.weight);assert.ok(Math.abs(f.steer)<.001);}
   assert.ok(outputs.every(v=>v>.99));assert.ok(Math.abs(outputs[0]-outputs[1])<.001);
-  const a=screenTilt({angle:90,beta:0,gamma:12}),b=screenTilt({angle:270,beta:0,gamma:-12});assert.ok(Math.abs(a.pitch-b.pitch)<.001);
+  const a=screenTilt({angle:90,beta:0,gamma:-12}),b=screenTilt({angle:270,beta:0,gamma:12});assert.ok(Math.abs(a.pitch-b.pitch)<.001);assert.ok(a.pitch>11,'lifting the far screen edge tilts toward the near side');
 });
 test('calibration removes holding angle, dead zone suppresses jitter, and rotating the screen recenters',()=>{
   const f=new TiltFilter(),held={beta:8,gamma:42,angle:90};f.calibrate(held);
   for(let i=0;i<60;i++)f.update({...held,beta:8+Math.sin(i)*.5},1/60);
   assert.ok(Math.abs(f.weight)<.001&&Math.abs(f.steer)<.001);
-  f.update({...held,beta:-20},.1);assert.ok(f.weight>0);f.update({...held,angle:270},.1);assert.equal(f.weight,0);assert.equal(f.steer,0);
+  f.update({...held,beta:28},.1);assert.ok(f.weight>0);f.update({...held,angle:270},.1);assert.equal(f.weight,0);assert.equal(f.steer,0);
 });
 test('soft wheels lose substantial loaded height while remaining stable and mass-conserving',()=>{
   const results=[];for(const stiffness of [1,0]){const sim=new Simulation(track(),1),v=sim.cars[0],mass=v.wheels[0].mass();v.flex.forEach(f=>f.stiffness=stiffness);run(sim,10);results.push(v.body.translation().y);if(!stiffness)assert.ok(v.flex.every(f=>f.amount>.5));assert.equal(v.wheels[0].mass(),mass);assert.ok(Math.abs(v.body.linvel().y)<.15);sim.dispose();}

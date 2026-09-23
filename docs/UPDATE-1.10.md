@@ -8,7 +8,7 @@ Die Steifigkeit jeder Achse hat einen eigenen senkrechten Regler direkt außerha
 
 Ohne Sensorfreigabe bleiben Pedale, Zeichnen und die manuellen Regler verfügbar. W/S beziehungsweise Pfeil hoch/runter lenken; Q/E verlagern Gewicht. Die bisherigen Gas- und Bremsentasten bleiben erhalten. Der manuelle Lenkregler federt beim Loslassen auf neutral zurück.
 
-Die Freigabe und Koordinatentransformation orientieren sich an der [W3C-Spezifikation für Device Orientation and Motion](https://w3c.github.io/deviceorientation/). Die emulierten Browserprüfungen ersetzen keinen Test der Sensoren und des Bediengefühls auf einem tatsächlichen iPhone.
+Die Freigabe und Koordinatentransformation orientieren sich an der [W3C-Spezifikation für Device Orientation and Motion](https://w3c.github.io/deviceorientation/). Der Bildschirmwinkel ist gegen den Uhrzeigersinn definiert, auch beim älteren [Apple-Orientierungswert](https://developer.apple.com/documentation/webkitjs/domwindow/1632568-orientation). Die abgesenkte rechte Bildschirmkante verschiebt das Gewicht nach vorne, die linke nach hinten. Die emulierten Browserprüfungen ersetzen keinen Test der Sensoren und des Bediengefühls auf einem tatsächlichen iPhone.
 
 ## Spürbare Rad- und Gewichtsänderungen
 
