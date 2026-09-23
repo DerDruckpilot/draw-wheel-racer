@@ -6,7 +6,7 @@ export type Theme = 'canyon' | 'alpine' | 'quarry';
 export interface Segment { a: Point; b: Point; surface: Surface }
 export interface Zone { start: number; end: number; kind: Feature; label: string }
 export interface Water { start: number; end: number; level: number; deep: boolean }
-export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller'; tilt?: number }
+export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder'; tilt?: number; lane?: number; outline?: Point[] }
 export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number }
 const specs: [string, string, Feature[]][] = [
   ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'washboard']],
@@ -39,6 +39,8 @@ export function createCourse(id: number): Course {
   for (let idx = 0; idx < spec[2].length; idx++) {
     const f = spec[2][idx];
     const start = x;
+    let seed = 5371 + id * 8191 + idx * 131;
+    const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     c.checkpoints.push(start - 2);
     if (f === 'flat' || f === 'mud') {
       line(20, [{ x: 0, y: 0 }, { x: 5, y: -.1 }, { x: 11, y: -.1 }, { x: 20, y: 0 }], f === 'mud' ? 'mud' : 'road');
@@ -54,16 +56,36 @@ export function createCourse(id: number): Course {
       profile.push({ x: 24, y: 4.56 }, { x: 36, y: 0 });
       line(36, profile, 'ice');
     } else if (f === 'rocks') {
-      line(18, Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : Math.sin(i * 2.31 + id) * (.2 + c.difficulty * .025) + .24 })));
+      const profile = Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : (random() - .3) * .2 }));
+      line(18, profile);
+      for (let lane = 0; lane < 4; lane++) for (let j = 0; j < 6; j++) {
+        const at = start + 3 + j * 2.25 + random() * .7, width = .9 + random() * 1.2, height = .35 + random() * .47;
+        const outline = [
+          { x: -.55 * width, y: .12 * height }, { x: -.3 * width, y: (.65 + random() * .2) * height },
+          { x: (.04 + random() * .12) * width, y: height }, { x: .45 * width, y: (.42 + random() * .18) * height },
+          { x: .56 * width, y: -.07 * height }, { x: -.33 * width, y: -.1 * height }
+        ];
+        c.obstacles.push({ x: at, y: groundAt(c, at), width, height, kind: 'boulder', lane, outline });
+      }
     } else if (f === 'steps') {
-      const h = .84 + c.difficulty * .015;
-      line(16, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3, y: h }, { x: 5, y: h }, { x: 5, y: h * 2 }, { x: 7, y: h * 2 }, { x: 7, y: h * 3 }, { x: 10, y: h * 3 }, { x: 16, y: 0 }]);
+      let at = 2.8 + random() * .4, top = 0;
+      const profile: Point[] = [{ x: 0, y: 0 }];
+      for (let j = 0; j < 3; j++) {
+        profile.push({ x: at, y: top }); top += .84 + c.difficulty * .012 + random() * .055;
+        profile.push({ x: at + .025, y: top }, { x: at + .42, y: top + .018 * (random() - .5) });
+        at += 1.8 + random() * .55;
+      }
+      profile.push({ x: 10.3, y: top - .05 }, { x: 12.5, y: top * .6 }, { x: 16, y: 0 }); line(16, profile);
     } else if (f === 'ramp') {
       // A steep ribbed ascent: a smooth rim loses purchase; protrusions can
       // bear against the risers. The normal contact forces provide the grip.
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 4, y: 0 }];
-      for (let i = 0; i < 8; i++) profile.push({ x: 4 + i + .7, y: i * .54 }, { x: 5 + i, y: (i + 1) * .54 });
-      profile.push({ x: 15, y: 4.32 }, { x: 22, y: 0 });
+      let top = 0;
+      for (let i = 0; i < 8; i++) {
+        profile.push({ x: 4 + i + .68 + random() * .09, y: top }); top += .57 + random() * .08;
+        profile.push({ x: 5 + i, y: top });
+      }
+      profile.push({ x: 15, y: top }, { x: 18.4, y: top * .58 }, { x: 22, y: 0 });
       line(22, profile);
     } else if (f === 'gap') {
       line(21, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 7, y: 1.35 }, { x: 10, y: 1.35 }, { x: 12.1, y: -.3 }, { x: 16, y: -.3 }, { x: 21, y: 0 }], 'stone', [4]);
@@ -76,26 +98,32 @@ export function createCourse(id: number): Course {
       c.waters.push({ start: start + 3, end: start + len - 3, level: -.1, deep });
     } else if (f === 'washboard') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }];
-      for (let j = 0; j < 20; j++) profile.push({ x: 3.3 + j * .7, y: .17 + (j % 3) * .025 }, { x: 3.65 + j * .7, y: 0 });
+      for (let j = 0; j < 20; j++) profile.push({ x: 3.16 + j * .7 + random() * .21, y: .11 + random() * .19 }, { x: 3.61 + j * .7 + random() * .055, y: random() * .04 });
       profile.push({ x: 20, y: 0 }); line(20, profile);
     } else if (f === 'trenches') {
       const profile: Point[] = [{ x: 0, y: 0 }];
       for (let j = 0; j < 4; j++) {
-        const a = 4 + j * 4, width = 1.15 + j * .12;
-        profile.push({ x: a, y: 0 }, { x: a, y: -1.15 }, { x: a + width, y: -1.15 }, { x: a + width, y: 0 });
+        const a = 3.7 + j * 4 + random() * .6, width = 1.05 + random() * .57, depth = .85 + random() * .5;
+        profile.push({ x: a, y: 0 }, { x: a + .1, y: -depth }, { x: a + width - .12, y: -depth + .12 }, { x: a + width, y: 0 });
       }
       profile.push({ x: 23, y: 0 }); line(23, profile);
     } else if (f === 'domes') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }];
-      for (let j = 0; j < 3; j++) for (let k = 1; k <= 16; k++) {
-        profile.push({ x: 3 + j * 5 + k * 5 / 16, y: Math.sin(k / 16 * Math.PI) ** 2 * (1.15 + j * .32) });
+      let at = 3;
+      for (let j = 0; j < 3; j++) {
+        const width = 4.8 + random() * .7, height = .85 + random() * .65, skew = .9 + random() * .2;
+        for (let k = 1; k <= 16; k++) {
+          const t = k / 16;
+          profile.push({ x: at + t * width, y: Math.sin(t ** skew * Math.PI) ** 2 * height * (1 + .06 * Math.sin(t * 13 + j)) });
+        }
+        at += width;
       }
       profile.push({ x: 22, y: 0 }); line(22, profile);
     } else if (f === 'sawtooth') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }];
       for (let j = 0; j < 5; j++) {
-        const a = 3 + j * 3.4, h = .65 + (j % 3) * .14;
-        profile.push({ x: a + .22, y: h }, { x: a + 1, y: h }, { x: a + 3.4, y: 0 });
+        const a = 3 + j * 3.4, h = .6 + random() * .35;
+        profile.push({ x: a + .13 + random() * .13, y: h }, { x: a + .7 + random() * .6, y: h * (.93 + random() * .07) }, { x: a + 2.3, y: h * .35 }, { x: a + 3.4, y: 0 });
       }
       profile.push({ x: 24, y: 0 }); line(24, profile);
     } else if (f === 'rollers') {
@@ -107,8 +135,8 @@ export function createCourse(id: number): Course {
     } else if (f === 'causeway') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: -.1 }, { x: 7, y: -1.35 }];
       for (let j = 0; j < 4; j++) {
-        const a = 8 + j * 4;
-        profile.push({ x: a, y: -1.35 }, { x: a + .35, y: -.28 }, { x: a + 2, y: -.28 }, { x: a + 2.35, y: -1.35 });
+        const a = 7.7 + j * 4 + random() * .55, top = -.2 - random() * .2, width = 1.35 + random() * .7;
+        profile.push({ x: a, y: -1.35 }, { x: a + .3, y: top }, { x: a + width, y: top + .06 }, { x: a + width + .4, y: -1.35 });
       }
       profile.push({ x: 25, y: -1.35 }, { x: 29, y: -.1 }, { x: 32, y: 0 }); line(32, profile);
       c.waters.push({ start: start + 3, end: start + 29, level: -.1, deep: false });
@@ -133,7 +161,21 @@ export function createCourse(id: number): Course {
   return c;
 }
 
+// Wide camera views can see behind the start and beyond the finish. Continue
+// the center strip there as well as the already extended landscape banks.
+export function courseRunout(c: Course): Segment[] {
+  if (!c.segments.length) return [];
+  const first = c.segments[0].a, last = c.segments.at(-1)!.b;
+  return [
+    { a: { x: Math.min(-100, first.x - 80), y: first.y }, b: first, surface: 'stone' as const },
+    { a: last, b: { x: Math.max(c.length + 100, last.x + 80), y: last.y }, surface: 'stone' as const }
+  ];
+}
+
 export function groundAt(c: Course, x: number): number {
+  const first = c.segments[0]?.a, last = c.segments.at(-1)?.b;
+  if (first && x < first.x && x >= Math.min(-100, first.x - 80)) return first.y;
+  if (last && x > last.x && x <= Math.max(c.length + 100, last.x + 80)) return last.y;
   let y = -12;
   for (const s of c.segments) {
     if (x >= s.a.x - .001 && x <= s.b.x + .001) {
@@ -150,8 +192,8 @@ export function zoneAt(c: Course, x: number) { return c.zones.find(z => x >= z.s
 export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
   if (!zone) return 'round';
   if (zone.kind === 'tunnel' || zone.kind === 'crawl') return 'compact';
-  if (['steps', 'ramp', 'logs', 'trenches', 'rollers', 'sawtooth', 'causeway', 'iceclimb'].includes(zone.kind)) return 'grip';
-  if (zone.kind === 'lake' && x < zone.end - 4.5) return 'paddle';
+  if (['rocks', 'steps', 'ramp', 'logs', 'trenches', 'rollers', 'sawtooth', 'causeway', 'iceclimb'].includes(zone.kind)) return 'grip';
+  if (zone.kind === 'lake' || zone.kind === 'ford') return 'paddle';
   return 'round';
 }
 export const courseList = Array.from({ length: 13 }, (_, i) => createCourse(i));

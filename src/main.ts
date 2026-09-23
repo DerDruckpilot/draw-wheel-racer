@@ -98,7 +98,7 @@ const pad = new DrawingPad($<HTMLCanvasElement>('drawing-canvas'), shape => {
   if (sim && !sim.requestShape(shape)) return false;
   document.querySelectorAll('[data-shape]').forEach(b => b.classList.remove('selected'));
   return true;
-}, toast);
+}, message => { if (message !== 'Neue Radform übernommen') toast(message); });
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const region = (id: number) => id === 12 ? 'EXPERIMENT' : id < 4 ? 'CANYON' : id < 8 ? 'ALPINE' : 'STEINBRUCH';
@@ -168,7 +168,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.3.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.4.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -283,13 +283,18 @@ async function boot() {
     requestAnimationFrame(frame);
     // Explicit test mode exposes deterministic stepping for browser verification only.
     if (import.meta.env.DEV || new URL(location.href).searchParams.has('test')) {
+      const previewSteps = (steps: number) => {
+        sim.started = true;
+        for (let i = 0; i < Math.min(steps, 20000); i++) { sim.tick(); if (i % 12 === 11) renderer.advanceEffects(sim, .1); }
+      };
       (window as any).__FORMDRIVE__ = {
-        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        sceneImage: () => { renderer.render(sim, 0, state === 'home'); return renderer.renderer.domElement.toDataURL('image/png'); },
+        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
-        water: () => { const lake = sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; sim.requestShape(preset('paddle')); sim.resetCar(0, false); sim.started = true; for (let i = 0; i < 720; i++) sim.tick(); setState('paused'); renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
+        water: () => { const lake = sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pad.usePreset('paddle'); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         load: (id: number) => loadLevel(clamp(id, 0, 12)),
         preset: (name: ShapeName) => pad.usePreset(name),
-        obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pad.usePreset(name); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); sim.started = true; for (let i = 0; i < Math.min(steps, 20000); i++) sim.tick(); sim.started = false; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
+        obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pad.usePreset(name); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); previewSteps(steps); sim.started = false; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         finish: () => { sim.cars[0].finished = true; sim.cars[0].finishTime = Math.max(1, sim.elapsed); finish(); }
       };
     }

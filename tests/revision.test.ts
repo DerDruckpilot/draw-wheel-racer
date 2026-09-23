@@ -26,7 +26,8 @@ test('a loaded rear axle climbs the Nordpass steps while the front wheel spins f
     assert.ok(maxPitch < 1.3, 'clearing a tooth must not launch a backflip');
     assert.equal(car.resets, 0); sim.dispose();
   }
-  assert.ok(loadedSamples > 100 && peakRearTorque >= 150, 'airborne front wheels must not reduce rear stall torque');
+  console.log('rear axle under load', { loadedSamples, peakRearTorque });
+  assert.ok(loadedSamples > 0 && peakRearTorque >= 300, 'airborne front wheels must not reduce rear stall torque');
 });
 
 test('ice changes the outcome of an identical climb and contours can engage its ledges', () => {

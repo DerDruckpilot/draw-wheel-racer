@@ -3,10 +3,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { groundAt, type Course, type Segment, type Surface } from './courses';
+import { courseRunout, groundAt, type Course, type Segment, type Surface, type Water } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
 import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 import { landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
+import { waterMaterial, WaterSpray } from './water-visuals';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
@@ -104,12 +105,7 @@ export class GameRenderer {
   viewX = 2;
   private resizeObserver: ResizeObserver;
   private env: THREE.WebGLRenderTarget;
-  private splashGeo = new THREE.BufferGeometry();
-  private splashData = new Float32Array(150 * 3);
-  private splashLife = new Float32Array(150);
-  private splashVel = new Float32Array(150 * 3);
-  private splashNext = 0;
-  private dust: THREE.Points;
+  readonly spray: WaterSpray;
   private frames = 0;
   private average = 16;
   private pixelRatio = 1.5;
@@ -129,12 +125,7 @@ export class GameRenderer {
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: .5, far: 80 });
     this.sun.shadow.bias = -.0003; this.sun.shadow.normalBias = .04;
-    this.splashData.fill(-1000);
-    this.splashGeo.setAttribute('position', new THREE.BufferAttribute(this.splashData, 3));
-    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 32;
-    const ctx = canvas.getContext('2d')!; const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16); gradient.addColorStop(0, 'rgba(255,255,255,.7)'); gradient.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gradient; ctx.fillRect(0, 0, 32, 32);
-    this.dust = new THREE.Points(this.splashGeo, new THREE.PointsMaterial({ color: 0xe3e6cf, size: .19, map: new THREE.CanvasTexture(canvas), transparent: true, depthWrite: false, opacity: .55 }));
-    this.dust.frustumCulled = false; this.scene.add(this.dust);
+    this.spray = new WaterSpray(this.scene);
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host); this.resize();
   }
 
@@ -153,7 +144,9 @@ export class GameRenderer {
       new GLTFLoader().loadAsync(`${BASE}assets/boulder.glb`).then(m => { onProgress(++loaded / 8); return m; }),
       new HDRLoader().loadAsync(`${BASE}assets/sky.hdr`).then(t => { onProgress(++loaded / 8); return t; })
     ]);
-    sky.mapping = THREE.EquirectangularReflectionMapping; this.skyTexture = sky;
+    sky.mapping = THREE.EquirectangularReflectionMapping;
+    sky.generateMipmaps = true; sky.minFilter = THREE.LinearMipmapLinearFilter;
+    this.skyTexture = sky;
     this.env.dispose(); const pmrem = new THREE.PMREMGenerator(this.renderer); this.env = pmrem.fromEquirectangular(sky); pmrem.dispose();
     this.scene.environment = this.env.texture; this.scene.environmentIntensity = .55;
     this.cliffMat = new THREE.MeshStandardMaterial({ map: rock, normalMap: normal, roughnessMap: rough, roughness: .94, color: 0xcfa786, normalScale: new THREE.Vector2(1.3, 1.3), side: THREE.DoubleSide });
@@ -183,6 +176,7 @@ export class GameRenderer {
     if (!w || !h) return;
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this.pixelRatio); this.renderer.setSize(w, h, false);
+    this.spray.material.uniforms.pixels.value = h * this.pixelRatio;
   }
 
   setCourse(sim: Simulation) {
@@ -195,6 +189,7 @@ export class GameRenderer {
     });
     for (const m of disposable) { const map = (m as THREE.MeshStandardMaterial).map; if (map && (map as THREE.CanvasTexture).isCanvasTexture) map.dispose(); m.dispose(); }
     this.terrain.clear(); this.rocks = []; this.waters = []; this.beamMeshes = [];
+    this.spray.clear();
     for (const car of this.cars) {
       for (const root of [car.root, ...car.wheels]) { this.disposeObject(root); this.scene.remove(root); }
       if (car.tag) { this.scene.remove(car.tag); car.tag.material.map?.dispose(); car.tag.material.dispose(); }
@@ -208,8 +203,9 @@ export class GameRenderer {
     this.mats.stone.color.set(alpine ? 0xcad5d6 : quarry ? 0xa0a39b : 0xcdb394);
     this.mats.road.color.set(alpine ? 0xe3e8e6 : quarry ? 0xaaaaa0 : 0xd4b891);
     this.cliffMat.color.set(alpine ? 0xa7b5bd : quarry ? 0x9b9e92 : 0xbc8a65);
+    const completeGround = [...course.segments, ...courseRunout(course)];
     for (const surface of ['stone', 'ice', 'mud', 'road'] as Surface[]) {
-      const parts = course.segments.filter(s => s.surface === surface);
+      const parts = completeGround.filter(s => s.surface === surface);
       if (!parts.length) continue;
       const mesh = new THREE.Mesh(terrainGeometry(parts, TRACK_BACK, TRACK_FRONT), this.mats[surface]); mesh.receiveShadow = true; this.terrain.add(mesh);
     }
@@ -221,10 +217,25 @@ export class GameRenderer {
       const bank = new THREE.Mesh(geometry, this.mats.stone); bank.receiveShadow = true; this.terrain.add(bank);
     }
     this.addScenery(course);
-    for (const w of course.waters) this.addWater(w.start, w.end, w.level, alpine);
+    for (const w of course.waters) this.addWater(course, w);
     const metal = new THREE.MeshStandardMaterial({ color: 0x3d4846, roughness: .58, metalness: .6 });
     for (const o of course.obstacles) {
-      if (o.kind === 'beam' || o.kind === 'roller') {
+      if (o.kind === 'boulder') {
+        // The center of each rock has exactly the physical convex outline at
+        // both wheel tracks. Only the exposed sides taper into chipped facets.
+        const shape = o.outline!, positions: number[] = [], indices: number[] = [], uvs: number[] = [];
+        for (const [z, scale] of [[-1.39, .65], [-1.06, 1], [1.06, 1], [1.4, .72]]) for (const p of shape) {
+          positions.push(p.x * scale, p.y * scale, z); uvs.push((o.x + p.x) / 3, (p.y + z) / 3);
+        }
+        for (let band = 0; band < 3; band++) for (let j = 0; j < shape.length; j++) {
+          const a = band * shape.length + j, b = band * shape.length + (j + 1) % shape.length;
+          indices.push(a, b, a + shape.length, b, b + shape.length, a + shape.length);
+        }
+        for (let j = 1; j < shape.length - 1; j++) { indices.push(0, j + 1, j); const k = shape.length * 3; indices.push(k, k + j, k + j + 1); }
+        const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); geometry.setIndex(indices);
+        const faceted = geometry.toNonIndexed(); geometry.dispose(); faceted.computeVertexNormals();
+        const mesh = new THREE.Mesh(faceted, this.cliffMat); mesh.position.set(o.x, o.y, LANES[o.lane!]); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
+      } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < sim.cars.length; i++) {
           const group = new THREE.Group();
           if (o.kind === 'roller') {
@@ -256,7 +267,7 @@ export class GameRenderer {
     }
     for (const car of sim.cars) this.cars.push(this.makeCar(car));
     this.addGate(course.length, 'ZIEL', true);
-    this.viewX = 2; this.camera.position.set(-9, 10.4, 16); this.target.set(6, .5, -3.3); this.camera.lookAt(this.target);
+    this.viewX = 2; this.camera.position.set(-8, 11, 18); this.target.set(4, 0, -.5); this.camera.lookAt(this.target);
   }
 
   addScenery(course: Course) {
@@ -314,18 +325,9 @@ export class GameRenderer {
     mergeRigidGroup(lines); this.terrain.add(lines);
   }
 
-  addWater(start: number, end: number, y: number, alpine: boolean) {
-    const material = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { time: { value: 0 }, colorDeep: { value: new THREE.Color(alpine ? '#235c71' : '#1d6d67') }, colorShallow: { value: new THREE.Color('#a6d6c5') }, eye: { value: this.camera.position }, wakes: { value: Array.from({ length: 4 }, () => new THREE.Vector4(-1000, 0, 0, 0)) } },
-      vertexShader: `varying vec3 vWorld; uniform float time; void main(){vec3 p=position; p.z+=sin(p.x*1.6+time*1.4)*.027+sin(p.y*2.3-time*.9)*.02; vec4 world=modelMatrix*vec4(p,1.); vWorld=world.xyz; gl_Position=projectionMatrix*viewMatrix*world;}`,
-      fragmentShader: `varying vec3 vWorld; uniform float time; uniform vec3 colorDeep; uniform vec3 colorShallow; uniform vec3 eye; uniform vec4 wakes[4];
-      void main(){vec2 p=vWorld.xz; float a=sin(p.x*5.3+p.y*3.8+time*2.); float b=sin(p.x*11.-p.y*7.-time*1.8); vec3 n=normalize(vec3(a*.07+b*.03,1.,cos(p.y*6.+time)*.1)); vec3 v=normalize(eye-vWorld); float fres=pow(1.-max(dot(n,v),0.),3.); vec3 sun=normalize(vec3(-.5,.9,.5)); float shine=pow(max(dot(reflect(-sun,n),v),0.),95.); float glint=pow(max(a*b,0.),8.); vec3 c=mix(colorDeep,colorShallow,fres*.65)+shine*.85+glint*.045; gl_FragColor=vec4(c,.77+fres*.18);
-      float foam=0.; for(int i=0;i<4;i++){vec2 d=p-wakes[i].xy; float trail=(1.-smoothstep(-.4,.5,d.x))*exp(-.24*abs(d.x)-1.8*abs(d.y)); foam+=trail*wakes[i].z*(.5+.5*sin(d.x*8.+time*9.-abs(d.y)*4.));} gl_FragColor.rgb+=foam*vec3(.18,.23,.2);
-      #include <tonemapping_fragment>
-      #include <colorspace_fragment>
-      }`
-    });
+  addWater(course: Course, water: Water) {
+    const { start, end, level: y } = water;
+    const material = waterMaterial(course, water, this.skyTexture, this.camera.position);
     // Water continues into the banks; opaque land occludes it at the natural
     // shoreline, instead of ending in a rectangular cut at the front lane.
     const geo = new THREE.PlaneGeometry(end - start, 60, 32, 20); const mesh = new THREE.Mesh(geo, material);
@@ -396,7 +398,7 @@ export class GameRenderer {
     if (car.id === 0) {
       const c = document.createElement('canvas'); c.width = 128; c.height = 72; const ctx = c.getContext('2d')!;
       ctx.fillStyle = '#d9ef8b'; ctx.beginPath(); ctx.roundRect(18, 4, 92, 43, 20); ctx.fill(); ctx.beginPath(); ctx.moveTo(57, 47); ctx.lineTo(71, 47); ctx.lineTo(64, 59); ctx.fill(); ctx.fillStyle = '#223328'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('DU', 64, 34);
-      const map = new THREE.CanvasTexture(c); map.colorSpace = THREE.SRGBColorSpace; tag = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false })); tag.scale.set(1.22, .68, 1); this.scene.add(tag);
+      const map = new THREE.CanvasTexture(c); map.colorSpace = THREE.SRGBColorSpace; tag = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false, depthWrite: false })); tag.scale.set(1.22, .68, 1); tag.renderOrder = 5; this.scene.add(tag);
     }
     return { root: group, wheels, revision: -1, tag };
   }
@@ -417,7 +419,8 @@ export class GameRenderer {
   }
 
   render(sim: Simulation, dt: number, menu = false) {
-    this.clock += dt; this.frames++;
+    if (sim.started || menu) this.clock += dt;
+    this.frames++;
     this.average = this.average * .98 + dt * 1000 * .02;
     if (this.quality === 'auto' && this.frames % 180 === 0 && this.average > 25 && this.pixelRatio > 1) { this.pixelRatio = Math.max(1, this.pixelRatio - .15); this.resize(); }
     for (const car of sim.cars) {
@@ -428,40 +431,31 @@ export class GameRenderer {
       }
       visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(); w.position.set(wp.x, wp.y, LANES[car.id] + (i < 2 ? .97 : -.97)); w.rotation.z = body.rotation(); });
       if (visual.tag) visual.tag.position.set(p.x, p.y + 1.72, LANES[car.id]);
-      if (sim.started && (car.water ? Math.abs(car.waterThrust) > .4 : Math.abs(car.body.linvel().x) > .4) && this.frames % 3 === 0) {
-        const wp = car.wheels[0].translation(); const j = this.splashNext++ % 150;
-        this.splashLife[j] = .6 + Math.random() * .45;
-        const level = sim.course.waters.find(w => wp.x > w.start && wp.x < w.end)?.level ?? -.1;
-        const strength = Math.min(1, Math.abs(car.waterThrust) / 12);
-        this.splashData[j * 3] = wp.x - .3; this.splashData[j * 3 + 1] = car.water ? level + .03 : wp.y - .7; this.splashData[j * 3 + 2] = LANES[car.id] + 1;
-        this.splashVel[j * 3] = -Math.random() * (car.water ? .5 + strength * 2 : 1.5); this.splashVel[j * 3 + 1] = car.water ? .4 + strength * (1 + Math.random()) : .5; this.splashVel[j * 3 + 2] = Math.random() * .5;
-      }
     }
-    for (let i = 0; i < 150; i++) {
-      if (this.splashLife[i] <= 0) { this.splashData[i * 3 + 1] = -1000; continue; }
-      this.splashLife[i] -= dt; this.splashVel[i * 3 + 1] -= dt * 3;
-      for (let a = 0; a < 3; a++) this.splashData[i * 3 + a] += this.splashVel[i * 3 + a] * dt;
-    }
-    this.splashGeo.attributes.position.needsUpdate = true;
+    this.advanceEffects(sim, dt);
     sim.beams.forEach((b, i) => { const mesh = this.beamMeshes[i]; if (mesh) { mesh.position.y = b.body.translation().y; mesh.rotation.z = b.body.rotation(); } });
     const player = sim.cars[0].body.translation();
     const factor = 1 - Math.exp(-dt * 4);
     this.viewX += (player.x - this.viewX) * factor;
     const y = Math.max(.2, player.y - .6);
-    temp.set(this.viewX - (menu ? 9 : 7.8), y + (menu ? 9.2 : 10.7), menu ? 14.9 : 16.2);
+    temp.set(this.viewX - (menu ? 10 : 9.5), y + (menu ? 10.5 : 10), menu ? 18 : 18.5);
     this.camera.position.lerp(temp, factor);
-    temp.set(this.viewX + (menu ? 4.8 : 4), y + .45, -3.3); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
+    temp.set(this.viewX + (menu ? 1.5 : 1.8), y - .2, -.5); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
     this.sun.position.set(this.viewX - 16, 25, 15); this.sun.target.position.set(this.viewX + 4, 0, -3);
     for (const rock of this.rocks) rock.visible = Math.abs(rock.position.x - this.viewX) < 78;
     for (const water of this.waters) {
       water.uniforms.time.value = this.clock;
       for (const car of sim.cars) {
         const wake = water.uniforms.wakes.value[car.id] as THREE.Vector4;
-        const strength = car.water > .05 ? Math.min(1, Math.abs(car.waterThrust) / 12) : 0;
-        wake.set(car.body.translation().x, LANES[car.id], wake.z + (strength - wake.z) * (1 - Math.exp(-dt * 4)), 0);
+        const p = car.body.translation(), strength = this.spray.strengths[car.id];
+        wake.set(p.x, LANES[car.id], strength, car.body.linvel().x);
       }
     }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  advanceEffects(sim: Simulation, dt: number) {
+    this.spray.update(sim, dt, LANES, sim.cars[0].body.translation().x);
   }
 
   disposeObject(root: THREE.Object3D) {

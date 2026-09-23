@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import sharp from 'sharp';
 
 test('portrait drawing, pause, favorites, water and results', async ({ page }) => {
   const errors: string[] = [];
@@ -17,7 +18,7 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('[data-shape="compact"]')).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Runde Räder', exact: true }).click();
   await page.locator('#settings-button').click();
-  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.3.0');
+  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.4.0');
   await page.locator('#close-modal').click();
   await page.screenshot({ path: '.local/test-home.png' });
   const initial = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
@@ -48,6 +49,8 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   const water = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
   expect(water.player.x).toBeGreaterThan(20);
   expect(water.player.water).toBeGreaterThan(.1);
+  expect(water.spray.count).toBeGreaterThan(100);
+  expect(water.spray.strengths[0]).toBeGreaterThan(.2);
   await page.screenshot({ path: '.local/test-water.png' });
   await page.evaluate(() => (window as any).__FORMDRIVE__.finish());
   await expect(page.locator('#modal-title')).toHaveText(/Starke Form|Im Ziel/);
@@ -55,6 +58,48 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('[data-level]')).toHaveCount(13);
   await page.locator('[data-level="0"]').click();
   expect(errors).toEqual([]);
+});
+
+test('floating drawing controls leave the full world visible at phone sizes and after rotation', async ({ page, browserName }) => {
+  test.skip(browserName !== 'webkit', 'Mobile layout is checked with WebKit; the main flow covers both engines.');
+  await page.addInitScript(() => localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false })));
+  await page.goto('?test=1');
+  await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
+  for (const [width, height] of [[440, 956], [390, 844], [375, 667], [956, 440]]) {
+    const before = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot().render.frame);
+    await page.setViewportSize({ width, height });
+    await expect.poll(() => page.evaluate(() => (window as any).__FORMDRIVE__.snapshot().render.frame), { timeout: 15000 }).toBeGreaterThan(before + 1);
+    const layout = await page.evaluate(() => {
+      const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().toJSON();
+      const field = document.querySelector('.drawing-field')!, background = getComputedStyle(field).backgroundColor;
+      const canvas = rect('#drawing-canvas'), panel = rect('.draw-panel'), stage = rect('#scene'), game = rect('.game');
+      const hit = document.elementFromPoint(canvas.x + canvas.width / 2, canvas.y + canvas.height / 2)?.id;
+      return { canvas, panel, stage, game, background, hit, scroll: document.documentElement.scrollWidth, buttons: [...document.querySelectorAll('.draw-tools button,.presets button')].map(b => b.getBoundingClientRect().toJSON()) };
+    });
+    expect(layout.stage.height).toBe(layout.game.height);
+    expect(layout.canvas.height).toBeGreaterThanOrEqual(125);
+    expect(layout.panel.bottom).toBeLessThanOrEqual(height);
+    expect(layout.panel.x).toBeGreaterThanOrEqual(0);
+    expect(layout.hit).toBe('drawing-canvas');
+    expect(layout.scroll).toBeLessThanOrEqual(width);
+    expect(layout.background).toMatch(/^rgba\(.+, 0\.[12]\d*\)$/);
+    for (const button of layout.buttons) {
+      expect(button.bottom).toBeLessThanOrEqual(height);
+      expect(button.height).toBeGreaterThanOrEqual(40);
+    }
+    // Windows WebKit's screenshot compositor can lose the WebGL layer after
+    // an emulated resize, although the drawing buffer keeps rendering. Check
+    // that buffer directly, then use a fresh document for the visual artifact.
+    const scene = await page.evaluate(() => (window as any).__FORMDRIVE__.sceneImage());
+    const buffer = Buffer.from(scene.split(',')[1], 'base64');
+    const stats = await sharp(buffer).stats();
+    expect(stats.channels.slice(0, 3).some(c => c.stdev > 15)).toBe(true);
+    await sharp(buffer).toFile(`.local/scene-1.4-${width}x${height}.png`);
+    await page.reload();
+    await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
+    await expect.poll(() => page.evaluate(() => (window as any).__FORMDRIVE__?.snapshot().render.frame ?? 0)).toBeGreaterThan(2);
+    await page.screenshot({ path: `.local/layout-1.4-${width}x${height}.png` });
+  }
 });
 
 test('countdown uses elapsed time when rendering has a low frame rate', async ({ page, browserName }) => {

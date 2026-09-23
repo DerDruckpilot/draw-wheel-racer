@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Rennspiel für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.3.0 – kräftigerer Kletterantrieb, spürbares Eis, neun neue Hindernisse und längere Zeichnungen.**
+**Version 1.4.0 – transparente Zeichenfläche, türkisfarbenes Wasser mit Gischt, unregelmäßige Felsen und 2,6-faches maximales Antriebsmoment.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -22,14 +22,18 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 - Freihandräder, sechs Vorlagen einschließlich kleiner Räder und flacher Zacken, Rückgängig und gespeicherte Lieblingsform.
 - 21 Gelände- und Hindernistypen, darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
 - Flache Furten und tiefe Seen: Der Buggy schwimmt, die gezeichneten Räder paddeln.
+- Vollflächige Spielwelt hinter einem schwebenden Zeichenfeld; kompakte Bedienelemente im Hochformat.
+- Wasser mit HDR-Reflexionen, Ufer- und Kielwasserschaum sowie Spritzern aus der tatsächlichen Bewegung der Radkontur.
 - Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
 - Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
 
 Die Physik arbeitet im seitlichen Profil. Wasserkräfte sind angenähert; Schlamm nutzt Widerstand, kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
 
-Version 1.3 erhöht das maximale Achsdrehmoment von 96 auf 160, korrigiert die Leistungsrücknahme beim Klettern und verwendet an steilen Passagen eine langsamere Kletterübersetzung. Eis hat deutlich weniger Haftung; gefrorene Kanten erlauben das geometrische Einhaken passender Konturen. Freihandräder unterstützen bis zu 512 Konturpunkte statt 128 und haben keine separate Linienlängenbegrenzung mehr. Sehr dichte Zeichnungen werden adaptiv vereinfacht, ihre Wassergeometrie wird im Hintergrund vorbereitet. [Änderungen und Messwerte](docs/BALANCING-1.3.md). Das Wasserverfahren aus [Version 1.2](docs/BALANCING-1.2.md) bleibt erhalten.
+Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Einheiten. Eine Lastregelung baut auch beim langsamen Klettern das volle Moment auf. Die Übersetzung berücksichtigt den Höhenhub der gezeichneten Kontur: Ein gerader Strich hebt den Buggy wiederholt an und bewegt ihn vorwärts. Konturen erhalten keinen pauschalen Vortrieb. Neue Felsblöcke besitzen eigene Kollisionsumrisse; Felskanten, Mulden, Rillen und Inseln variieren in Höhe und Abstand. [Änderungen und Messwerte](docs/UPDATE-1.4.md).
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.3.0**. Spielstand und gespeicherte Radform bleiben erhalten.
+Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
+
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.4.0**. Spielstand und gespeicherte Radform bleiben erhalten.
 
 ## Lokal entwickeln
 

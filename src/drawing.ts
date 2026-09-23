@@ -82,17 +82,16 @@ export class DrawingPad {
   render() {
     const ctx = this.ctx, w = this.width, h = this.height;
     ctx.clearRect(0, 0, w, h); if (!w) return;
-    ctx.fillStyle = '#dae0d0';
-    for (let x = w / 2 % 18; x < w; x += 18) for (let y = h / 2 % 18; y < h; y += 18) { ctx.beginPath(); ctx.arc(x, y, .7, 0, Math.PI * 2); ctx.fill(); }
-    ctx.strokeStyle = '#d0d7c5'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.arc(w / 2, h / 2, this.scale * 1.2, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = this.active ? '#ffffff65' : '#ffffff26'; ctx.lineWidth = 1; ctx.setLineDash([2, 6]); ctx.beginPath(); ctx.arc(w / 2, h / 2, this.scale * 1.2, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
     const draw = (points: Point[], color: string, width: number) => {
       if (points.length < 1) return;
       ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = ctx.lineJoin = 'round'; ctx.beginPath();
       points.forEach((p, i) => { const x = w / 2 + p.x * this.scale, y = h / 2 - p.y * this.scale; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
     };
-    draw(this.visibleShape, this.active ? '#c3ccb6' : '#263c2e', this.scale * .19);
-    if (this.active) draw(this.raw, '#263c2e', this.scale * .19);
-    ctx.fillStyle = '#f1f3e8'; ctx.beginPath(); ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#7f926f'; ctx.lineWidth = 1.4; ctx.stroke();
-    if (!this.active) { ctx.fillStyle = '#8a9681'; ctx.font = '10px system-ui'; ctx.textAlign = 'left'; ctx.fillText('ACHSE', w / 2 + 9, h / 2 + 3); }
+    ctx.shadowColor = '#ffffff6b'; ctx.shadowBlur = 2;
+    draw(this.visibleShape, this.active ? '#ffffff48' : '#101615', this.scale * .19);
+    if (this.active) draw(this.raw, '#101615', this.scale * .19);
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = '#ffffffab'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(w / 2, h / 2, 3, 0, Math.PI * 2); ctx.stroke();
   }
 }

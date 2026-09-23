@@ -1,12 +1,12 @@
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle, Water } from './courses';
-import { groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
+import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
 import { clamp, preset, radiusOf, sanitizeShape, shapeLength, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
-export const DRIVE_TORQUE = 160;
+export const DRIVE_TORQUE = 420;
 export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
@@ -14,7 +14,7 @@ export interface Vehicle {
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
   changeCooldown: number; buoyancy: number; drive: number; aiShape: ShapeName;
-  hydro: HydroShape[]; motorTorques: number[]; motorCut: boolean; displacedVolume: number; waterThrust: number; waterDragPower: number;
+  hydro: HydroShape[]; motorTorques: number[]; motorIntegrals: number[]; radialTravel: number; motorCut: boolean; displacedVolume: number; waterThrust: number; waterDragPower: number;
 }
 export interface Beam { body: RAPIER.RigidBody; obstacle: Obstacle; lane: number }
 let initialized: Promise<void> | undefined;
@@ -41,7 +41,10 @@ export class Simulation {
     }
     for (let i = 0; i < carCount; i++) this.cars.push(this.createCar(i));
     for (const o of course.obstacles) {
-      if (o.kind === 'beam' || o.kind === 'roller') {
+      if (o.kind === 'boulder') {
+        const desc = RAPIER.ColliderDesc.convexHull(new Float32Array(o.outline!.flatMap(p => [p.x, p.y])));
+        if (desc) this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(1.15).setCollisionGroups(((32 << o.lane!) << 16) | (2 << o.lane!)));
+      } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < carCount; i++) {
           const pivot = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(o.x, o.y));
           const roller = o.kind === 'roller';
@@ -58,6 +61,10 @@ export class Simulation {
         const desc = o.kind === 'log' ? RAPIER.ColliderDesc.ball(o.width / 2) : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
         this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(.9).setCollisionGroups(0x0001ffff));
       }
+    }
+    for (const s of courseRunout(course)) {
+      this.world.createCollider(RAPIER.ColliderDesc.cuboid((s.b.x - s.a.x) / 2, 6)
+        .setTranslation((s.a.x + s.b.x) / 2, s.a.y - 6).setFriction(surfaceFriction.stone).setCollisionGroups(0x0001ffff));
     }
     // Settle the suspension before the countdown.
     for (let i = 0; i < 90; i++) this.world.step();
@@ -83,7 +90,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -93,6 +100,14 @@ export class Simulation {
     const length = shapeLength(car.shape);
     car.hydro = wheelHydro(car.shape);
     const properties = wheelMassProperties(car.shape);
+    // The support radius of a bar changes much more than that of a circle.
+    // Use its actual lift per turn for gearing; it still has the same stall torque.
+    const supports = Array.from({ length: 48 }, (_, i) => {
+      const a = i * Math.PI / 24;
+      return Math.max(.15, ...car.shape.map(p => p.x * Math.cos(a) + p.y * Math.sin(a) + STROKE_RADIUS));
+    });
+    car.radialTravel = Math.max(...supports) - Math.min(...supports);
+    car.motorIntegrals.fill(0);
     for (const w of car.wheels) {
       const previousOmega = w.angvel();
       const previousInertia = w.principalInertia();
@@ -149,7 +164,7 @@ export class Simulation {
       }
       // Check the full cage and both wheels, including the rear wheel while
       // leaving a low roof. The old chassis-center check grew wheels too early.
-      const shift = Math.min(lift, .65), bodyPos = car.body.translation(), angle = car.body.rotation();
+      const shift = lift, bodyPos = car.body.translation(), angle = car.body.rotation();
       const co = Math.cos(angle), si = Math.sin(angle);
       const cage = { x: bodyPos.x - .05 * co - .6 * si, y: bodyPos.y - .05 * si + .6 * co + shift };
       for (const roof of this.course.obstacles.filter(o => o.kind === 'ceiling')) {
@@ -163,7 +178,7 @@ export class Simulation {
     this.replaceColliders(car);
     if (lift > 0) {
       for (const b of [car.body, ...car.wheels, ...car.carriers]) {
-        const p = b.translation(); b.setTranslation({ x: p.x, y: p.y + Math.min(lift, .65) }, true);
+        const p = b.translation(); b.setTranslation({ x: p.x, y: p.y + lift }, true);
         const v = b.linvel(); b.setLinvel({ x: v.x, y: Math.min(v.y, 0) }, true);
       }
     }
@@ -183,6 +198,7 @@ export class Simulation {
     });
     car.stuck = 0;
     car.motorTorques.fill(0);
+    car.motorIntegrals.fill(0);
     car.motorCut = false;
     if (countReset) car.resets++;
   }
@@ -203,7 +219,9 @@ export class Simulation {
       if (car.id && this.ai) {
         car.aiTimer -= FIXED_DT;
         if (car.aiTimer <= 0) {
-          const ahead = zoneAt(this.course, p.x + 4);
+          // Keep paddling until the rear axle has reached the shallow shore.
+          // Looking ahead alone changed to a smooth ring while still afloat.
+          const ahead = zone?.kind === 'lake' || zone?.kind === 'ford' ? zone : zoneAt(this.course, p.x + 4);
           const shape = suggestedShape(ahead, p.x);
           if (shape !== car.aiShape) { car.desiredShape = preset(shape); car.aiShape = shape; }
           car.aiTimer = .45 + car.id * .12;
@@ -226,12 +244,13 @@ export class Simulation {
       const pitchRate = car.body.angvel();
       // Hysteresis lets gravity lower the nose after an overshoot. A continuous
       // partial throttle instead held it balanced on the rear wheel forever.
-      if (pitch + Math.max(0, pitchRate) * .3 > 1.08) car.motorCut = true;
-      else if (pitch < .82 || pitch < 1 && pitchRate < -.25) car.motorCut = false;
+      const liftTravel = clamp(car.radialTravel, 0, 1);
+      if (pitch + Math.max(0, pitchRate) * (.3 - liftTravel * .15) > 1.08) car.motorCut = true;
+      else if (pitch < .82 - liftTravel * .17) car.motorCut = false;
       const marineControl = clamp((1.05 - pitch - Math.max(0, pitchRate) * .3) / .35, 0, 1);
       const wheelieControl = (car.motorCut ? 0 : 1) * (1 - afloat) + marineControl * afloat;
       const throttle = car.finished ? 0 : car.drive * wheelieControl;
-      const cruiseSpeed = 6.5 - car.id * .18;
+      const cruiseSpeed = (6.5 - car.id * .18) / (1 + car.radialTravel * 1.6 * (1 - afloat));
       // Crawl gearing trades wheel speed for control during an actual climb,
       // while retaining the full stall torque. This prevents launching over a
       // crest after a loaded rear wheel finally gets past its edge.
@@ -242,14 +261,20 @@ export class Simulation {
         // A marine throttle map keeps the already balanced paddle thrust gentle;
         // on land the low gear supplies substantially more peak axle torque.
         const torqueLimit = DRIVE_TORQUE + (96 - DRIVE_TORQUE) * afloat;
-        const gain = (28 - afloat * 10) * gearing;
-        const target = clamp((-speed - rel) * gain, -torqueLimit, 36) * throttle;
+        const error = -speed - rel;
+        // A bounded load integrator supplies full torque even in crawling gear.
+        // Low proportional gain avoids exciting the tiny inertia of a thin line.
+        // Discard stored demand as soon as the axle is released or power is cut.
+        if (error > -.3 || throttle < .05) car.motorIntegrals[index] = 0;
+        else car.motorIntegrals[index] = clamp(car.motorIntegrals[index] + error * 600 * FIXED_DT, -torqueLimit, 0);
+        const gain = (28 - afloat * 10) * Math.min(gearing, 1.6);
+        const target = clamp(error * gain + car.motorIntegrals[index] * (1 - afloat), -torqueLimit, 36) * throttle;
         // Finite torque rise prevents a newly mounted/immersed paddle from
         // delivering a one-frame hammer blow. Reaction torque is conserved.
-        const rise = (600 - afloat * 240) * FIXED_DT;
+        const rise = (12000 - afloat * 11640) * FIXED_DT;
         // Release torque promptly when a tooth clears the edge. Smoothing both
         // directions left stored throttle pushing the chassis into a backflip.
-        const release = (2400 - afloat * 2040) * FIXED_DT;
+        const release = (7200 - afloat * 6840) * FIXED_DT;
         const torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], -rise, release);
         w.addTorque(torque, true);
         car.body.addTorque(-torque, true);
