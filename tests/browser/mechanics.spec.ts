@@ -15,7 +15,7 @@ test('mechanical adventures render in mobile WebKit, expose live tuning, and pre
   await page.screenshot({path:'.local/v19-tuning.png'});await page.locator('#close-tune').click();
   await page.locator('#choose-course').click();await expect(page.locator('[data-level]')).toHaveCount(22);await expect(page.locator('[data-level="20"]')).toContainText('Versorgungsfahrt');await page.locator('#close-modal').click();
   // Apply vehicle load to the actual control apron, then simulate filling.
-  await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.load(16);const plate=a.course().mechanisms.find((m:any)=>m.kind==='plate');a.inspect(plate.x,'round');a.drive(0,1);a.step(1440);});
+  await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.load(16);const plate=a.course().mechanisms.find((m:any)=>m.kind==='plate');a.inspect(plate.x,'round');a.steer(0,-.9);a.drive(0,1);a.step(1440);});
   const lock=await snapshot(page);expect(lock.mechanics.signals.length).toBeGreaterThan(0);expect(lock.mechanics.waterLevels[0]).toBeGreaterThan(-.1);
   await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.inspect(a.course().waters[0].start+13,'paddle');});
   await page.screenshot({path:'.local/v19-lock.png'});

@@ -11,7 +11,7 @@ export interface Segment { a: Point; b: Point; surface: Surface }
 export interface Zone { start: number; end: number; kind: Feature; label: string; feature?: Feature }
 export interface Water { start: number; end: number; level: number; deep: boolean; current?: Point; eddies?: { x:number; radius:number; strength:number }[]; fall?: {x:number;top:number;width:number}; control?:string; targetLevel?:number; drainControl?:string;drainLevel?:number; deform?:boolean }
 export type Structure = 'bridge' | 'arch' | 'cave';
-export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder' | 'platform'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure }
+export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder' | 'platform'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure; lateral?:number; depth?:number }
 export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; muds?: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[]; mechanisms?:MechanismSpec[]; masterRoutes?:MasterRoute[]; freight?:FreightSpec }
 const specs: [string, string, Feature[]][] = [
   ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'washboard']],
@@ -278,6 +278,7 @@ export function createCourse(id: number, expedition = false): Course {
     }
   }
   if(expedition && id===20)c.freight={mass:1.7,name:'Messgeräte'};
+  if(expedition)for(const [i,rock] of c.obstacles.filter(o=>o.kind==='boulder').entries()){rock.lateral??=i%2?.9:-.9;rock.depth??=.9;}
   return c;
 }
 

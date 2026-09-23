@@ -1,6 +1,6 @@
 import { initPhysics, Simulation } from '../src/physics.ts';
 import { EXPEDITION_COUNT, createExpedition, suggestedShape, zoneAt } from '../src/courses.ts';
-import { referenceDrive,cross } from './expedition-driver.ts';
+import { referenceDrive,cross,referenceSteering } from './expedition-driver.ts';
 import {ADVENTURE_FEATURES} from '../src/adventure-courses';
 
 await initPhysics();
@@ -12,6 +12,7 @@ for (const id of ids.length ? ids : Array.from({ length: EXPEDITION_COUNT }, (_,
   let alternateUntil=-Infinity;
   for (let step = 0; step < 120 * (id === 12 ? 1400 : 360) && !car.finished; step++) {
     if (step % 15 === 0) {
+      referenceSteering(sim);
       const p=car.body.translation(),action=referenceDrive(sim.course,p.x,p.y);
       const activeZone=zoneAt(sim.course,p.x);
       if(activeZone?.feature==='stepwell'&&noProgress>8)alternateUntil=activeZone.end+1;

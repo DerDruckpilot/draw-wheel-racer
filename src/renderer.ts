@@ -271,7 +271,7 @@ export class GameRenderer {
         // both wheel tracks. Only the exposed sides taper into chipped facets.
         const shape = o.outline!, positions: number[] = [], indices: number[] = [], uvs: number[] = [];
         for (const [z, scale] of [[-1.39, .65], [-1.06, 1], [1.06, 1], [1.4, .72]]) for (const p of shape) {
-          positions.push(p.x * scale, p.y * scale, z); uvs.push((o.x + p.x) / 3, (p.y + z) / 3);
+          positions.push(p.x * scale, p.y * scale, z*(o.depth?o.depth/2.8:1)); uvs.push((o.x + p.x) / 3, (p.y + z) / 3);
         }
         for (let band = 0; band < 3; band++) for (let j = 0; j < shape.length; j++) {
           const a = band * shape.length + j, b = band * shape.length + (j + 1) % shape.length;
@@ -280,7 +280,7 @@ export class GameRenderer {
         for (let j = 1; j < shape.length - 1; j++) { indices.push(0, j + 1, j); const k = shape.length * 3; indices.push(k, k + j, k + j + 1); }
         const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); geometry.setIndex(indices);
         const faceted = geometry.toNonIndexed(); geometry.dispose(); faceted.computeVertexNormals();
-        const mesh = new THREE.Mesh(faceted, this.cliffMat); mesh.position.set(o.x, o.y, LANES[o.lane!]); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
+        const mesh = new THREE.Mesh(faceted, this.cliffMat); mesh.position.set(o.x, o.y, LANES[o.lane!]+(o.lateral??0)); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < sim.cars.length; i++) {
           const group = new THREE.Group(); group.userData.moving = true;
@@ -541,7 +541,7 @@ export class GameRenderer {
     if (this.quality === 'auto' && this.frames % 180 === 0 && this.average > 25 && this.pixelRatio > 1) { this.pixelRatio = Math.max(1, this.pixelRatio - .15); this.resize(); }
     for (const car of sim.cars) {
       const visual = this.cars[car.id]; if (!visual) continue;
-      const p = car.body.translation(), spatial = this.layout.point(p.x, LANES[car.id]); visual.root.position.set(spatial.x, p.y, spatial.z); visual.root.rotation.set(0, spatial.yaw, car.body.rotation(), 'YXZ');
+      const p = car.body.translation(), spatial = this.layout.point(p.x, LANES[car.id]+car.lateral.offset); visual.root.position.set(spatial.x, p.y, spatial.z); visual.root.rotation.set(0, spatial.yaw-car.lateral.heading, car.body.rotation(), 'YXZ');
       for (let axle = 0; axle < 2; axle++) if (visual.revisions[axle] !== car.axleRevisions[axle]) {
         this.wheelGeometry(visual.wheels[axle], car.shapes[axle]);
         const opposite = visual.wheels[axle + 2]; opposite.clear();
@@ -550,8 +550,8 @@ export class GameRenderer {
         }
         visual.revisions[axle] = car.axleRevisions[axle];
       }
-      visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(), point = this.layout.point(wp.x, LANES[car.id] + (i < 2 ? .97 : -.97)); w.position.set(point.x, wp.y, point.z); w.rotation.set(0, point.yaw, body.rotation(), 'YXZ'); });
-      visual.wheels.forEach((wheel,i)=>{const f=car.flex[i%2],a=f.amount,nx=f.nx,ny=f.ny;for(const child of wheel.children){child.matrixAutoUpdate=false;child.matrix.set(1-a*nx*nx,-a*nx*ny,0,0,-a*nx*ny,1-a*ny*ny,0,0,0,0,1,0,0,0,0,1);}});
+      visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(), point = this.layout.point(wp.x, LANES[car.id]+car.lateral.offset+(wp.x-p.x)*Math.sin(car.lateral.heading) + (i < 2 ? .97 : -.97)); w.position.set(point.x, wp.y, point.z); w.rotation.set(0, point.yaw-car.lateral.heading, body.rotation(), 'YXZ'); });
+      visual.wheels.forEach((wheel,i)=>{const f=car.flex[i%2],a=f.amount,nx=f.nx,ny=f.ny,b=a*.22;for(const child of wheel.children){child.matrixAutoUpdate=false;child.matrix.set(1+b-(a+b)*nx*nx,-(a+b)*nx*ny,0,0,-(a+b)*nx*ny,1+b-(a+b)*ny*ny,0,0,0,0,1,0,0,0,0,1);}});
       if (visual.tag) { visual.tag.visible = sim.cars.length > 1; visual.tag.position.set(spatial.x, p.y + 1.72, spatial.z); }
     }
     this.advanceEffects(sim, dt);
@@ -565,7 +565,7 @@ export class GameRenderer {
     const factor = this.snapNextFrame ? 1 : 1 - Math.exp(-dt * 4); this.snapNextFrame = false;
     this.viewX += (player.x - this.viewX) * factor;
     const y = Math.max(.2, player.y - .6);
-    const cameraPoint = this.layout.point(this.viewX - 3.5, 16), targetPoint = this.layout.point(this.viewX + 3.2, 0);
+    const cameraPoint = this.layout.point(this.viewX - 3.5, 16), targetPoint = this.layout.point(this.viewX + 3.2, sim.cars[0].lateral.offset*.7);
     temp.set(cameraPoint.x, y + 8, cameraPoint.z);
     this.camera.position.lerp(temp, factor);
     temp.set(targetPoint.x, y - 1.15, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
@@ -575,7 +575,7 @@ export class GameRenderer {
     const candidates=this.roofs.filter(r=>Math.abs(player.x-r.x)<r.width/2+1.2);
     let hidden=false;
     if(candidates.length){
-      const at=this.layout.point(player.x,1);temp.set(at.x,player.y+.3,at.z).sub(this.camera.position);
+      const at=this.layout.point(player.x,1+sim.cars[0].lateral.offset);temp.set(at.x,player.y+.3,at.z).sub(this.camera.position);
       this.roofRay.far=Math.max(.1,temp.length()-.4);this.roofRay.set(this.camera.position,temp.normalize());
       hidden=this.roofRay.intersectObjects(candidates.map(r=>r.mesh),false).length>0;
     }
@@ -596,15 +596,15 @@ export class GameRenderer {
       for (const car of sim.cars) {
         const wake = water.uniforms.wakes.value[car.id] as THREE.Vector4;
         const p = car.body.translation(), strength = (water.uniforms.mud.value ? this.mudSpray : this.spray).strengths[car.id];
-        wake.set(p.x, LANES[car.id], strength, car.body.linvel().x);
+        wake.set(p.x, LANES[car.id]+car.lateral.offset, strength, car.body.linvel().x);
       }
     }
     this.renderer.render(this.scene, this.camera);
   }
 
   advanceEffects(sim: Simulation, dt: number) {
-    this.spray.update(sim, dt, LANES, sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
-    this.mudSpray.update(sim, dt, LANES, sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
+    this.spray.update(sim, dt, LANES.map((z,i)=>z+(sim.cars[i]?.lateral.offset??0)), sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
+    this.mudSpray.update(sim, dt, LANES.map((z,i)=>z+(sim.cars[i]?.lateral.offset??0)), sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
   }
 
   playerFraming() {

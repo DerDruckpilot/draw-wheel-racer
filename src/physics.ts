@@ -5,6 +5,7 @@ import { clamp, preset, radiusOf, sanitizeShape, shapeEdges, spokeTips, SPOKE_RA
 import { HULL_HYDRO, MUD_MEDIUM, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 import { roofOutline } from './structures';
 import { Mechanics, prepareSoils, rigidWheel, type FlexState } from './mechanics';
+import { Steering,centeredSteering,type LateralState } from './steering';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
@@ -12,7 +13,7 @@ export const DRIVE_TORQUE = 1200;
 export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
-  flex:FlexState[]; ballast:number; ballastTarget:number;
+  lateral:LateralState; flex:FlexState[]; ballast:number; ballastTarget:number;
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shapes: Point[][]; hydros: HydroShape[][]; radialTravels: number[]; desiredShapes: (Point[] | null)[]; axleRevisions: number[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
@@ -26,6 +27,7 @@ export function initPhysics() { return initialized ??= RAPIER.init(); }
 
 export class Simulation {
   mechanics:Mechanics;
+  steering:Steering;
   world: RAPIER.World;
   cars: Vehicle[] = [];
   beams: Beam[] = [];
@@ -37,6 +39,7 @@ export class Simulation {
     this.world = new RAPIER.World({ x: 0, y: -9.81 });
     this.world.timestep = FIXED_DT;
     this.world.numSolverIterations = 8;
+    this.steering=new Steering(this);
     const soils=prepareSoils(course.segments,course.muds??[]);
     for (const s of course.segments) {
       // A vertical profile edge has no polygon area. Its wall is already the side
@@ -53,7 +56,7 @@ export class Simulation {
     for (const o of course.obstacles) {
       if (o.kind === 'boulder') {
         const desc = RAPIER.ColliderDesc.convexHull(new Float32Array(o.outline!.flatMap(p => [p.x, p.y])));
-        if (desc) this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(1.15).setCollisionGroups(((32 << o.lane!) << 16) | (2 << o.lane!)));
+        if (desc) {const collider=this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(1.15).setCollisionGroups(((32 << o.lane!) << 16) | (2 << o.lane!)));if(o.lateral!==undefined)this.steering.sides.push({collider,z:o.lateral,depth:o.depth??.9,x:o.x,y:o.y,width:o.width,height:o.height});}
       } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < carCount; i++) {
           const pivot = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(o.x, o.y));
@@ -77,6 +80,7 @@ export class Simulation {
         .setTranslation((s.a.x + s.b.x) / 2, s.a.y - 6).setFriction(surfaceFriction.stone).setCollisionGroups(0x0001ffff));
     }
     this.mechanics=new Mechanics(this,soils);
+    this.steering.sync();
     // Settle the suspension before the countdown.
     for (let i = 0; i < 90; i++) this.world.step();
     this.mechanics.capture();
@@ -103,7 +107,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { flex:[rigidWheel(),rigidWheel()],ballast:0,ballastTarget:0,id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, mud: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { lateral:centeredSteering(),flex:[rigidWheel(),rigidWheel()],ballast:0,ballastTarget:0,id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, mud: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -219,6 +223,7 @@ export class Simulation {
       const carrier = car.carriers[i]; carrier.setTranslation({ x: x + AXLES[i], y: y + AXLE_Y }, true); carrier.setRotation(0, true); carrier.setLinvel({ x: 0, y: 0 }, true); carrier.setAngvel(0, true);
     });
     car.stuck = 0;
+    car.lateral.offset=car.lateral.checkpoint;car.lateral.velocity=0;car.lateral.heading=0;this.steering.sync();
     car.lastX = x;
     car.motorTorques.fill(0);
     car.motorIntegrals.fill(0);
@@ -230,6 +235,7 @@ export class Simulation {
   tick() {
     if (!this.started) return;
     this.elapsed += FIXED_DT;
+    this.steering.tick(FIXED_DT);
     this.mechanics.beforeStep();
     let checkpointChanged=false;
     for (const car of this.cars) {
@@ -242,7 +248,7 @@ export class Simulation {
       if (car.id === 0) this.collectCaches(car);
       const cargoAlive=(this.mechanics.cargo?.health??100)>0;
       if (!car.finished && p.x >= this.course.length && cargoAlive) { car.finished = true; car.finishTime = this.elapsed; }
-      for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint && cargoAlive) {car.checkpoint = cp;if(car.id===0)checkpointChanged=true;}
+      for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint && cargoAlive) {car.checkpoint = cp;car.lateral.checkpoint=0;if(car.id===0)checkpointChanged=true;}
       const zone = zoneAt(this.course, p.x);
       if (car.id && this.ai) {
         car.aiTimer -= FIXED_DT;

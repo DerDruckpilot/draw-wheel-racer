@@ -2,6 +2,7 @@ import './style.css';
 import { registerSW } from 'virtual:pwa-register';
 import { createExpedition, expeditionList as courseList, EXPEDITION_COUNT, zoneAt } from './courses';
 import { DriveControls } from './drive-controls';
+import { TiltControls } from './tilt-controls';
 import { expeditionStars, recordExpedition, restoreExpeditions, type ExpeditionRecord } from './expedition';
 import { DrawingPad } from './drawing';
 import { GameAudio } from './audio';
@@ -42,6 +43,7 @@ try {
 } catch { /* Private browsing and corrupt saves get a playable in-memory fallback. */ }
 function persist() { try { localStorage.setItem('formdrive.v1', JSON.stringify(saved)); } catch { toast('Dein Browser kann den Spielstand gerade nicht speichern.'); } }
 
+const axleSlider=(axle:string)=>`<label class="wheel-slider" aria-label="${axle==='rear'?'Hinterachse':'Vorderachse'}"><span aria-hidden="true">◇</span><input id="stiffness-${axle}" type="range" min="0" max="1" step="0.05" value="1" aria-label="Steifigkeit ${axle==='rear'?'Hinterachse':'Vorderachse'}" aria-valuetext="Starr"><span aria-hidden="true">〰</span><output id="stiffness-${axle}-value" hidden>Starr</output></label>`;
 document.querySelector('#app')!.innerHTML = `
 <main class="game" aria-label="FORMDRIVE Physik-Abenteuer">
   <section class="stage" id="stage">
@@ -64,20 +66,19 @@ document.querySelector('#app')!.innerHTML = `
     <div class="loading-bar" id="loading-bar"><span></span></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
     <section class="tune-panel" id="tune-panel" aria-label="Fahrwerk" hidden>
-      <div class="tune-heading"><strong>Fahrwerk</strong><button id="close-tune" aria-label="Fahrwerk schließen">${svg('close')}</button></div>
-      <label for="stiffness-rear">Hinterachse <output id="stiffness-rear-value">Starr</output></label><input id="stiffness-rear" type="range" min="0" max="1" step="0.05" value="1" aria-label="Steifigkeit Hinterachse">
-      <label for="stiffness-front">Vorderachse <output id="stiffness-front-value">Starr</output></label><input id="stiffness-front" type="range" min="0" max="1" step="0.05" value="1" aria-label="Steifigkeit Vorderachse">
+      <div class="tune-heading"><strong>Neigungssteuerung</strong><button id="close-tune" aria-label="Fahrwerk schließen">${svg('close')}</button></div>
+<p class="tilt-copy">Links / rechts kippen: Gewicht verlagern.<br>Vor / zurück kippen: seitlich lenken.</p><button class="sensor-button" id="gyro-enable">Neigung aktivieren</button><div class="sensor-actions"><button id="gyro-calibrate" disabled>Neutralstellung</button><button id="gyro-disable" disabled>Aus</button></div><p id="gyro-status" role="status">Aus · auch mit Touch spielbar</p>
       <label for="ballast">Gewicht <output id="ballast-value">Mitte</output></label><input id="ballast" type="range" min="-1" max="1" step="0.1" value="0" aria-label="Gewicht nach hinten oder vorne verlagern">
-      <div class="tune-ends"><span>← Hinten</span><span>Vorne →</span></div>
+<div class="tune-ends"><span>← Hinten</span><span>Vorne →</span></div><label for="steering">Lenken ohne Sensoren</label><input id="steering" type="range" min="-1" max="1" step="0.05" value="0" aria-label="Seitlich lenken"><div class="tune-ends"><span>In die Tiefe</span><span>Nach vorne</span></div>
     </section>
   </section>
   <section class="cockpit" id="drive-controls" aria-label="Fahren und Räder zeichnen">
     <button class="pedal brake-pedal" data-pedal="brake" aria-label="Bremse und Rückwärtsgang" aria-pressed="false"><i class="pedal-arm"></i><span class="pedal-face"><i></i><i></i><i></i><i></i></span></button>
-    <div class="axle-pads">${['rear', 'front'].map((axle, i) => `<section class="axle-pad" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen">
+    <div class="axle-pads">${axleSlider('rear')}${['rear', 'front'].map((axle, i) => `<section class="axle-pad" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen">
       <div class="axle-toolbar"><button class="mount-button" id="mount-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} montieren" disabled>${svg('check')}</button></div>
       <div class="drawing-field"><canvas id="drawing-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen, mehrere Striche möglich"></canvas></div>
       <div class="draft-tools"><button id="undo-${axle}" aria-label="Letzten Strich ${i ? 'vorne' : 'hinten'} entfernen">${svg('undo')}</button><button id="clear-${axle}" aria-label="Zeichenfläche ${i ? 'vorne' : 'hinten'} leeren">${svg('close')}</button></div>
-    </section>`).join('')}</div>
+    </section>`).join('')}${axleSlider('front')}</div>
     <button class="pedal gas-pedal" data-pedal="gas" aria-label="Gas, nach oben wischen aktiviert den Tempomat" aria-pressed="false"><i class="pedal-arm"></i><span class="pedal-face"><i></i><i></i><i></i><i></i><i></i></span><b class="cruise-light" aria-hidden="true">↟</b></button>
   </section>
 </main>
@@ -126,9 +127,14 @@ const pads = ['rear', 'front'].map((name, axle) => {
 const controls = new DriveControls($('drive-controls'), (drive, brake) => { if (sim) { sim.cars[0].drive = drive; sim.cars[0].brake = brake; } }, () => sim?.cars[0].body.linvel().x ?? 0);
 function toggleTune(open:boolean){$('tune-panel').hidden=!open;$('tune-button').setAttribute('aria-expanded',String(open));}
 $('tune-button').onclick=()=>{if(sim)toggleTune(!!$('tune-panel').hidden);};$('close-tune').onclick=()=>toggleTune(false);
-for(const [i,name] of ['rear','front'].entries())$('stiffness-'+name).oninput=()=>{const v=+$<HTMLInputElement>('stiffness-'+name).value;if(sim)sim.cars[0].flex[i].stiffness=v;$('stiffness-'+name+'-value').textContent=v>.95?'Starr':v<.2?'Weich':Math.round(v*100)+' %';};
+for(const [i,name] of ['rear','front'].entries()){const input=$<HTMLInputElement>('stiffness-'+name);input.oninput=()=>{const v=+input.value;if(sim)sim.cars[0].flex[i].stiffness=v;const label=v>.95?'Starr':v<.2?'Weich':Math.round(v*100)+' %';$('stiffness-'+name+'-value').textContent=label;input.setAttribute('aria-valuetext',label);};input.addEventListener('keydown',e=>e.stopPropagation());}
 $('ballast').oninput=()=>{const v=+$<HTMLInputElement>('ballast').value;if(sim)sim.cars[0].ballastTarget=v;$('ballast-value').textContent=Math.abs(v)<.05?'Mitte':v<0?'Hinten':'Vorne';};
 $('tune-panel').addEventListener('keydown',e=>e.stopPropagation());
+const tilt=new TiltControls(()=>{$('gyro-status').textContent=tilt.status;$<HTMLButtonElement>('gyro-calibrate').disabled=!tilt.active;$<HTMLButtonElement>('gyro-disable').disabled=!tilt.active;$('tune-button').classList.toggle('sensor-active',tilt.active);});
+$('gyro-enable').onclick=()=>{void tilt.enable();};$('gyro-calibrate').onclick=()=>tilt.calibrate();$('gyro-disable').onclick=()=>{tilt.disable();if(sim){sim.cars[0].ballastTarget=0;sim.cars[0].lateral.input=0;}};
+$('steering').oninput=()=>{if(sim)sim.cars[0].lateral.input=+$<HTMLInputElement>('steering').value;};
+function releaseSteering(){$<HTMLInputElement>('steering').value='0';if(sim)sim.cars[0].lateral.input=0;}
+for(const event of ['pointerup','pointercancel','blur'])$('steering').addEventListener(event,releaseSteering);
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const courseNumber = (id: number) => id === 12 ? '∞' : String(id > 12 ? id : id + 1).padStart(2, '0');
@@ -142,7 +148,7 @@ function setState(next: typeof state) {
   $('pause-button').hidden = home || state === 'finished'; $('countdown').hidden = state !== 'countdown';
   $('drive-controls').classList.toggle('not-driving', home || state === 'finished');
   controls.enabled = state === 'racing';
-  if (!controls.enabled) controls.reset();
+  if (!controls.enabled){controls.reset();tilt.suspend();releaseSteering();}else tilt.resume();
   for (const pad of pads) { pad.enabled = state !== 'loading' && state !== 'finished'; if (!pad.enabled) pad.cancel(); else pad.render(); }
   if (sim) sim.started = state === 'racing';
   if(next==='paused'||next==='finished')toggleTune(false);
@@ -209,7 +215,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.9.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.10.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -225,7 +231,7 @@ function showInstall() {
   $('install-done').onclick = closeModal;
 }
 function showHelp() {
-  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Das Ziel ist die Herausforderung. Eine Fahrt ohne Bergung erhält einen zusätzlichen Stern.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten: weiter oben am Pedal gibst du mehr Gas. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Das Häkchen montiert den Entwurf auf der jeweiligen Achse und leert das Feld für die nächste Form. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Experimentiere.</strong> Deine Kontur bestimmt Kontakt, Masse und Verdrängung. Es gibt keine fest vorgegebene Lösung für einen Abschnitt.</li><li><strong>Fahrwerk einstellen.</strong> Über das Fahrwerksymbol kannst du die Steifigkeit beider Achsen einzeln verändern und Gewicht nach vorne oder hinten verlagern. Weiche Räder geben unter Kontaktlast nach. Gas und Bremse verändern auch in der Luft die Neigung.</li><li><strong>Bewege die Welt.</strong> Druckplatten und Gegengewichte betätigst du mit dem Fahrzeug. Wasserstände und Strömungen wirken auf deine Konturen. Morsche Bohlen und dünnes Eis zeigen Schäden, bevor sie nachgeben. Lehm behält eingegrabene Spuren.</li><li><strong>Zusätzliche Ziele.</strong> Goldene Rauten markieren optionale Meisterrouten. Passiere ihre Markierungen der Reihe nach und erreiche das Ziel für eine Auszeichnung. Bei der Versorgungsfahrt muss die empfindliche Ladung heil ankommen. Der Zustand von Mechanismen, Ladung und Boden wird an Lagern gesichert.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
+  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Das Ziel ist die Herausforderung. Eine Fahrt ohne Bergung erhält einen zusätzlichen Stern.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten: weiter oben am Pedal gibst du mehr Gas. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Das Häkchen montiert den Entwurf auf der jeweiligen Achse und leert das Feld für die nächste Form. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Experimentiere.</strong> Deine Kontur bestimmt Kontakt, Masse und Verdrängung. Es gibt keine fest vorgegebene Lösung für einen Abschnitt.</li><li><strong>Fahrwerk einstellen.</strong> Die senkrechten Regler außen neben den Zeichenfeldern ändern die Radsteifigkeit: oben starr, unten weich. Über das Achssymbol aktivierst du die Neigungssensoren. Halte das iPhone bequem und tippe auf Neutralstellung. Rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt seitlich. Ohne Sensoren stehen dort Touchregler bereit. Gas und Bremse verändern auch in der Luft die Neigung.</li><li><strong>Bewege die Welt.</strong> Druckplatten und Gegengewichte betätigst du mit dem Fahrzeug. Wasserstände und Strömungen wirken auf deine Konturen. Morsche Bohlen und dünnes Eis zeigen Schäden, bevor sie nachgeben. Lehm behält eingegrabene Spuren.</li><li><strong>Zusätzliche Ziele.</strong> Goldene Rauten markieren optionale Meisterrouten. Passiere ihre Markierungen der Reihe nach und erreiche das Ziel für eine Auszeichnung. Bei der Versorgungsfahrt muss die empfindliche Ladung heil ankommen. Der Zustand von Mechanismen, Ladung und Boden wird an Lagern gesichert.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, W / S seitlich lenken, Q / E Gewicht verlagern, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
   $('help-done').onclick = closeModal;
 }
 
@@ -254,6 +260,7 @@ $('home-button').onclick = () => { if (state === 'racing' || state === 'countdow
 $('rescue-button').onclick = () => { if (state !== 'racing') return; controls.reset(); sim.resetCar(); accumulator = 0; toast('Zurück am Checkpoint'); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (state === 'racing' || state === 'countdown') showPause(); sound.update(0, false); pads.forEach(pad => pad.cancel()); } accumulator = 0; });
 window.addEventListener('keydown', e => { if (e.code === 'Escape' && !modal.open && state === 'racing') { e.preventDefault(); showPause(); } });
+window.addEventListener('focus',()=>{if(state==='racing')tilt.resume();});
 window.addEventListener('offline', () => toast('Offline unterwegs · dein Spiel läuft weiter.'));
 
 function offlineReady() { $('offline-status').innerHTML = '<i class="ready"></i> OFFLINE BEREIT'; }
@@ -310,6 +317,9 @@ async function boot() {
         }
         if (state === 'racing') {
           controls.update();
+          const motion=tilt.read(now),car=sim.cars[0];
+          car.ballastTarget=controls.weight??motion?.weight??(tilt.active?0:+$<HTMLInputElement>('ballast').value);
+          car.lateral.input=controls.steering??motion?.steer??(tilt.active?0:+$<HTMLInputElement>('steering').value);
           accumulator += dt * (slow ? .45 : 1);
           let steps = 0;
           while (accumulator >= FIXED_DT && steps < 12) { sim.tick(); accumulator -= FIXED_DT; steps++; }
@@ -330,6 +340,7 @@ async function boot() {
         for (let i = 0; i < Math.min(steps, 20000); i++) { sim.tick(); if (i % 12 === 11) renderer.advanceEffects(sim, .1); }
       };
       (window as any).__FORMDRIVE__ = {
+        steer:(input:number,offset?:number)=>{sim.cars[0].lateral.input=clamp(input,-1,1);if(offset!==undefined){sim.cars[0].lateral.offset=clamp(offset,-1.05,1.05);sim.steering.sync();}},
         tuning:(rear:number,front:number,ballast:number)=>{sim.cars[0].flex[0].stiffness=clamp(rear,0,1);sim.cars[0].flex[1].stiffness=clamp(front,0,1);sim.cars[0].ballastTarget=clamp(ballast,-1,1);},
         draft: (axle: number, shape: Point[]) => { pads[axle].draft = shape; pads[axle].render(); },
         framing: () => renderer.playerFraming(),
@@ -338,7 +349,7 @@ async function boot() {
         scenery:()=>({goal:['goal-front','goal-back'].map(n=>{const o=renderer.scene.getObjectByName(n) as any;return o?{name:n,side:o.material.side,rotation:o.rotation.y}:null}),roofs:renderer.roofs.map(r=>({x:r.x,width:r.width,transparent:(r.mesh.material as any).transparent,faces:r.mesh.geometry.index?.count})),theme:sim.course.theme}),
         drive: (value: number, brake = 0) => { sim.cars[0].drive = clamp(value, -1, 1); sim.cars[0].brake = clamp(brake, 0, 1); },
         sceneImage: () => { renderer.render(sim, 0, state === 'home'); return renderer.renderer.domElement.toDataURL('image/png'); },
-        snapshot: () => ({ mechanics:sim.mechanics.snapshot(),tuning:{flex:sim.cars[0].flex,ballast:sim.cars[0].ballast,ballastTarget:sim.cars[0].ballastTarget},state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, drafts: pads.map(pad => pad.draft), player: { mud: sim.cars[0].mud, x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, mudSpray: { count: renderer.mudSpray.activeCount, strengths: [...renderer.mudSpray.strengths] }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        snapshot: () => ({ mechanics:sim.mechanics.snapshot(),tuning:{flex:sim.cars[0].flex,ballast:sim.cars[0].ballast,ballastTarget:sim.cars[0].ballastTarget,lateral:sim.cars[0].lateral,gyro:{active:tilt.active,status:tilt.status,weight:tilt.filter.weight,steer:tilt.filter.steer}},state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, drafts: pads.map(pad => pad.draft), player: { mud: sim.cars[0].mud, x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, mudSpray: { count: renderer.mudSpray.activeCount, strengths: [...renderer.mudSpray.strengths] }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
         water: () => { const lake = sim.course.waters.find(w => w.deep && sim.course.zones.some(z => z.kind === 'lake' && z.start <= w.start && z.end >= w.end)) ?? sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pads.forEach(pad => pad.usePreset('paddle')); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         load: (id: number) => loadLevel(clamp(id, 0, EXPEDITION_COUNT - 1)),

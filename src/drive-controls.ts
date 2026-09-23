@@ -27,11 +27,13 @@ export class DriveControls {
         if (this.pointers.delete((e as PointerEvent).pointerId)) { this.cruise = false; this.publish(); }
       });
     });
-    const bound = ['ArrowRight', 'KeyD', 'ArrowLeft', 'KeyA', 'Space'];
+    const bound = ['ArrowRight', 'KeyD', 'ArrowLeft', 'KeyA', 'Space','KeyW','KeyS','ArrowUp','ArrowDown','KeyQ','KeyE'];
     window.addEventListener('keydown', e => { if (!this.enabled || !bound.includes(e.code)) return; e.preventDefault(); this.cruise = false; this.keys.add(e.code); this.publish(); });
     window.addEventListener('keyup', e => { if (this.keys.delete(e.code)) { e.preventDefault(); this.publish(); } });
     window.addEventListener('blur', () => this.reset());
   }
+  get steering(){return this.keys.has('KeyW')||this.keys.has('ArrowUp')?-1:this.keys.has('KeyS')||this.keys.has('ArrowDown')?1:null;}
+  get weight(){return this.keys.has('KeyQ')?-1:this.keys.has('KeyE')?1:null;}
   update() {
     let changed = false;
     for (const p of this.pointers.values()) if (p.kind === 'brake' && !p.reverse && performance.now() - p.started > 350 && this.speed() < .28) { p.reverse = true; changed = true; }

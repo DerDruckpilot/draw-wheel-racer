@@ -38,14 +38,14 @@ test('current acts on relative fluid velocity; eddies shelter and immersed water
 
 test('vehicle weight latches a pressure plate, raises the real gate, and fills the basin gradually',()=>{
   const sim=new Simulation(isolated('sluice'),1),car=sim.cars[0],plate=sim.mechanics.machines.find(m=>m.spec.kind==='plate')!,gate=sim.mechanics.machines.find(m=>m.spec.kind==='gate')!;
-  car.checkpoint=plate.spec.x;sim.resetCar(0,false);car.brake=1;run(sim,3);
-  assert.ok(plate.activated);const low=sim.course.waters[0].level;assert.ok(low> -2.7 && low<-.5);
+  car.lateral.checkpoint=-.9;car.checkpoint=plate.spec.x;sim.resetCar(0,false);car.brake=1;run(sim,3);
+  assert.ok(sim.mechanics.signals.has(plate.spec.signal!));const low=sim.course.waters[0].level;assert.ok(low> -2.7 && low<-.5);
   run(sim,9);assert.ok(gate.body.translation().y>gate.spec.y+3.5);assert.ok(sim.course.waters[0].level>-.03);finite(sim);sim.dispose();
 });
 
 test('a weighted beam needs load on the opposing arm to unlock its gate',()=>{
   const sim=new Simulation(isolated('countergate'),1),lever=sim.mechanics.machines[0],car=sim.cars[0];run(sim,2);assert.equal(lever.activated,false);
-  car.checkpoint=lever.spec.x+1.6;sim.resetCar(0,false);for(const b of [car.body,...car.wheels,...car.carriers]){const p=b.translation();b.setTranslation({x:p.x,y:p.y+2},true);}car.brake=1;run(sim,4);assert.ok(lever.activated);assert.ok(sim.mechanics.machines[1].body.translation().y>3);sim.dispose();
+  car.lateral.checkpoint=-.9;car.checkpoint=lever.spec.x+1.6;sim.resetCar(0,false);for(const b of [car.body,...car.wheels,...car.carriers]){const p=b.translation();b.setTranslation({x:p.x,y:p.y+2},true);}car.brake=1;run(sim,4);assert.ok(sim.mechanics.signals.has(lever.spec.signal!));assert.ok(sim.mechanics.machines[1].body.translation().y>3);sim.dispose();
 });
 
 test('fragile surfaces warn through accumulating damage, fall under load, and restore at the checkpoint',()=>{
@@ -68,7 +68,7 @@ test('soft wheel strain follows contact load, changes actual colliders, and keep
 
 test('ballast changes the center of mass gradually without changing vehicle mass',()=>{
   const sim=new Simulation(isolated(),1),car=sim.cars[0],mass=car.body.mass(),initial=car.body.localCom().x;
-  car.ballastTarget=1;run(sim,.5);assert.ok(car.ballast>0&&car.ballast<1);run(sim,1);assert.ok(car.body.localCom().x>initial+.4);assert.equal(car.body.mass(),mass);car.ballastTarget=-1;run(sim,3);assert.ok(car.body.localCom().x<initial-.4);sim.dispose();
+  car.ballastTarget=1;run(sim,.2);assert.ok(car.ballast>0&&car.ballast<1);run(sim,1);assert.ok(car.body.localCom().x>initial+.4);assert.equal(car.body.mass(),mass);car.ballastTarget=-1;run(sim,3);assert.ok(car.body.localCom().x<initial-.4);sim.dispose();
 });
 
 test('the lower alternative bypasses master marks; ordered upper-route completion earns a persistent award',()=>{

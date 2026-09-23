@@ -1,3 +1,7 @@
+## Erweiterung 1.10
+
+[UPDATE-1.10.md](UPDATE-1.10.md) beschreibt die Neigungssteuerung, stärkere Radnachgiebigkeit, größere Schwerpunktverlagerung und begrenzte Querbewegung mit seitlich wählbaren Kontakten. Die folgenden Angaben zum unveränderlichen Längsprofil dokumentieren die vorherigen Versionen.
+
 ## Erweiterung 1.9
 
 Der aktuelle Stand umfasst 21 Expeditionen und ein Testgelände mit 57 Hindernistypen. Die neuen Systeme, Prüfungen und ihre physikalischen Vereinfachungen sind in [UPDATE-1.9.md](UPDATE-1.9.md) beschrieben. Die folgenden historischen Angaben zur unverformbaren Bodenphysik beziehen sich auf die bisherigen Lehmfelder; die neuen weichen Felder verformen ihr tatsächliches Kollisionsprofil.

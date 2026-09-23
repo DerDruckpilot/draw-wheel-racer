@@ -28,15 +28,16 @@ export function buildAdventure(f:Feature,c:Course,start:number,line:Line):boolea
     // A dry control apron precedes the basin. The free exit bay is long enough
     // for both axles to leave the roof before the steep, stepped bank begins.
     line(len,pts([[0,0],[10,0],[14,-2.9],[31,-2.9],[35,-1.1],[43,-1.1],[46,-.15],[46.2,.65],[49>len?len:49,final?.65:0],...(final?[[52,.65],[52.2,1.65],[57,1.65],[62,.5],[67,0]]:[])]));
-    if(final)machine('counterweight',6,.18,7,.22,{signal});else machine('plate',6,.09,3.5,.18,{signal});
-    c.waters.push({start:start+10,end:start+46,level:-2.7,deep:true,control:signal,targetLevel:.0,current:{x:0,y:0},...(final?{drainControl:signal+'-outflow',drainLevel:-1.02}:{})});
+    machine('plate',6,.09,3.2,.18,{signal,lateral:-1.85,depth:.7,clears:[signal+'-outflow']});
+    machine('plate',6,.09,3.2,.18,{signal:signal+'-outflow',lateral:1.85,depth:.7,clears:[signal]});
+    c.waters.push({start:start+10,end:start+46,level:-2.7,deep:true,control:signal,targetLevel:.0,current:{x:0,y:0},drainControl:signal+'-outflow',drainLevel:final?-1.02:-2.7});
     roof(26,2.05,9);
-    machine('gate',12,1.8,.28,4,{signal,travel:4.8});
+    machine('gate',12,1.8,.28,4,{signal,travel:4.8,lateral:-2.5,depth:.7});
     if(final){
       // The exit apron has a second load-operated control: draining the basin
       // releases the exit gate. Both controls remain latched until recovery.
-      machine('plate',39,-.99,4,.18,{signal:signal+'-outflow'});
-      machine('gate',43,1.2,.26,4,{signal:signal+'-outflow',travel:4.7});
+      machine('plate',39,-.99,4,.18,{signal:signal+'-outflow',lateral:1.85,depth:.7,clears:[signal]});
+      machine('gate',43,1.2,.26,4,{signal:signal+'-outflow',travel:4.7,lateral:2.5,depth:.7});
       c.obstacles.push({kind:'beam',x:start+55,y:1.75,width:7,height:.23,tilt:.24});
     }
     zone(0,11,'countergate');zone(11,35,'lake');zone(35,44,'ford');zone(44,len,'steps');
@@ -53,13 +54,14 @@ export function buildAdventure(f:Feature,c:Course,start:number,line:Line):boolea
     zone(0,35,'brokenbridge');
     if(f==='thinice')c.waters.push({start:start+5,end:start+29,level:.01,deep:false});
   }else if(f==='countergate'){
-    line(29,pts([[0,0],[29,0]]));machine('counterweight',7,.2,7,.22,{signal:key});machine('gate',16,1.8,.3,3.7,{signal:key,travel:4.3});zone(0,29,'countergate');
+    line(29,pts([[0,0],[29,0]]));machine('counterweight',7,.2,7,.22,{signal:key,lateral:-1.85,depth:.7});machine('gate',16,1.8,.3,3.7,{signal:key,travel:4.3,lateral:1.2,depth:1});
+    c.obstacles.push({kind:'boulder',x:start+16,y:.62,width:1.4,height:1.24,lane:0,lateral:-.95,depth:.8,outline:pts([[-.7,-.62],[.7,-.62],[.62,.28],[.12,.62],[-.55,.38]])});zone(0,29,'countergate');
   }else if(f==='swinggate'){
     line(28,pts([[0,0],[4,0],[8,-.25],[20,-.25],[24,0],[28,0]]));
     machine('swing',12,1.85,.22,2.5);machine('swing',20,1.85,.22,2.5);zone(0,28,'swinggate');
   }else if(f==='loosefield'){
     line(30,pts([[0,0],[4,0],[6,-.4],[22,-.4],[25,0],[30,0]]));
-    for(let j=0;j<5;j++)machine('loose',8+j*3.1,.1+(j%2)*.1,1+(j%3)*.2,1+(j%3)*.2);zone(0,30,'rocks');
+    for(let j=0;j<5;j++)machine('loose',8+j*3.1,.1+(j%2)*.1,1+(j%3)*.2,1+(j%3)*.2,{lateral:j%2?.9:-.9,depth:.8});zone(0,30,'rocks');
   }else if(f==='flexshelf'){
     const p=pts([[0,0],[3,0]]);for(let j=0;j<16;j++)p.push({x:3+j*1.25+.4,y:.15+Math.sin(j*2.3)*.14},{x:3+j*1.25+1.1,y:.35+(j%3)*.13});p.push({x:28,y:0});line(28,p);zone(0,28,'washboard');
   }else if(f==='axlelock'){

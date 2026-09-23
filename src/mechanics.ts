@@ -11,7 +11,8 @@ export const rigidWheel=():FlexState=>({stiffness:1,amount:0,nx:0,ny:1,load:0});
 /** Bounded quasi-static elastic strain along the measured contact normal. */
 export function deformPoint(p:Point,flex:FlexState):Point {
   const d=(p.x*flex.nx+p.y*flex.ny)*flex.amount;
-  return {x:p.x-d*flex.nx,y:p.y-d*flex.ny,...(p.move?{move:true}: {})};
+  const spread=flex.amount*.22,normal=p.x*flex.nx+p.y*flex.ny;
+  return {x:p.x*(1+spread)-(d+spread*normal)*flex.nx,y:p.y*(1+spread)-(d+spread*normal)*flex.ny,...(p.move?{move:true}: {})};
 }
 export interface Machine { spec:MechanismSpec; body:RAPIER.RigidBody; joint?:RAPIER.ImpulseJoint; pivot?:RAPIER.RigidBody; damage:number; broken:boolean; held:number; activated:boolean;hydro?:HydroShape }
 export interface Soil { water:Water; nodes:Point[]; base:number[]; depths:number[]; segments:Segment[]; colliders:RAPIER.Collider[]; version:number }
@@ -62,7 +63,8 @@ export class Mechanics {
     const desc=kind==='loose'?RAPIER.ColliderDesc.ball(spec.width/2):RAPIER.ColliderDesc.cuboid(spec.width/2,spec.height/2);
     desc.setMass(kind==='gate'?9:kind==='counterweight'?4:kind==='loose'?1.5:2).setFriction(kind==='breakice'?.018:.8).setRestitution(.015).setCollisionGroups(kind==='plate'||kind==='counterweight'?0x00200002:0x00210023);
     if(kind==='counterweight')desc.setMassProperties(4,{x:-1.8,y:-.05},15);
-    world.createCollider(desc,body);
+    const collider=world.createCollider(desc,body);
+    if(spec.lateral!==undefined)this.sim.steering.sides.push({collider,z:spec.lateral,depth:spec.depth??1,x:spec.x,y:spec.y,width:spec.width,height:spec.height,tyresOnly:kind==='plate'||kind==='counterweight'});
     const m:Machine={spec,body,damage:0,broken:false,held:0,activated:false};
     if(kind==='breakice'||kind==='fragile'){
       const x=spec.width/2,y=spec.height/2;
@@ -117,8 +119,8 @@ export class Mechanics {
       if(draining||w.control&&this.signals.has(w.control)){const target=draining?w.drainLevel??-1:w.targetLevel??0;w.level+=clamp(target-w.level,-.32*DT,.32*DT);}
     }
     for(const car of this.sim.cars){
-      const delta=clamp(car.ballastTarget-car.ballast,-DT*.8,DT*.8);
-      if(Math.abs(delta)>.00001){car.ballast+=delta;car.body.collider(0).setMassProperties(7.5,{x:.18+car.ballast*.48,y:-.12},6.8);car.body.recomputeMassPropertiesFromColliders();}
+      const delta=clamp(car.ballastTarget-car.ballast,-DT*2.1,DT*2.1);
+      if(Math.abs(delta)>.00001){car.ballast+=delta;car.body.collider(0).setMassProperties(7.5,{x:.18+car.ballast*1.3,y:-.12},6.8);car.body.recomputeMassPropertiesFromColliders();}
     }
   }
   afterStep(){
@@ -130,7 +132,8 @@ export class Mechanics {
         // The ratchet also accepts repeated paddle strokes. Requiring one
         // uninterrupted press made a submerged plate impossible with open rims.
         m.held=pressed?m.held+DT:Math.max(0,m.held-DT*.4);
-        if(m.held>.22&&m.spec.signal){this.signals.add(m.spec.signal);m.activated=true;}
+        if(m.held>.22&&m.spec.signal&&!m.activated){for(const signal of m.spec.clears??[])this.signals.delete(signal);this.signals.add(m.spec.signal);m.activated=true;}
+        if(m.held===0)m.activated=false;
       }else if((kind==='fragile'||kind==='breakice')&&!m.broken){
         const load=this.load(m.body).load;
         m.damage=clamp(m.damage+clamp(load-25,0,180)/(m.spec.strength??60)*DT*.26,0,1);
@@ -158,9 +161,9 @@ export class Mechanics {
       const oldNx=f.nx,oldNy=f.ny;
       const {load,nx,ny}=this.load(w),co=Math.cos(w.rotation()),si=Math.sin(w.rotation());
       if(load>1){f.nx=nx*co+ny*si;f.ny=-nx*si+ny*co;}
-      f.load=f.load*.75+clamp(load,0,160)*.25;
-      const target=(1-f.stiffness)*clamp(f.load/280,0,.25);
-      const old=f.amount;f.amount+=clamp((target-old)*.16,-.018,.012);
+      f.load=f.load*.65+clamp(load,0,180)*.35;
+      const target=Math.pow(1-f.stiffness,1.25)*clamp(f.load/65,0,.62);
+      const old=f.amount;f.amount+=clamp((target-old)*.13,-.016,.009);
       if(Math.abs(f.amount-old)<.0002&&Math.abs(f.nx*f.ny-oldNx*oldNy)+Math.abs(f.nx*f.nx-oldNx*oldNx)<.001)continue;
       const edges=shapeEdges(car.shapes[i]);let idx=1;
       const update=(a:Point,b:Point,r:number)=>{

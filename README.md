@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.9.0 – sechs neue Mechanik-Abenteuer, bewegliche Welt, Fracht und Meisterrouten.**
+**Version 1.10.0 – Neigungssteuerung, seitliches Ausweichen und bewusst wählbare Schleusen.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -16,7 +16,7 @@ Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der
 
 Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
 
-Das Fahrwerksymbol öffnet Regler für die Steifigkeit jeder Achse und die Gewichtsverlagerung. Weiter oben am Gaspedal drücken gibt mehr Gas. [Alle Änderungen und Grenzen der neuen Mechaniken](docs/UPDATE-1.9.md).
+Die senkrechten Regler außen neben den Zeichenfeldern ändern die Radsteifigkeit. Über das Achssymbol aktivierst und kalibrierst du die Neigungssensoren: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt seitlich. Touchregler und Tastatur bleiben verfügbar. Weiter oben am Gaspedal drücken gibt mehr Gas. [Änderungen und physikalische Grenzen](docs/UPDATE-1.10.md).
 
 ## Enthalten
 
@@ -43,7 +43,7 @@ Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Ei
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.9.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.10.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
 
 Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
 

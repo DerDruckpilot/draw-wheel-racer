@@ -54,7 +54,7 @@ export class MechanicsView {
           for(const z of [-1.38,1.38])g.add(box(.08,2,.08,rope,0,s.height/2+1,z));
         }
       }
-      this.place(base,s.x,s.y);this.root.add(base,g);this.machines.push({machine:m,mesh:g,cracks,lamp});
+      const depthScale=s.depth?(s.depth/(s.kind==='plate'||s.kind==='counterweight'?2.45:2.8)):1;g.scale.z=depthScale;base.scale.z=depthScale;this.place(base,s.x,s.y,1+(s.lateral??0));this.root.add(base,g);this.machines.push({machine:m,mesh:g,cracks,lamp});
     }
     for(const soil of sim.mechanics.soils){
       const geo=new THREE.BufferGeometry(),count=soil.segments.length*12;
@@ -92,7 +92,7 @@ void main(){vec2 uv=vec2(v.x*5.,v.y*7.+time*3.4);float n=noise(uv)*.65+noise(uv*
   }
   private place(object:THREE.Object3D,x:number,y:number,z=1,angle=0){const p=this.layout.point(x,z);object.position.set(p.x,y,p.z);object.rotation.set(0,p.yaw,angle,'YXZ');}
   update(time:number){
-    for(const v of this.machines){const p=v.machine.body.translation();this.place(v.mesh,p.x,p.y,1,v.machine.body.rotation());if(v.cracks)(v.cracks.material as THREE.LineBasicMaterial).opacity=Math.min(1,v.machine.damage*1.6);if(v.lamp){const mat=v.lamp.material as THREE.MeshStandardMaterial;mat.color.set(v.machine.activated?0xd9ee8e:0xd1a65e);mat.emissive.set(v.machine.activated?0x4a772a:0x6b3913);}}
+    for(const v of this.machines){const p=v.machine.body.translation();this.place(v.mesh,p.x,p.y,1+(v.machine.spec.lateral??0),v.machine.body.rotation());if(v.cracks)(v.cracks.material as THREE.LineBasicMaterial).opacity=Math.min(1,v.machine.damage*1.6);if(v.lamp){const mat=v.lamp.material as THREE.MeshStandardMaterial;const on=this.sim.mechanics.signals.has(v.machine.spec.signal!);mat.color.set(on?0xd9ee8e:0xd1a65e);mat.emissive.set(on?0x4a772a:0x6b3913);}}
     for(const v of this.soilMeshes)if(v.version!==v.soil.version){
       const a=v.mesh.geometry.attributes.position,u=v.mesh.geometry.attributes.uv;let i=0;
       for(const s of v.soil.segments)for(const [z0,z1] of [[-1.05,1],[1,3.05]]){
@@ -106,8 +106,8 @@ void main(){vec2 uv=vec2(v.x*5.,v.y*7.+time*3.4);float n=noise(uv)*.65+noise(uv*
       for(let i=0;i<fall.data.length/3;i++){const t=(time*.6+i*.071)%1,angle=i*2.4;const x=f.x+Math.cos(angle)*t*.9,z=-.35+Math.sin(angle)*t*1.2,p=this.layout.point(x,z);fall.data[i*3]=p.x;fall.data[i*3+1]=fall.water.level+.05+Math.sin(t*Math.PI)*.6;fall.data[i*3+2]=p.z;}fall.foam.geometry.attributes.position.needsUpdate=true;fall.foam.geometry.computeBoundingSphere();
     }
     const car=this.sim.cars[0],p=car.body.translation(),a=car.body.rotation();
-    if(this.ballast)this.place(this.ballast,p.x+car.ballast*.72*Math.cos(a),p.y+.1+car.ballast*.72*Math.sin(a),1,a);
-    if(this.cargo&&this.sim.mechanics.cargo){const b=this.sim.mechanics.cargo.body,q=b.translation();this.place(this.cargo,q.x,q.y,1,b.rotation());}
+    if(this.ballast)this.place(this.ballast,p.x+car.ballast*1.3*Math.cos(a),p.y+.1+car.ballast*1.3*Math.sin(a),1+car.lateral.offset,a);
+    if(this.cargo&&this.sim.mechanics.cargo){const b=this.sim.mechanics.cargo.body,q=b.translation();this.place(this.cargo,q.x,q.y,1+car.lateral.offset,b.rotation());}
   }
   dispose(){this.root.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.LineSegments||o instanceof THREE.Points)o.geometry.dispose();});this.ownMaterials.forEach(m=>m.dispose());this.root.removeFromParent();}
 }

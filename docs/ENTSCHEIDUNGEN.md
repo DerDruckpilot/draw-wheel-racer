@@ -98,3 +98,7 @@ Geländekanten seitlich unregelmäßig geformt. Details: [UPDATE-1.6.md](UPDATE-
 ## Erweiterung 1.9
 
 Die freigegebenen Ideen werden als sechs zusätzliche Mechanik-Abenteuer umgesetzt. Radsteifigkeit und Gewichtsverlagerung sind während der Fahrt in einem einklappbaren Feld erreichbar. Mechanismen werden durch Fahrzeugkontakt ausgelöst. Es gibt keine zusätzlichen Pflicht-Sammelobjekte, Formvorgaben oder Hindernistipps. Goldene Routenmarkierungen und die Frachtmission besitzen überprüfbare Abschlussbedingungen. Details: [UPDATE-1.9.md](UPDATE-1.9.md).
+
+## 1.10: Neigung und Wegentscheidungen
+
+Aus dem Feedback: Schleusenschalter sind umfahrbar und erlauben entgegengesetzte Pegelentscheidungen; Radsteifigkeit erhält deutlich größere Effekte und dauerhafte senkrechte Regler. Die Neigungssensoren steuern Gewichtsverlagerung und begrenztes seitliches Lenken. Lokale Umfahrungen ergänzen die bisherigen Höhenrouten. Die Grenze zum frei verzweigten 3D-Straßennetz ist in UPDATE-1.10.md ausdrücklich dokumentiert.

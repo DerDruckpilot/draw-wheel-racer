@@ -1,5 +1,6 @@
 import { suggestedShape, zoneAt, type Course } from '../src/courses';
 import { preset, type Point } from '../src/shapes';
+import type { Simulation } from '../src/physics';
 
 // Drawings used ONLY by the offline course verifier. They confer no physics
 // bonus and are not exposed as presets, hints or an autopilot in the game.
@@ -26,4 +27,14 @@ export function referenceDrive(course:Course,x:number,y=Infinity){
   if(feature==='stepwell')key='grip';
   if(feature==='rubblegate'&&z?.kind==='steps'){key='cross';shape=cross;}
   return {key,shape:shape??preset(key as Parameters<typeof preset>[0]),drive:feature==='highroute'&&key==='grip'?1:z?.kind==='ridge'?.5:.8};
+}
+
+// Steer into the optional fill control, then return to the passage. This uses
+// the same bounded steering input as the player, never lateral teleportation.
+export function referenceSteering(sim:Simulation){
+  const car=sim.cars[0],x=car.body.translation().x;
+  const switchAhead=sim.mechanics.machines.find(m=>['plate','counterweight'].includes(m.spec.kind)&&m.spec.lateral!==undefined&&x>m.spec.x-14&&x<m.spec.x+3.5&&(m.spec.lateral<0||sim.course.waters.some(w=>w.drainControl===m.spec.signal&&m.spec.x>w.start+15)));
+  let target=switchAhead?Math.sign(switchAhead.spec.lateral!)*.9:0;
+  if(sim.course.obstacles.some(o=>o.kind==='boulder'&&o.lateral===-.95&&Math.abs(x-o.x)<7)&&!switchAhead)target=.95;
+  car.lateral.input=Math.max(-1,Math.min(1,(target-car.lateral.offset)*4))*Math.sign(car.body.linvel().x||1);
 }
