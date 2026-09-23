@@ -1,3 +1,5 @@
+import { inBand,groundGroup,propGroup,ROUTE_GROUPS,RIDGE_GROUP } from './branching';
+import {waterHeight} from './waves';
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle, Water } from './courses';
 import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
@@ -48,7 +50,8 @@ export class Simulation {
       const pts = new Float32Array([s.a.x, s.a.y, s.b.x, s.b.y, s.b.x, -12, s.a.x, -12]);
       const desc = RAPIER.ColliderDesc.convexHull(pts);
       if (desc) {
-        const collider=this.world.createCollider(desc.setFriction(surfaceFriction[s.surface]).setRestitution(0).setCollisionGroups(0x0001ffff));
+        const collider=this.world.createCollider(desc.setFriction(surfaceFriction[s.surface]).setRestitution(0).setCollisionGroups(s.ridge?(RIDGE_GROUP<<16)|2:(groundGroup(s.channel)<<16)|(s.channel===undefined?0xffff:2|propGroup(s.channel))));
+        if(s.lateral!==undefined)this.steering.sides.push({collider,z:s.lateral,depth:s.depth!,x:(s.a.x+s.b.x)/2,y:(Math.max(s.a.y,s.b.y)-12)/2,width:s.b.x-s.a.x,height:Math.max(s.a.y,s.b.y)+12,support:!s.ridge,fixedCoordinates:true});
         for(const soil of soils){const i=soil.segments.indexOf(s);if(i>=0)soil.colliders[i]=collider;}
       }
     }
@@ -56,7 +59,7 @@ export class Simulation {
     for (const o of course.obstacles) {
       if (o.kind === 'boulder') {
         const desc = RAPIER.ColliderDesc.convexHull(new Float32Array(o.outline!.flatMap(p => [p.x, p.y])));
-        if (desc) {const collider=this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(1.15).setCollisionGroups(((32 << o.lane!) << 16) | (2 << o.lane!)));if(o.lateral!==undefined)this.steering.sides.push({collider,z:o.lateral,depth:o.depth??.9,x:o.x,y:o.y,width:o.width,height:o.height});}
+        if (desc) {const collider=this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(1.15).setCollisionGroups((propGroup(o.channel) << 16) | (2 << o.lane!)));if(o.lateral!==undefined){const lo=Math.min(...o.outline!.map(p=>p.y)),hi=Math.max(...o.outline!.map(p=>p.y));this.steering.sides.push({collider,z:o.lateral,depth:o.depth??.9,x:o.x,y:o.y+(lo+hi)/2,width:o.width,height:hi-lo,fixedCoordinates:true});}}
       } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < carCount; i++) {
           const pivot = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(o.x, o.y));
@@ -65,14 +68,16 @@ export class Simulation {
           const desc = roller ? RAPIER.ColliderDesc.ball(o.width / 2) : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
           // A drum intersects the static floor visually; only the car contacts
           // its circumference. Its fixed bearing allows rotation, not translation.
-          this.world.createCollider(desc.setMass(roller ? 3 : 5).setFriction(1.1).setCollisionGroups(((32 << i) << 16) | (roller ? 0 : 1) | (2 << i)), body);
+          const collider=this.world.createCollider(desc.setMass(roller ? 3 : 5).setFriction(1.1).setCollisionGroups((propGroup(o.channel) << 16) | (roller ? 0 : groundGroup(o.channel)) | (2 << i)), body);
+          if(o.lateral!==undefined)this.steering.sides.push({collider,z:o.lateral,depth:o.depth!,x:o.x,y:o.y,width:o.width,height:o.height});
           const joint = this.world.createImpulseJoint(RAPIER.JointData.revolute({ x: 0, y: 0 }, { x: 0, y: 0 }), pivot, body, true) as RAPIER.RevoluteImpulseJoint;
           if (!roller) joint.setLimits(-(o.tilt ?? .2), o.tilt ?? .2);
           this.beams.push({ body, obstacle: o, lane: i });
         }
       } else {
         const desc = o.kind === 'log' ? RAPIER.ColliderDesc.ball(o.width / 2) : o.structure ? RAPIER.ColliderDesc.convexHull(new Float32Array(roofOutline(o).flatMap(p => [p.x, p.y])))! : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
-        this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(.9).setCollisionGroups(0x0001ffff));
+        const collider=this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(.9).setCollisionGroups(o.channel===undefined&&o.lateral===undefined?0x0001ffff:(propGroup(o.channel)<<16)|2));
+        if(o.lateral!==undefined)this.steering.sides.push({collider,z:o.lateral,depth:o.depth!,x:o.x,y:o.y,width:o.width,height:o.height});
       }
     }
     for (const s of courseRunout(course)) {
@@ -88,7 +93,7 @@ export class Simulation {
 
   createCar(id: number): Vehicle {
     const x = 2 - id * .14;
-    const group = ((2 << id) << 16) | 1 | (32 << id);
+    const group = ((2 << id) << 16) | 1 | (32 << id) | ROUTE_GROUPS;
     const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 1.48).setLinearDamping(.045).setAngularDamping(1.6).setCcdEnabled(true));
     // Low engine/underframe ballast and longitudinal mass distribution.
     this.world.createCollider(RAPIER.ColliderDesc.cuboid(1.15, .27).setMassProperties(7.5, { x: .18, y: -.12 }, 6.8).setFriction(.35).setCollisionGroups(group), body);
@@ -113,7 +118,7 @@ export class Simulation {
   }
 
   replaceColliders(car: Vehicle, changed = [0, 1]) {
-    const group = ((2 << car.id) << 16) | 1 | (32 << car.id);
+    const group = ((2 << car.id) << 16) | 1 | (32 << car.id) | ROUTE_GROUPS;
     car.shape = car.shapes[0];
     for (const [index, w] of car.wheels.entries()) {
       if (!changed.includes(index)) continue;
@@ -180,7 +185,7 @@ export class Simulation {
         const pos = w.translation(), rot = w.rotation(), co = Math.cos(rot), si = Math.sin(rot);
         for (const p of next[i]) {
           const px = pos.x + p.x * co - p.y * si, py = pos.y + p.x * si + p.y * co;
-          lift = Math.max(lift, groundAt(this.course, px) + STROKE_RADIUS + .02 - py);
+          lift = Math.max(lift, groundAt(this.course, px,car.lateral.offset) + STROKE_RADIUS + .02 - py);
         }
       }
       // Check the full cage and both wheels, including the rear wheel while
@@ -188,7 +193,7 @@ export class Simulation {
       const shift = lift, bodyPos = car.body.translation(), angle = car.body.rotation();
       const co = Math.cos(angle), si = Math.sin(angle);
       const cage = { x: bodyPos.x - .05 * co - .6 * si, y: bodyPos.y - .05 * si + .6 * co + shift };
-      for (const roof of this.course.obstacles.filter(o => o.kind === 'ceiling'||o.kind==='platform')) {
+      for (const roof of this.course.obstacles.filter(o => (o.kind === 'ceiling'||o.kind==='platform')&&inBand(o,car.lateral.offset,1))) {
         const overlaps = (x: number, y: number, hx: number, hy: number) =>
           Math.abs(x - roof.x) < hx + roof.width / 2 + .02 && Math.abs(y - roof.y) < hy + roof.height / 2 + .02;
         if (overlaps(cage.x, cage.y, Math.abs(co) * .675 + Math.abs(si) * .415, Math.abs(si) * .675 + Math.abs(co) * .415)) return;
@@ -214,7 +219,7 @@ export class Simulation {
   resetCar(id = 0, countReset = true) {
     const car = this.cars[id];
     const x = car.checkpoint, r = Math.max(...car.shapes.map(radiusOf));
-    const y = Math.max(0, groundAt(this.course, x)) + r - AXLE_Y + .1;
+    const y = Math.max(0, groundAt(this.course, x,car.lateral.checkpoint)) + r - AXLE_Y + .1;
     car.body.setTranslation({ x, y }, true); car.body.setRotation(0, true);
     car.body.setLinvel({ x: 0, y: 0 }, true); car.body.setAngvel(0, true);
     car.wheels.forEach((w, i) => {
@@ -235,6 +240,7 @@ export class Simulation {
   tick() {
     if (!this.started) return;
     this.elapsed += FIXED_DT;
+    for(const w of this.course.waters)w.time=this.elapsed;
     this.steering.tick(FIXED_DT);
     this.mechanics.beforeStep();
     let checkpointChanged=false;
@@ -249,7 +255,7 @@ export class Simulation {
       const cargoAlive=(this.mechanics.cargo?.health??100)>0;
       if (!car.finished && p.x >= this.course.length && cargoAlive) { car.finished = true; car.finishTime = this.elapsed; }
       for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint && cargoAlive) {car.checkpoint = cp;car.lateral.checkpoint=0;if(car.id===0)checkpointChanged=true;}
-      const zone = zoneAt(this.course, p.x);
+      const zone = zoneAt(this.course, p.x,car.lateral.offset);
       if (car.id && this.ai) {
         car.aiTimer -= FIXED_DT;
         if (car.aiTimer <= 0) {
@@ -261,11 +267,11 @@ export class Simulation {
           car.aiTimer = .45 + car.id * .12;
         }
       }
-      const water = this.course.waters.find(w => p.x + 2.7 > w.start && p.x - 2.7 < w.end);
-      car.water = water ? clamp(water.level - (p.y - .65), 0, 1) : 0;
+      const water = this.course.waters.find(w => inBand(w,car.lateral.offset) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
+      car.water = water ? clamp(waterHeight(water,p.x) - (p.y - .65), 0, 1) : 0;
       car.buoyancy = 0; car.displacedVolume = 0; car.waterThrust = 0; car.waterDragPower = 0;
       if (water) this.applyWater(car, water);
-      const mud = this.course.muds?.find(w => p.x + 2.7 > w.start && p.x - 2.7 < w.end);
+      const mud = this.course.muds?.find(w => inBand(w,car.lateral.offset) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
       car.mud = mud ? clamp(mud.level - (p.y - 1.2), 0, 1) : 0;
       if (mud) this.applyWater(car, mud, true);
       // Each axle has its own speed regulator and full stall torque. An airborne

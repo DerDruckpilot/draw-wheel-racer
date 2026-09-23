@@ -1,3 +1,4 @@
+import {assertJoinedGround} from './course-assertions';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initPhysics, Simulation} from '../src/physics.ts';
@@ -22,7 +23,7 @@ test('mud resistance dissipates energy, varies with immersion and never acts abo
 test('deep clay slows smooth tyres significantly and exposed lugs can move material',()=>{
  const results:number[]=[];
  for(const [name,muddy] of [['round',false],['round',true],['paddle',true],['compact',true]] as const){
-  const c=createExpedition(0);c.segments=[{a:{x:-50,y:-.62},b:{x:400,y:-.62},surface:muddy?'mud':'stone'}];c.obstacles=[];c.waters=[];c.zones=[];c.length=300;c.muds=muddy?[{start:-30,end:200,level:-.02,deep:false}]:[];
+  const c=createExpedition(0);c.routes=undefined;c.mechanisms=[];c.masterRoutes=[];c.segments=[{a:{x:-50,y:-.62},b:{x:400,y:-.62},surface:muddy?'mud':'stone'}];c.obstacles=[];c.waters=[];c.zones=[];c.length=300;c.muds=muddy?[{start:-30,end:200,level:-.02,deep:false}]:[];
   const sim=new Simulation(c,1),v=sim.cars[0];sim.requestShape(preset(name));sim.started=true;v.drive=.8;
   for(let i=0;i<120*12;i++)sim.tick();results.push(v.body.translation().x-2);assert.ok(Math.abs(v.body.rotation())<.5);assert.equal(v.resets,0);sim.dispose();
  }
@@ -50,7 +51,7 @@ test('expert routes preserve legacy IDs, retain a varied hazard selection and pr
   const c=createExpedition(id);assert.deepEqual(c,createExpedition(id));assert.ok(c.difficulty>=5);assert.equal(c.caches!.length,0);
   c.features.forEach(f=>found.add(f));
   for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);
-  for(let i=1;i<c.segments.length;i++)assert.deepEqual(c.segments[i].a,c.segments[i-1].b);
+  assertJoinedGround(c);
  }
  for(const f of ['talus','mudpit','squeeze','notch','icefissure','stepwell'])assert.ok(found.has(f));
 });
@@ -59,7 +60,7 @@ test('expert needle-eye requires a change of wheel size; oversized rims cannot p
  const distances:number[]=[];
  for(const name of ['grip','compact'] as const){
   const c=createExpedition(13),roof=c.obstacles.find(o=>o.structure)!;
-  const sim=new Simulation(c,1),v=sim.cars[0];sim.requestShape(preset(name));v.checkpoint=roof.x-4;sim.resetCar(0,false);sim.started=true;v.drive=.7;
+  const sim=new Simulation(c,1),v=sim.cars[0];sim.requestShape(preset(name));v.checkpoint=roof.x-4;v.lateral.checkpoint=roof.lateral??0;sim.resetCar(0,false);sim.started=true;v.drive=.7;
   for(let i=0;i<120*6;i++)sim.tick();distances.push(v.body.translation().x-roof.x);assert.equal(v.resets,0);sim.dispose();
  }
  console.log('needle-eye grip/compact exit',distances);assert.ok(distances[0]<0);assert.ok(distances[1]>3);

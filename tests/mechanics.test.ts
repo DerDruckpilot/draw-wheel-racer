@@ -1,3 +1,4 @@
+import {assertJoinedGround} from './course-assertions';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initPhysics, Simulation } from '../src/physics';
@@ -9,7 +10,7 @@ import { recordExpedition, restoreExpeditions } from '../src/expedition';
 await initPhysics();
 
 export function isolated(feature?:Feature):Course {
-  const c:Course={...createExpedition(0),segments:[{a:{x:-12,y:0},b:{x:12,y:0},surface:'stone'}],obstacles:[],zones:[],waters:[],muds:[],mechanisms:[],masterRoutes:[],checkpoints:[2],length:60};let x=12;
+  const c:Course={...createExpedition(0),routes:undefined,segments:[{a:{x:-12,y:0},b:{x:12,y:0},surface:'stone'}],obstacles:[],zones:[],waters:[],muds:[],mechanisms:[],masterRoutes:[],checkpoints:[2],length:60};let x=12;
   if(feature)buildAdventure(feature,c,x,(len,p,surface='stone')=>{for(let i=1;i<p.length;i++)c.segments.push({a:{x:x+p[i-1].x,y:p[i-1].y},b:{x:x+p[i].x,y:p[i].y},surface});x+=len;});
   c.length=x+12;c.segments.push({a:{x,y:0},b:{x:x+70,y:0},surface:'stone'});return c;
 }
@@ -20,8 +21,8 @@ test('all flooded caves provide an unobstructed remounting bay after the rear ax
   for(let id=0;id<22;id++){
     const c=createExpedition(id);
     for(const z of c.zones.filter(z=>z.kind==='tidalcave')){
-      const roof=c.obstacles.find(o=>o.structure&&o.x>z.start&&o.x<z.end)!;
-      const exit=c.segments.find(s=>s.a.x>roof.x+roof.width/2&&s.b.y-s.a.y>.7)!;
+      const roof=c.obstacles.find(o=>o.channel===z.channel&&o.structure&&o.x>z.start&&o.x<z.end)!;
+      const exit=c.segments.find(s=>s.channel===z.channel&&s.a.x>roof.x+roof.width/2&&s.b.y-s.a.y>.7)!;
       assert.ok(exit.a.x-(roof.x+roof.width/2)>8,`${id}: insufficient exit bay`);
     }
   }
@@ -88,7 +89,7 @@ test('freight is a physical moving load; hard impact causes damage and recovery 
 });
 
 test('six new expeditions cover every new mechanic, keep continuous ground and safe recovery aprons',()=>{
-  const used=new Set<string>();for(let id=16;id<22;id++){const c=createExpedition(id);c.features.forEach(f=>used.add(f));assert.deepEqual(c,createExpedition(id));for(let i=1;i<c.segments.length;i++)assert.deepEqual(c.segments[i].a,c.segments[i-1].b);for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);}
+  const used=new Set<string>();for(let id=16;id<22;id++){const c=createExpedition(id);c.features.forEach(f=>used.add(f));assert.deepEqual(c,createExpedition(id));assertJoinedGround(c);for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);}
   for(const f of ADVENTURE_FEATURES)assert.ok(used.has(f),f);assert.ok(createExpedition(20).freight);assert.ok(createExpedition(21).waters.some(w=>w.control));
 });
 

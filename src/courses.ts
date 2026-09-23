@@ -1,3 +1,4 @@
+import { branchCourse,inBand,type Band,type RouteNetwork } from './branching';
 import { buildChallenge } from './challenges';
 import { adventureSpecs, buildAdventure, ADVENTURE_FEATURES } from './adventure-courses';
 import type { AdventureFeature, FreightSpec, MasterRoute, MechanismSpec } from './mechanics-types';
@@ -7,12 +8,12 @@ export type Feature = AdventureFeature | 'flat' | 'rocks' | 'steps' | 'ramp' | '
   | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb'
   | 'ridge' | 'grotto' | 'floodpass' | 'ravine' | 'talus' | 'mudpit' | 'squeeze' | 'stairfall' | 'icegully' | 'logjam' | 'notch' | 'escarpment' | 'rubblegate' | 'siltclimb' | 'tidalcave' | 'brokenbridge' | 'potholes' | 'crater' | 'icefissure' | 'glacier' | 'stepwell' | 'knifeedge';
 export type Theme = 'canyon' | 'alpine' | 'quarry';
-export interface Segment { a: Point; b: Point; surface: Surface }
-export interface Zone { start: number; end: number; kind: Feature; label: string; feature?: Feature }
-export interface Water { start: number; end: number; level: number; deep: boolean; current?: Point; eddies?: { x:number; radius:number; strength:number }[]; fall?: {x:number;top:number;width:number}; control?:string; targetLevel?:number; drainControl?:string;drainLevel?:number; deform?:boolean }
+export interface Segment extends Band { ridge?:boolean; a: Point; b: Point; surface: Surface }
+export interface Zone extends Band { start: number; end: number; kind: Feature; label: string; feature?: Feature }
+export interface Water extends Band { waves?:{amplitude:number;wavelength:number;period:number;phase:number};time?:number; start: number; end: number; level: number; deep: boolean; current?: Point; eddies?: { x:number; radius:number; strength:number }[]; fall?: {x:number;top:number;width:number}; control?:string; targetLevel?:number; drainControl?:string;drainLevel?:number; deform?:boolean }
 export type Structure = 'bridge' | 'arch' | 'cave';
-export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder' | 'platform'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure; lateral?:number; depth?:number }
-export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; muds?: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[]; mechanisms?:MechanismSpec[]; masterRoutes?:MasterRoute[]; freight?:FreightSpec }
+export interface Obstacle extends Band { deadEnd?:boolean; x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder' | 'platform'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure; lateral?:number; depth?:number }
+export interface Course { routes?:RouteNetwork; id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; muds?: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[]; mechanisms?:MechanismSpec[]; masterRoutes?:MasterRoute[]; freight?:FreightSpec }
 const specs: [string, string, Feature[]][] = [
   ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'washboard']],
   ['Rote Klippen', 'Kanten brauchen Charakter.', ['domes', 'steps', 'ramp', 'trenches', 'gap', 'lake']],
@@ -51,12 +52,13 @@ export const EXPEDITION_COUNT = 22; // Existing IDs and saved achievements stay 
 const labels: Record<Feature, string> = { freightpass:'FRACHTPASSAGE',sluice:'SCHLEUSENWERK',current:'STRÖMUNG',softground:'WEICHER LEHM',fragilepath:'MORSCHER STEG',thinice:'DÜNNES EIS',highroute:'HÖHENLINIE',precisionjump:'FELSSPRUNG',axlelock:'ACHSVERSATZ',countergate:'GEGENGEWICHT',swinggate:'PENDELTOR',loosefield:'LOSE STEINE',flexshelf:'RAUER FELS',waterworks:'WASSERWERK', flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT', talus: 'BLOCKHALDE', mudpit: 'LEHMGRUBE', squeeze: 'NADELÖHR', stairfall: 'BRUCHSTUFEN', icegully: 'EISRINNE', logjam: 'TREIBHOLZ', notch:'FELSSPALT',escarpment:'HOHE FELSWAND',rubblegate:'FELSSCHLEUSE',siltclimb:'LEHMAUSSTIEG',tidalcave:'GEZEITENHÖHLE',brokenbridge:'GEBROCHENER HOLZSTEG',potholes:'AUSWASCHUNGEN',crater:'KRATER',icefissure:'GLETSCHERSPALTEN',glacier:'GLETSCHERBRUCH',stepwell:'WECHSELSTUFEN',knifeedge:'MESSERGRAT' };
 export const surfaceFriction: Record<Surface, number> = { stone: 1.15, road: 1.05, ice: .018, mud: .20, wood: .85 };
 
-export function createCourse(id: number, expedition = false): Course {
+export function createCourse(id: number, expedition = false, override?:Feature[]): Course {
   const test = id === 12;
   const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !ADVENTURE_FEATURES.includes(f as any) && !NEW_FEATURES.includes(f) && !['ridge', 'grotto', 'floodpass', 'ravine', 'talus', 'mudpit', 'squeeze', 'stairfall', 'icegully', 'logjam'].includes(f)).sort((a,b)=>Number(ADVENTURE_FEATURES.includes(a as any))-Number(ADVENTURE_FEATURES.includes(b as any)));
   const spec = test ? ['Testgelände', `Alle ${features.length} Untergründe und Hindernisse.`, features] as [string, string, Feature[]] : expedition && id >= 16 ? adventureSpecs[Math.min(adventureSpecs.length-1,id-16)] : expedition && id >= 13 ? expertSpecs[Math.min(2, id - 13)] : (expedition ? expeditionSpecs : specs)[Math.max(0, Math.min(11, id))];
   const theme: Theme = id === 14 || id === 18 ? 'alpine' : test || id < 4 ? 'canyon' : id < 8 ? 'alpine' : 'quarry';
-  const c: Course = { id, name: spec[0], subtitle: spec[1], features: spec[2], theme, difficulty: id > 12 ? (id === 15 ? 6 : 5) : test ? 1 : id % 4 + 1, segments: [], waters: [], muds: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
+  const selected=override??spec[2];
+  const c: Course = { id, name: spec[0], subtitle: spec[1], features: selected, theme, difficulty: id > 12 ? (id === 15 ? 6 : 5) : test ? 1 : id % 4 + 1, segments: [], waters: [], muds: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
   if (expedition) { c.expedition = true; c.caches = []; }
   let x = -12;
   const line = (length: number, profile: Point[], surface: Surface = 'stone', gaps: number[] = []) => {
@@ -73,8 +75,8 @@ export function createCourse(id: number, expedition = false): Course {
     x += length;
   };
   line(24, [{ x: 0, y: 0 }, { x: 24, y: 0 }], 'road');
-  for (let idx = 0; idx < spec[2].length; idx++) {
-    const f = spec[2][idx];
+  for (let idx = 0; idx < selected.length; idx++) {
+    const f = selected[idx];
     const start = x;
     const zoneCount = c.zones.length;
     let seed = 5371 + id * 8191 + idx * 131;
@@ -293,13 +295,13 @@ export function courseRunout(c: Course): Segment[] {
   ];
 }
 
-export function groundAt(c: Course, x: number): number {
+export function groundAt(c: Course, x: number, lateral=0): number {
   const first = c.segments[0]?.a, last = c.segments.at(-1)?.b;
   if (first && x < first.x && x >= Math.min(-100, first.x - 80)) return first.y;
   if (last && x > last.x && x <= Math.max(c.length + 100, last.x + 80)) return last.y;
   let y = -12;
   for (const s of c.segments) {
-    if (x >= s.a.x - .001 && x <= s.b.x + .001) {
+    if (inBand(s,lateral) && x >= s.a.x - .001 && x <= s.b.x + .001) {
       const t = (x - s.a.x) / Math.max(.001, s.b.x - s.a.x);
       y = Math.max(y, s.a.y + (s.b.y - s.a.y) * t);
     }
@@ -307,7 +309,7 @@ export function groundAt(c: Course, x: number): number {
   return y;
 }
 
-export function zoneAt(c: Course, x: number) { return c.zones.find(z => x >= z.start && x < z.end); }
+export function zoneAt(c: Course, x: number, lateral=0) { return c.zones.find(z => inBand(z,lateral) && x >= z.start && x < z.end); }
 // Opponents use the same geometry and motors as the player. This is only their
 // drawing strategy; contact forces never inspect a preset name or zone label.
 export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
@@ -320,5 +322,5 @@ export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
   return 'round';
 }
 export const courseList = Array.from({ length: 13 }, (_, i) => createCourse(i));
-export const createExpedition = (id: number) => createCourse(id, true);
+export const createExpedition = (id: number) => branchCourse(createCourse(id,true),features=>createCourse(id,true,features));
 export const expeditionList = Array.from({ length: EXPEDITION_COUNT }, (_, i) => createExpedition(i));

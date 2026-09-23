@@ -6,7 +6,7 @@ import { archSection, structureExtent } from './structures';
  * No alpha cutouts, intersecting aprons or uncapped half-meshes. */
 export function structureMesh(course: Course, o: Obstacle) {
   const positions: number[] = [], indices: number[] = [];
-  const nx = 16, nz = 48, extent = structureExtent(o.structure!);
+  const nx = 16, nz = 48, extent = structureExtent(o.structure!,o.channel!==undefined?o.depth:undefined);
   const zs = [...new Set([-extent, -1.35, -.97, 0, .97, 1.35, extent,
     ...Array.from({ length: nz + 1 }, (_, j) => -extent + j * extent * 2 / nz)])].sort((a,b)=>a-b);
   const row = zs.length, plane = (nx + 1) * row;
@@ -14,11 +14,11 @@ export function structureMesh(course: Course, o: Obstacle) {
     const t=i/nx, shoulder=Math.max(0,Math.abs(z)-1.35), fade=Math.min(1,shoulder/2);
     const spread=o.structure==='bridge'?1:Math.max(.18,Math.sqrt(1-Math.min(1,shoulder/(extent-1.35))**2));
     const x=o.x+(t-.5)*o.width*spread+fade*(Math.sin(z*.83+o.x)*.28+Math.sin(z*1.63+t*3)*.13);
-    const base=bankHeight(x,groundAt(course,x),1+z), shape=archSection(o,z,base);
+    const base=course.routes?Math.max(-5,groundAt(course,x,(o.lateral??0)+z)):bankHeight(x,groundAt(course,x),1+z), shape=archSection(o,z,base);
     const crest=o.structure==='bridge'?0:o.structure==='cave'?1.75:.3;
     let y=upper?shape.bottom+(shape.top-shape.bottom)*(1-(o.structure==='bridge'?0:fade*.8)*(1-Math.sin(t*Math.PI)))+Math.sin(t*Math.PI)*crest*Math.max(0,1-shoulder/(extent-1.35)):shape.bottom;
-    if (upper) y+=fade*Math.sin(t*7+z*1.7+o.x)*.12*Math.sin(Math.PI*(z+extent)/(2*extent));
-    positions.push(x,y,1+z);
+    if (upper) y=Math.max(shape.bottom+.08,y+fade*Math.sin(t*7+z*1.7+o.x)*.12*Math.sin(Math.PI*(z+extent)/(2*extent)));
+    positions.push(x,y,1+(o.lateral??0)+z);
   }
   const quad=(a:number,b:number,c:number,d:number)=>indices.push(a,b,c,a,c,d);
   for(let i=0;i<nx;i++)for(let j=0;j<row-1;j++){

@@ -33,7 +33,7 @@ export class MechanicsView {
         const points:number[]=[];for(let j=0;j<5;j++){const x=-s.width*.4+j*s.width*.18;points.push(x,s.height/2+.009,-1.2,x+.17,s.height/2+.01,0,x+.17,s.height/2+.01,0,x-.11,s.height/2+.009,1.2);}
         const mat=new THREE.LineBasicMaterial({color:s.kind==='breakice'?0xebfbff:0x151e19,transparent:true,opacity:0});this.ownMaterials.push(mat);
         const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(points,3));cracks=new THREE.LineSegments(geo,mat);g.add(cracks);
-        if(s.kind==='fragile')for(const z of [-1.2,1.2])base.add(box(.18,Math.max(.3,s.y-groundAt(sim.course,s.x)),.18,wood,0,-Math.max(.3,s.y-groundAt(sim.course,s.x))/2,z));
+        if(s.kind==='fragile')for(const z of [-1.2,1.2])base.add(box(.18,Math.max(.3,s.y-groundAt(sim.course,s.x,s.lateral??0)),.18,wood,0,-Math.max(.3,s.y-groundAt(sim.course,s.x,s.lateral??0))/2,z));
       }else if(s.kind==='plate'||s.kind==='counterweight'){
         g.add(box(s.width,s.height,2.45,s.kind==='plate'?bronze:wood));
         for(const z of [-1.08,1.08])g.add(box(s.width,.04,.09,metal,0,s.height/2+.03,z));
@@ -46,7 +46,7 @@ export class MechanicsView {
       }else{
         g.add(box(s.width,s.height,2.8,wood));
         for(const y of [-s.height*.4,0,s.height*.4])g.add(box(s.width+.02,.1,2.82,metal,0,y));
-        const floor=groundAt(sim.course,s.x),h=s.y+s.height/2-floor+(s.kind==='gate'?(s.travel??4.5):.1);
+        const floor=groundAt(sim.course,s.x,s.lateral??0),h=s.y+s.height/2-floor+(s.kind==='gate'?(s.travel??4.5):.1);
         for(const z of [-1.7,1.7]){base.add(box(.55,h,.55,rock,0,floor-s.y+h/2,z));base.add(box(.7,.25,.7,rock,0,floor-s.y+.1,z));}
         base.add(box(.3,.22,3.9,wood,0,floor-s.y+h));
         if(s.kind==='gate'){
@@ -54,7 +54,7 @@ export class MechanicsView {
           for(const z of [-1.38,1.38])g.add(box(.08,2,.08,rope,0,s.height/2+1,z));
         }
       }
-      const depthScale=s.depth?(s.depth/(s.kind==='plate'||s.kind==='counterweight'?2.45:2.8)):1;g.scale.z=depthScale;base.scale.z=depthScale;this.place(base,s.x,s.y,1+(s.lateral??0));this.root.add(base,g);this.machines.push({machine:m,mesh:g,cracks,lamp});
+      const depthScale=s.depth?(s.depth/(s.kind==='plate'||s.kind==='counterweight'?2.45:s.kind==='fragile'||s.kind==='breakice'?2.6:s.kind==='loose'?s.width:2.8)):1;g.scale.z=depthScale;base.scale.z=depthScale;this.place(base,s.x,s.y,1+(s.lateral??0));this.root.add(base,g);this.machines.push({machine:m,mesh:g,cracks,lamp});
     }
     for(const soil of sim.mechanics.soils){
       const geo=new THREE.BufferGeometry(),count=soil.segments.length*12;
@@ -65,7 +65,7 @@ export class MechanicsView {
     (sim.course.masterRoutes??[]).forEach((route,index)=>route.marks.forEach((mark,j)=>{
       const flag=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:0xe6b65e,roughness:.7});this.ownMaterials.push(mat);
       flag.add(box(.06,1.3,.06,metal,0,-.4,0));const badge=box(.34,.34,.065,mat,0,.22,0);badge.rotation.z=Math.PI/4;flag.add(badge);
-      this.place(flag,mark.x,mark.y,-.7);this.root.add(flag);this.flags.push({mesh:flag,index,mark:j});
+      this.place(flag,mark.x,mark.y,-.7+(route.lateral??0));this.root.add(flag);this.flags.push({mesh:flag,index,mark:j});
     }));
     for(const w of sim.course.waters)if(w.fall){
       const f=w.fall,mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,uniforms:{time:{value:0}},vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec2 v;uniform float time;
@@ -95,7 +95,7 @@ void main(){vec2 uv=vec2(v.x*5.,v.y*7.+time*3.4);float n=noise(uv)*.65+noise(uv*
     for(const v of this.machines){const p=v.machine.body.translation();this.place(v.mesh,p.x,p.y,1+(v.machine.spec.lateral??0),v.machine.body.rotation());if(v.cracks)(v.cracks.material as THREE.LineBasicMaterial).opacity=Math.min(1,v.machine.damage*1.6);if(v.lamp){const mat=v.lamp.material as THREE.MeshStandardMaterial;const on=this.sim.mechanics.signals.has(v.machine.spec.signal!);mat.color.set(on?0xd9ee8e:0xd1a65e);mat.emissive.set(on?0x4a772a:0x6b3913);}}
     for(const v of this.soilMeshes)if(v.version!==v.soil.version){
       const a=v.mesh.geometry.attributes.position,u=v.mesh.geometry.attributes.uv;let i=0;
-      for(const s of v.soil.segments)for(const [z0,z1] of [[-1.05,1],[1,3.05]]){
+      for(const s of v.soil.segments)for(const [z0,z1] of [[1+(v.soil.water.lateral??0)-(v.soil.water.depth??4.1)/2,1+(v.soil.water.lateral??0)],[1+(v.soil.water.lateral??0),1+(v.soil.water.lateral??0)+(v.soil.water.depth??4.1)/2]]){
         for(const [p,z] of [[s.a,z0],[s.b,z0],[s.a,z1],[s.b,z0],[s.b,z1],[s.a,z1]] as const){const pos=this.layout.point(p.x,z);a.setXYZ(i,pos.x,p.y,pos.z);u.setXY(i++,p.x/5,z/5);}
       }
       a.needsUpdate=true;u.needsUpdate=true;v.mesh.geometry.computeVertexNormals();v.mesh.geometry.computeBoundingSphere();v.version=v.soil.version;

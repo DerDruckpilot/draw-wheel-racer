@@ -1,3 +1,4 @@
+import {inBand,groundGroup,propGroup,ROUTE_GROUPS} from './branching';
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Simulation, Vehicle } from './physics';
 import type { MechanismSpec } from './mechanics-types';
@@ -27,10 +28,10 @@ export function prepareSoils(segments:Segment[],waters:Water[]):Soil[] {
   for(const water of waters.filter(w=>w.deform)){
     const out:Segment[]=[],nodes:Point[]=[],parts:Segment[]=[];
     for(const s of segments){
-      if(s.b.x<=water.start || s.a.x>=water.end || s.surface!=='mud'){out.push(s);continue;}
+      if(s.b.x<=water.start || s.a.x>=water.end || s.surface!=='mud'||s.channel!==water.channel){out.push(s);continue;}
       const count=Math.max(1,Math.ceil((s.b.x-s.a.x)/.65));
       let a=nodes.at(-1);if(!a||Math.abs(a.x-s.a.x)>.001){a={...s.a};nodes.push(a);}
-      for(let i=1;i<=count;i++){const b={x:s.a.x+(s.b.x-s.a.x)*i/count,y:s.a.y+(s.b.y-s.a.y)*i/count};const part={a,b,surface:s.surface};out.push(part);parts.push(part);nodes.push(b);a=b;}
+      for(let i=1;i<=count;i++){const b={x:s.a.x+(s.b.x-s.a.x)*i/count,y:s.a.y+(s.b.y-s.a.y)*i/count};const part={...s,a,b};out.push(part);parts.push(part);nodes.push(b);a=b;}
     }
     segments.splice(0,segments.length,...out);
     soils.push({water,nodes,base:nodes.map(n=>n.y),depths:nodes.map(()=>0),segments:parts,colliders:[],version:0});
@@ -51,7 +52,7 @@ export class Mechanics {
     if(sim.course.freight){
       const car=sim.cars[0],p=car.body.translation();
       const body=sim.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(p.x-.3,p.y+1.04).setCcdEnabled(true).setAngularDamping(.3));
-      sim.world.createCollider(RAPIER.ColliderDesc.roundCuboid(.43,.29,.045).setMass(sim.course.freight.mass).setFriction(.7).setCollisionGroups(0x00020021),body);
+      sim.world.createCollider(RAPIER.ColliderDesc.roundCuboid(.43,.29,.045).setMass(sim.course.freight.mass).setFriction(.7).setCollisionGroups(0x00020021|ROUTE_GROUPS),body);
       const jd=RAPIER.JointData.prismatic({x:-.3,y:1.04},{x:0,y:0},{x:1,y:0});jd.limitsEnabled=true;jd.limits=[-.32,.32];
       const j=sim.world.createImpulseJoint(jd,car.body,body,true) as RAPIER.PrismaticImpulseJoint;j.setContactsEnabled(false);j.configureMotorModel(RAPIER.MotorModel.ForceBased);j.configureMotorPosition(0,95,12);
       this.cargo={body,health:100,lastVelocity:{x:0,y:0},lastOmega:0};
@@ -61,7 +62,11 @@ export class Mechanics {
     const world=this.sim.world,kind=spec.kind;
     const body=world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(spec.x,spec.y).setCcdEnabled(true).setAngularDamping(.4));
     const desc=kind==='loose'?RAPIER.ColliderDesc.ball(spec.width/2):RAPIER.ColliderDesc.cuboid(spec.width/2,spec.height/2);
-    desc.setMass(kind==='gate'?9:kind==='counterweight'?4:kind==='loose'?1.5:2).setFriction(kind==='breakice'?.018:.8).setRestitution(.015).setCollisionGroups(kind==='plate'||kind==='counterweight'?0x00200002:0x00210023);
+    const control=kind==='plate'||kind==='counterweight';
+    // Recessed controls move into their socket. They must neither strike the
+    // terrain underneath nor the adjacent control at the same longitudinal x.
+    const groups=spec.channel!==undefined?(propGroup(spec.channel)<<16)|(control?2:3|groundGroup(spec.channel)|propGroup(spec.channel)):control?0x00200002:0x00210023;
+    desc.setMass(kind==='gate'?9:kind==='counterweight'?4:kind==='loose'?1.5:2).setFriction(kind==='breakice'?.018:.8).setRestitution(.015).setCollisionGroups(groups);
     if(kind==='counterweight')desc.setMassProperties(4,{x:-1.8,y:-.05},15);
     const collider=world.createCollider(desc,body);
     if(spec.lateral!==undefined)this.sim.steering.sides.push({collider,z:spec.lateral,depth:spec.depth??1,x:spec.x,y:spec.y,width:spec.width,height:spec.height,tyresOnly:kind==='plate'||kind==='counterweight'});
@@ -106,7 +111,7 @@ export class Mechanics {
     for(const m of this.machines){
       if(m.hydro){
         m.body.resetForces(true);m.body.resetTorques(true);
-        const b=m.body,p=b.translation(),w=this.sim.course.waters.find(w=>p.x>w.start&&p.x<w.end);
+        const b=m.body,p=b.translation(),w=this.sim.course.waters.find(w=>inBand(w,m.spec.lateral??0)&&p.x>w.start&&p.x<w.end);
         if(w){const f=waterForces(m.hydro,{position:p,center:b.worldCom(),angle:b.rotation(),velocity:b.linvel(),omega:b.angvel(),invMass:b.invMass(),invInertia:b.invPrincipalInertia()},w,DT);b.addForce({x:f.x,y:f.y},true);b.addTorque(f.torque,true);}
       }
       if(m.spec.kind==='gate'){
@@ -144,7 +149,7 @@ export class Mechanics {
     const p=this.sim.cars[0].body.translation();
     (this.sim.course.masterRoutes??[]).forEach((r,i)=>{
       const mark=r.marks[this.routeProgress[i]];
-      if(mark&&Math.hypot(p.x-mark.x,p.y-mark.y)<mark.radius&&Math.abs(this.sim.cars[0].body.linvel().y)<3.8)this.routeProgress[i]++;
+      if((r.lateral===undefined||Math.abs(this.sim.cars[0].lateral.offset-r.lateral)<2)&&mark&&Math.hypot(p.x-mark.x,p.y-mark.y)<mark.radius&&Math.abs(this.sim.cars[0].body.linvel().y)<3.8)this.routeProgress[i]++;
     });
     if(this.cargo){
       const c=this.cargo,v=c.body.linvel(),omega=this.sim.cars[0].body.angvel();
@@ -177,6 +182,7 @@ export class Mechanics {
   }
   private deformSoil(car:Vehicle){
     for(const soil of this.soils){
+      if(!inBand(soil.water,car.lateral.offset))continue;
       let dirty=false;
       for(const w of car.wheels){
         const p=w.translation();if(p.x<soil.water.start-1||p.x>soil.water.end+1)continue;

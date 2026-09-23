@@ -1,3 +1,4 @@
+import {assertJoinedGround} from './course-assertions';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createExpedition,EXPEDITION_COUNT,groundAt,NEW_FEATURES,type Course} from '../src/courses';
@@ -9,7 +10,7 @@ import {cross,hooks} from '../scripts/expedition-driver';
 await initPhysics();
 
 function challenge(feature:Parameters<typeof buildChallenge>[0]):Course {
- const c=createExpedition(0);c.zones=[];c.obstacles=[];c.waters=[];c.muds=[];c.checkpoints=[2];
+ const c=createExpedition(0);c.routes=undefined;c.mechanisms=[];c.masterRoutes=[];c.zones=[];c.obstacles=[];c.waters=[];c.muds=[];c.checkpoints=[2];
  c.segments=[{a:{x:-12,y:0},b:{x:12,y:0},surface:'stone'}];let x=12;
  buildChallenge(feature,c,12,(len,p,surface='stone')=>{for(let i=1;i<p.length;i++)c.segments.push({a:{x:x+p[i-1].x,y:p[i-1].y},b:{x:x+p[i].x,y:p[i].y},surface});x+=len;});
  c.length=x;c.segments.push({a:{x,y:0},b:{x:x+40,y:0},surface:'stone'});return c;
@@ -40,7 +41,7 @@ test('frozen ground belongs to winter expeditions and old collectible clutter is
   assert.ok(c.features.length>=6);if(id<16)assert.ok(c.features.some(f=>['notch','rubblegate','squeeze'].includes(f)));
   if(c.segments.some(s=>s.surface==='ice'))assert.equal(c.theme,'alpine');
   for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);
-  for(let i=1;i<c.segments.length;i++)assert.ok(Math.abs(c.segments[i].a.x-c.segments[i-1].b.x)<1e-7);
+  assertJoinedGround(c);
  }
  const used=new Set(Array.from({length:EXPEDITION_COUNT},(_,id)=>createExpedition(id)).filter(c=>c.id!==12).flatMap(c=>c.features));
  assert.equal(NEW_FEATURES.length,12);for(const f of NEW_FEATURES)assert.ok(used.has(f));

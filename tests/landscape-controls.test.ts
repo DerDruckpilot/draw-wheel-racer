@@ -1,3 +1,4 @@
+import {assertJoinedGround} from './course-assertions';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initPhysics, Simulation, DRIVE_TORQUE} from '../src/physics.ts';
@@ -44,9 +45,9 @@ test('a stalled axle receives full low-gear torque even with the body pitched st
 
 test('expedition jump gaps have continuous physical walls and a deep rocky floor',()=>{
   const c=createExpedition(12),gap=c.zones.find(z=>z.kind==='gap')!;
-  for(let i=1;i<c.segments.length;i++)assert.deepEqual(c.segments[i].a,c.segments[i-1].b);
-  assert.ok(groundAt(c,gap.start+11)<-3);assert.ok(groundAt(c,gap.start+11)>-7);
-  assert.ok(groundAt(c,gap.start+10)>1);
+  assertJoinedGround(c);
+  assert.ok(groundAt(c,gap.start+11,gap.lateral)<-3);assert.ok(groundAt(c,gap.start+11)>-7);
+  assert.ok(groundAt(c,gap.start+10,gap.lateral)>1);
 });
 
 test('natural ledges remain exact at wheel contacts and have slanted, uneven exposed edges',()=>{

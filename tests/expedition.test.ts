@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createExpedition, groundAt, type Course } from '../src/courses.ts';
+import { createExpedition, createCourse, groundAt, type Course } from '../src/courses.ts';
 import { initPhysics, Simulation } from '../src/physics.ts';
 import { recordExpedition, restoreExpeditions, expeditionStars } from '../src/expedition.ts';
 import { preset } from '../src/shapes.ts';
@@ -8,7 +8,7 @@ import { RouteLayout } from '../src/route-layout.ts';
 import { archSection, archBands, roofOutline } from '../src/structures.ts';
 
 await initPhysics();
-const flat = (ice = false) => ({ ...createExpedition(0), obstacles: [], waters: [], zones: [], caches: [], checkpoints: [2], length: 400, segments: [{ a: { x: -100, y: 0 }, b: { x: 500, y: 0 }, surface: ice ? 'ice' as const : 'stone' as const }] });
+const flat = (ice = false) => ({ ...createExpedition(0),routes:undefined, obstacles: [], waters: [], zones: [], caches: [], checkpoints: [2], length: 400, segments: [{ a: { x: -100, y: 0 }, b: { x: 500, y: 0 }, surface: ice ? 'ice' as const : 'stone' as const }] });
 const run = (sim: Simulation, seconds: number) => { sim.started = true; for (let i = 0; i < seconds * 120; i++) sim.tick(); };
 
 test('expeditions wait for a pedal, support controlled speed and real reverse', () => {
@@ -69,7 +69,7 @@ test('all expeditions are deterministic without automatic collectibles and with 
 });
 
 test('large circles cannot drive through the elevated grotto, compact contours can', () => {
-  const c = createExpedition(2), zone = c.zones.find(z => z.kind === 'tunnel')!;
+  const c = createCourse(2,true), zone = c.zones.find(z => z.kind === 'tunnel')!;
   const results: number[] = [];
   for (const small of [false, true]) {
     const sim = new Simulation(c, 1), car = sim.cars[0];

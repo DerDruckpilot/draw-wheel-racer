@@ -9,9 +9,9 @@ test('sealed passages, winter world and readable goal signs survive repeated mob
  for(const id of [0,3,4,7,13,14,15]){
   const c=await page.evaluate(id=>{const a=(window as any).__FORMDRIVE__;a.load(id);return a.course();},id);
   expect(c.caches).toEqual([]);
-  for(const roof of c.obstacles.filter((o:any)=>o.structure)){
+  for(const roof of c.obstacles.filter((o:any,i:number,all:any[])=>o.structure&&!all.slice(0,i).some(p=>p.structure===o.structure))){
    types.add(roof.structure);
-   await page.evaluate(x=>(window as any).__FORMDRIVE__.inspect(x),roof.x-5);
+   await page.evaluate((o:any)=>(window as any).__FORMDRIVE__.inspect(o.x-5,'compact',o.lateral),roof);
    const scenery=await page.evaluate(()=>(window as any).__FORMDRIVE__.scenery());
    for(const r of scenery.roofs){expect(r.transparent).toBe(false);expect(r.faces).toBeGreaterThan(1000);}
    await page.screenshot({path:`.local/v18-${id}-${roof.structure}-entry.png`});
@@ -22,7 +22,7 @@ test('sealed passages, winter world and readable goal signs survive repeated mob
   await page.screenshot({path:`.local/v18-${id}-goal.png`});
  }
  expect([...types].sort()).toEqual(['arch','bridge','cave']);
- await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.load(4);const c=a.course();a.inspect(c.zones[1].start+8,'grip');});
+ await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.load(4);const c=a.course();const z=c.zones.find((z:any)=>z.kind==='ice'||z.kind==='iceclimb');a.inspect(z.start+8,'grip',z.lateral);});
  await page.screenshot({path:'.local/v18-winter-ice.png'});
  await page.evaluate(()=>(window as any).__FORMDRIVE__.finish());
  await expect(page.locator('.mission-results li')).toHaveCount(2);await expect(page.locator('#modal')).not.toContainText('Fundstück');

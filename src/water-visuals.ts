@@ -1,19 +1,24 @@
+import {inBand} from './branching';
+import {waterHeight} from './waves';
 import * as THREE from 'three';
 import { groundAt, type Course, type Water } from './courses';
 import { TRACK_BACK, TRACK_FRONT } from './landscape';
 import { splashActivity } from './splash-activity';
 import type { Simulation } from './physics';
 
+const waveShader=`uniform vec4 swell;uniform vec2 bounds;
+float surfaceWave(float x){float d=x-bounds.x,t=time;float fade=smoothstep(0.,4.,d)*smoothstep(0.,4.,bounds.y-x);return swell.x*fade*(sin(swell.y*d+swell.z*t+swell.w)+.28*sin(1.73*swell.y*d-1.31*swell.z*t+swell.w*.7));}`;
 export function waterMaterial(course: Course, water: Water, sky: THREE.Texture | null, eye: THREE.Vector3, mud = false) {
   // A small bathymetry map colors shallows and locates foam at the bank. The
   // collision profile remains authoritative; the shader doesn't move the waterline.
-  const width = 256, height = 96, data = new Uint8Array(width * height * 4);
-  const depths = Array.from({ length: width }, (_, i) => groundAt(course, water.start + i / (width - 1) * (water.end - water.start)));
+  const z0=water.lateral===undefined?-33.9:1+water.lateral-(water.depth!+1.4)/2,z1=water.lateral===undefined?26.1:1+water.lateral+(water.depth!+1.4)/2;
+  const width = 256, height = 48, data = new Uint8Array(width * height * 4);
+  const depths = Array.from({ length: width }, (_, i) => groundAt(course, water.start + i / (width - 1) * (water.end - water.start),water.lateral??0));
   for (let j = 0; j < height; j++) for (let i = 0; i < width; i++) {
-    const x = water.start + i / (width - 1) * (water.end - water.start), z = -33.9 + j / (height - 1) * 60;
+    const x = water.start + i / (width - 1) * (water.end - water.start), z = z0 + j / (height - 1) * (z1-z0);
     const d = Math.max(0, z - TRACK_FRONT, TRACK_BACK - z), t = Math.min(1, d / 10), blend = t * t * (3 - 2 * t);
     const land = .45 + Math.sin(x * .081 + z * .06) * .18 + Math.cos(x * .17 - z * .09) * .12;
-    const bottom = depths[i] * (1 - blend) + land * blend;
+    const bottom = course.routes?groundAt(course,x,z-1):depths[i] * (1 - blend) + land * blend;
     const depth = Math.max(0, Math.min(1, (water.level - bottom) / 5));
     const n = (j * width + i) * 4; data[n] = data[n + 1] = data[n + 2] = Math.round(depth * 255); data[n + 3] = 255;
   }
@@ -23,20 +28,22 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
     uniforms: {
       time: { value: 0 }, mud: { value: mud ? 1 : 0 }, rate: { value: mud ? .12 : 1 }, eye: { value: eye }, sky: { value: sky }, bathymetry: { value: depthMap },
-      bounds: { value: new THREE.Vector2(water.start, water.end) },
+      bounds: { value: new THREE.Vector2(water.start, water.end) },zBounds:{value:new THREE.Vector2(z0,z1)},swell:{value:water.waves?new THREE.Vector4(water.waves.amplitude,2*Math.PI/water.waves.wavelength,2*Math.PI/water.waves.period,water.waves.phase):new THREE.Vector4()},
       flow:{value:water.current?.x??0},levelDelta:{value:0},rutMap:{value:rutMap},
       colorDeep: { value: new THREE.Color(course.theme === 'alpine' ? '#075268' : '#015a60') },
       colorShallow: { value: new THREE.Color('#218a85') },
       wakes: { value: Array.from({ length: 4 }, () => new THREE.Vector4(-1000, 0, 0, 0)) }
     },
     vertexShader: `varying vec3 vWorld; varying vec2 vTrackUv; uniform float time; uniform float rate;
+    ${waveShader}
     void main() {
       vec4 world = modelMatrix * vec4(position, 1.);
-      world.y += .016*sin(world.x*.9+world.z*1.4+time*rate*1.3)+.012*sin(world.x*2.4-world.z*.7-time*rate*1.6);
+      world.y += surfaceWave(mix(bounds.x,bounds.y,uv.x))+.016*sin(world.x*.9+world.z*1.4+time*rate*1.3)+.012*sin(world.x*2.4-world.z*.7-time*rate*1.6);
       vTrackUv=uv; vWorld = world.xyz; gl_Position = projectionMatrix * viewMatrix * world;
     }`,
     fragmentShader: `varying vec3 vWorld; varying vec2 vTrackUv; uniform float time; uniform float rate; uniform vec3 eye;
-    uniform float mud; uniform sampler2D sky; uniform sampler2D bathymetry; uniform vec2 bounds;
+    uniform float mud; uniform sampler2D sky; uniform sampler2D bathymetry; uniform vec2 zBounds;
+    ${waveShader}
     uniform float flow; uniform float levelDelta; uniform sampler2D rutMap;
     uniform vec3 colorDeep; uniform vec3 colorShallow; uniform vec4 wakes[4];
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
@@ -45,13 +52,13 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
     void main(){
       // Unbent route coordinates keep bathymetry, banks and wakes aligned while
       // the world-space position is used for the eye and sky reflection.
-      vec2 p=vec2(mix(bounds.x,bounds.y,vTrackUv.x),-33.9+(1.-vTrackUv.y)*60.);vec2 moving=p-vec2(flow*time,0.); float h=waves(moving), e=.08;
-      vec3 n=normalize(vec3((h-waves(moving+vec2(e,0)))*.75, e, (h-waves(moving+vec2(0,e)))*.75));
+      vec2 p=vec2(mix(bounds.x,bounds.y,vTrackUv.x),mix(zBounds.x,zBounds.y,1.-vTrackUv.y));vec2 moving=p-vec2(flow*time,0.); float h=waves(moving), e=.08;
+      vec3 n=normalize(vec3((h-waves(moving+vec2(e,0)))*.75+surfaceWave(p.x)-surfaceWave(p.x+e), e, (h-waves(moving+vec2(0,e)))*.75));
       vec3 v=normalize(eye-vWorld), reflected=reflect(-v,n);
       vec2 env=vec2(atan(reflected.z,reflected.x)*.159154943+.5,asin(clamp(reflected.y,-1.,1.))*.318309886+.5);
       vec3 reflection=texture2D(sky,env,3.5).rgb; reflection=reflection/(1.+max(reflection.r,max(reflection.g,reflection.b)))*1.4;
       float fresnel=.035+.965*pow(1.-max(dot(n,v),0.),5.);
-      float depth=max(0.,texture2D(bathymetry,vec2((p.x-bounds.x)/(bounds.y-bounds.x),(p.y+33.9)/60.)).r*5.+levelDelta);
+      float depth=max(0.,texture2D(bathymetry,vec2((p.x-bounds.x)/(bounds.y-bounds.x),(p.y-zBounds.x)/(zBounds.y-zBounds.x))).r*5.+levelDelta);
       vec3 water=mix(colorShallow,colorDeep,smoothstep(.1,2.8,depth))*(1.1+h*.17);
       // Wide, broken highlights from the sky and a soft sun lobe, never a sine checkerboard.
       vec3 halfSun=normalize(v+normalize(vec3(-.5,.9,.5)));
@@ -59,7 +66,7 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
       float glitter=smoothstep(.82,.94,noise(p*.6+vec2(time*rate*.1,-time*rate*.08)))*smoothstep(.5,.67,h);
       vec3 color=mix(water,reflection,clamp(fresnel*.9+.035,0.,.8))+vec3(spec*.35+glitter*.32);
       float shore=(1.-smoothstep(.03,.3,depth))*smoothstep(0.,.05,depth);
-      float foam=shore*(.18+.5*noise(p*6.-time*rate*.2));
+      float foam=shore*(.18+.5*noise(p*6.-time*rate*.2))+smoothstep(.45,.88,surfaceWave(p.x)/max(.01,swell.x))*.45*noise(p*5.-time);
       for(int i=0;i<4;i++){
         vec2 d=p-wakes[i].xy; float strength=wakes[i].z;
         float behind=1.-smoothstep(-.6,1.3,d.x);
@@ -159,7 +166,7 @@ export class WaterSpray {
     for (const car of sim.cars) {
       let total = 0;
       if (Math.abs(car.body.translation().x - viewX) < 28) for (const [axle, wheel] of car.wheels.entries()) {
-        const p = wheel.translation(), water = (this.mud ? sim.course.muds ?? [] : sim.course.waters).find(w => p.x + 1.3 > w.start && p.x - 1.3 < w.end);
+        const p = wheel.translation(), water = (this.mud ? sim.course.muds ?? [] : sim.course.waters).find(w => inBand(w,car.lateral.offset) && p.x + 1.3 > w.start && p.x - 1.3 < w.end);
         if (!water) continue;
         const activity = splashActivity(car.hydros[axle], { position: p, center: wheel.worldCom(), angle: wheel.rotation(), velocity: wheel.linvel(), omega: wheel.angvel() }, water);
         const strength = Math.min(1.7, Math.sqrt(activity.energy) * .23); total += strength;
@@ -169,13 +176,13 @@ export class WaterSpray {
           while (this.credit[slot] >= 1) {
             this.credit[slot]--; const i = this.next++ % CAPACITY, k = i * 3, mist = !this.mud && Math.random() > .65;
             this.positions[k] = activity.x + (Math.random() - .5) * .25;
-            this.positions[k + 1] = water.level + .055;
+            this.positions[k + 1] = waterHeight(water,activity.x) + .055;
             this.positions[k + 2] = lanes[car.id] + (side ? -.97 : .97) + (Math.random() - .5) * .16;
             this.velocity[k] = activity.vx * (this.mud ? .23 : .5) - Math.random() * strength * .7;
             const launch = Math.min(4.5, .5 + Math.hypot(activity.vx, activity.vy) * .55 + strength);
             this.velocity[k + 1] = launch * (.65 + Math.random() * .35) * (this.mud ? .65 : 1);
             this.velocity[k + 2] = (side ? -1 : 1) * (.25 + Math.random() * strength * 1.2);
-            this.level[i] = water.level; this.foam[i] = 0;
+            this.level[i] = waterHeight(water,activity.x); this.foam[i] = 0;
             this.size[i] = mist ? .15 + Math.random() * .12 : (this.mud ? .08 : .025) + Math.random() * .055;
             this.life[i] = this.duration[i] = .5 + Math.random() * .8;
             this.opacity[i] = this.baseOpacity[i] = mist ? .28 : .85;

@@ -1,5 +1,7 @@
 ## Erweiterung 1.10
 
+Aktueller Stand: [Version 1.11 – verzweigte Profile, breite Fahrbahn und physische Wellen](UPDATE-1.11.md). Die historischen Abschnitte unten beschreiben die Entwicklungsschritte.
+
 [UPDATE-1.10.md](UPDATE-1.10.md) beschreibt die Neigungssteuerung, stärkere Radnachgiebigkeit, größere Schwerpunktverlagerung und begrenzte Querbewegung mit seitlich wählbaren Kontakten. Die folgenden Angaben zum unveränderlichen Längsprofil dokumentieren die vorherigen Versionen.
 
 ## Erweiterung 1.9

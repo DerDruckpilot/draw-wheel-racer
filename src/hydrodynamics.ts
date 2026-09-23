@@ -1,3 +1,4 @@
+import {waterHeight,waveVelocity} from './waves';
 import polygonClipping, { type Polygon, type Pair } from 'polygon-clipping';
 import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 import type { Water } from './courses';
@@ -110,7 +111,7 @@ function clip(points: Point[], value: (p: Point) => number): Point[] {
 export function submergedArea(rings: Point[][], water: Water) {
   let twiceArea = 0, momentX = 0, momentY = 0;
   for (const ring of rings) {
-    let wet = clip(ring, p => water.level - p.y);
+    let wet = clip(ring, p => waterHeight(water,p.x) - p.y);
     wet = clip(wet, p => p.x - water.start);
     wet = clip(wet, p => water.end - p.x);
     if (wet.length < 3) continue;
@@ -130,11 +131,11 @@ export function submergedArea(rings: Point[][], water: Water) {
 
 export interface FluidMedium { density: number; viscosity: number; yieldStress: number; shear: number; pressure: number }
 export const MUD_MEDIUM: FluidMedium = { density: 23, viscosity: 38, yieldStress: 28, shear: 8, pressure: 2.2 };
-export function fluidVelocity(water:Water,x:number):Point {
+export function fluidVelocity(water:Water,x:number,y=water.level):Point {
   let shelter=1;
   for(const e of water.eddies??[])shelter*=1-e.strength*Math.exp(-(((x-e.x)/e.radius)**2));
   const down=water.fall?-1.5*Math.exp(-(((x-water.fall.x)/water.fall.width)**2)):0;
-  return {x:(water.current?.x??0)*shelter,y:(water.current?.y??0)+down};
+  const orbit=waveVelocity(water,x,y);return {x:(water.current?.x??0)*shelter+orbit.x,y:(water.current?.y??0)+down+orbit.y};
 }
 // Regularized yield stress and viscous shear act on the actual wet contour.
 // No preset-dependent boost: a paddle pushes clay through its exposed faces.
@@ -142,7 +143,8 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
   const density = medium?.density ?? WATER_DENSITY;
   const result: WaterForces = { x: 0, y: 0, torque: 0, volume: 0, buoyancy: 0, dragX: 0, dragY: 0, dragTorque: 0, dragPower: 0 };
   const co = Math.cos(pose.angle), si = Math.sin(pose.angle);
-  const rings = shape.rings.map(r => r.map(p => ({ x: pose.position.x + p.x * co - p.y * si, y: pose.position.y + p.x * si + p.y * co })));
+  const detailed=water.waves?shape.rings.map(r=>r.flatMap((a,i)=>{const b=r[(i+1)%r.length],n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/.28));return Array.from({length:n},(_,j)=>({x:a.x+(b.x-a.x)*j/n,y:a.y+(b.y-a.y)*j/n}));})):shape.rings;
+  const rings = detailed.map(r => r.map(p => ({ x: pose.position.x + p.x * co - p.y * si, y: pose.position.y + p.x * si + p.y * co })));
   const wet = submergedArea(rings, water);
   result.volume = wet.area * shape.width;
   result.buoyancy = result.volume * density * GRAVITY;
@@ -157,7 +159,7 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
     let lo = 0, hi = 1;
     // Clip the original exposed edge; the artificial waterline is never a face
     // that can propel a wheel. Wet length varies continuously on water entry.
-    for (const [v0, v1] of [[water.level - a.y, water.level - b.y], [a.x - water.start, b.x - water.start], [water.end - a.x, water.end - b.x]]) {
+    for (const [v0, v1] of [[waterHeight(water,a.x) - a.y, waterHeight(water,b.x) - b.y], [a.x - water.start, b.x - water.start], [water.end - a.x, water.end - b.x]]) {
       if (v0 < 0 && v1 < 0) { hi = -1; break; }
       if ((v0 >= 0) !== (v1 >= 0)) {
         const t = v0 / (v0 - v1);
@@ -168,7 +170,7 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
     const tx = dx / length, ty = dy / length, nx = ty, ny = -tx;
     const cd = shape.dragX * nx * nx + shape.dragY * ny * ny;
     const linear = shape.linearX * nx * nx + shape.linearY * ny * ny;
-    const current=fluidVelocity(water,(a.x+b.x)/2);
+    const current=fluidVelocity(water,(a.x+b.x)/2,(a.y+b.y)/2);
     const normalAtStart = (pose.velocity.x - current.x - pose.omega * (a.y - pose.center.y)) * nx + (pose.velocity.y - current.y + pose.omega * (a.x - pose.center.x)) * ny;
     const zero = normalAtStart / (pose.omega * length);
     const intervals = zero > lo && zero < hi ? [lo, zero, hi] : [lo, hi];

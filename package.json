@@ -1,13 +1,13 @@
 {
   "name": "formdrive",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "tsx --test tests/physics.test.ts tests/hydrodynamics.test.ts tests/revision.test.ts tests/presentation-physics.test.ts tests/expedition.test.ts tests/landscape-controls.test.ts tests/solo-update.test.ts tests/world-revision.test.ts tests/mechanics.test.ts tests/steering-tilt.test.ts",
+    "test": "tsx --test tests/physics.test.ts tests/hydrodynamics.test.ts tests/revision.test.ts tests/presentation-physics.test.ts tests/expedition.test.ts tests/landscape-controls.test.ts tests/solo-update.test.ts tests/world-revision.test.ts tests/mechanics.test.ts tests/steering-tilt.test.ts tests/branching.test.ts",
     "test:courses": "tsx scripts/check-courses.ts",
     "test:races": "tsx scripts/check-races.ts",
     "test:browser": "playwright test",

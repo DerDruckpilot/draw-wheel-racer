@@ -7,7 +7,7 @@ import {buildAdventure} from '../src/adventure-courses';
 import {preset} from '../src/shapes';
 await initPhysics();
 function track(feature?:'sluice'|'countergate'):Course{
-  const c:Course={...createExpedition(0),segments:[{a:{x:-20,y:0},b:{x:12,y:0},surface:'stone'}],obstacles:[],zones:[],waters:[],muds:[],mechanisms:[],masterRoutes:[],checkpoints:[2],length:80};let x=12;
+  const c:Course={...createExpedition(0),routes:undefined,segments:[{a:{x:-20,y:0},b:{x:12,y:0},surface:'stone'}],obstacles:[],zones:[],waters:[],muds:[],mechanisms:[],masterRoutes:[],checkpoints:[2],length:80};let x=12;
   if(feature)buildAdventure(feature,c,x,(len,p,surface='stone')=>{for(let i=1;i<p.length;i++)c.segments.push({a:{x:x+p[i-1].x,y:p[i-1].y},b:{x:x+p[i].x,y:p[i].y},surface});x+=len;});
   c.length=x+45;c.segments.push({a:{x,y:0},b:{x:x+90,y:0},surface:'stone'});return c;
 }
