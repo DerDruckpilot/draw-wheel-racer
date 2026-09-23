@@ -10,7 +10,7 @@ export default defineConfig({
       id: '/draw-wheel-racer/', name: 'FORMDRIVE — Zeichne deinen Weg', short_name: 'FORMDRIVE',
       description: 'Ein Physik-Abenteuer. Zeichne deine Räder. Bezwinge Fels, Eis und Wasser.',
       lang: 'de', theme_color: '#18201e', background_color: '#18201e',
-      display: 'standalone', orientation: 'portrait', start_url: '/draw-wheel-racer/', scope: '/draw-wheel-racer/',
+      display: 'standalone', orientation: 'landscape', start_url: '/draw-wheel-racer/', scope: '/draw-wheel-racer/',
       icons: [
         { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },

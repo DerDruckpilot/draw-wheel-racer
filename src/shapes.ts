@@ -1,4 +1,5 @@
-export type Point = { x: number; y: number };
+// move marks the start of another stroke: never join it to the previous point.
+export type Point = { x: number; y: number; move?: true };
 export const STROKE_RADIUS = 0.095;
 export const MAX_RADIUS = 1.2;
 export const MAX_SHAPE_POINTS = 512;
@@ -44,6 +45,18 @@ export function resample(input: Point[], count: number): Point[] {
 
 export function sanitizeShape(raw: Point[]): Point[] | null {
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_INPUT_POINTS) return null;
+  if (raw.some(p => p?.move)) {
+    if (raw.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y))) return null;
+    const strokes = splitStrokes(raw).filter(s => s.length > 1);
+    if (strokes.length > MAX_SHAPE_POINTS / 2) return null;
+    const total = strokes.reduce((n, s) => n + s.length, 0);
+    const result = strokes.flatMap((s, i) => {
+      const normalized = s.map(p => { const r = Math.hypot(p.x, p.y), k = r > MAX_RADIUS + 1e-10 ? MAX_RADIUS / r : 1; return { x: p.x * k, y: p.y * k }; });
+      const budget = total <= MAX_SHAPE_POINTS ? s.length : 2 + Math.floor((MAX_SHAPE_POINTS - strokes.length * 2) * s.length / total);
+      return simplifyStroke(normalized, SHAPE_TOLERANCE, budget).map((p, j) => i && !j ? { ...p, move: true as const } : p);
+    });
+    return shapeLength(result) >= .35 ? result : null;
+  }
   const filtered: Point[] = [];
   for (const p of raw) {
     if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
@@ -113,7 +126,7 @@ export function simplifyStroke(points: Point[], tolerance: number, budget = MAX_
 
 export function shapeLength(points: Point[]) {
   let length = 0;
-  for (let i = 1; i < points.length; i++) length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+  for (const [a, b] of shapeEdges(points)) length += Math.hypot(b.x - a.x, b.y - a.y);
   return length;
 }
 
@@ -124,18 +137,28 @@ export function restoreShape(raw: unknown): Point[] | null {
   if (raw.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.hypot(p.x, p.y) > MAX_RADIUS + 1e-8)) return null;
   const length = shapeLength(raw);
   if (length < .35) return null;
-  return raw.map(p => ({ x: p.x, y: p.y }));
+  return raw.map(p => ({ x: p.x, y: p.y, ...(p.move === true ? { move: true as const } : {}) }));
 }
 
-export function radiusOf(points: Point[]) { return Math.max(...points.map(p => Math.hypot(p.x, p.y))) + STROKE_RADIUS; }
+export function radiusOf(points: Point[]) { return Math.max(.15, ...points.map(p => Math.hypot(p.x, p.y) + STROKE_RADIUS)); }
+
+export function splitStrokes(points: Point[]): Point[][] {
+  const strokes: Point[][] = [];
+  for (const p of points) { if (!strokes.length || p.move) strokes.push([]); strokes.at(-1)!.push(p); }
+  return strokes;
+}
+export function* shapeEdges(points: Point[]): Generator<[Point, Point]> {
+  for (let i = 1; i < points.length; i++) if (!points[i].move) yield [points[i - 1], points[i]];
+}
 
 // Radial supports depend on the contour, not drawing speed or retracing a line.
 // An open side connects to its nearest extreme instead of closing the opening.
 export function spokeTips(shape: Point[]): Point[] {
-  return [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }].map(ray => {
+  if (!shape.length) return [];
+  const tips = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }].map(ray => {
     let distance = -1;
-    for (let i = 1; i < shape.length; i++) {
-      const a = shape[i - 1], b = shape[i], dx = b.x - a.x, dy = b.y - a.y;
+    for (const [a, b] of shapeEdges(shape)) {
+      const dx = b.x - a.x, dy = b.y - a.y;
       const cross = ray.x * dy - ray.y * dx;
       if (Math.abs(cross) < 1e-10) {
         if (Math.abs(a.x * ray.y - a.y * ray.x) < 1e-10) distance = Math.max(distance, a.x * ray.x + a.y * ray.y, b.x * ray.x + b.y * ray.y);
@@ -147,4 +170,7 @@ export function spokeTips(shape: Point[]): Point[] {
     if (distance >= 0) return { x: ray.x * distance, y: ray.y * distance };
     return shape.reduce((best, p) => p.x * ray.x + p.y * ray.y > best.x * ray.x + best.y * ray.y ? p : best);
   });
+  // Every detached stroke is welded to the hub by an actual thin spoke.
+  if (shape.some(p => p.move)) for (const stroke of splitStrokes(shape)) tips.push(stroke.reduce((a, b) => Math.hypot(a.x, a.y) < Math.hypot(b.x, b.y) ? a : b));
+  return tips;
 }

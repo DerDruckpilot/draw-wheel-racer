@@ -1,5 +1,5 @@
 import polygonClipping, { type Polygon, type Pair } from 'polygon-clipping';
-import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
+import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 import type { Water } from './courses';
 
 // The existing game uses normalized masses and world lengths, not SI vehicle
@@ -47,10 +47,11 @@ export function cacheWheelHydro(shape: Point[], geometry: HydroShape[]) {
   cache.set(JSON.stringify(shape), geometry);
 }
 export function wheelHydro(shape: Point[]): HydroShape[] {
+  if (shape.length < 2) return [];
   const key = JSON.stringify(shape), cached = cache.get(key);
   if (cached) return cached;
   const rim: Polygon[] = [];
-  for (let i = 1; i < shape.length; i++) rim.push(capsule(shape[i - 1], shape[i], STROKE_RADIUS));
+  for (const [a, b] of shapeEdges(shape)) rim.push(capsule(a, b, STROKE_RADIUS));
   const origin = { x: 0, y: 0 };
   const spokes = spokeTips(shape).map(p => capsule(origin, p, SPOKE_RADIUS));
   const properties = { dragX: 1.15, dragY: 1.15, skin: .0006, linearX: .01, linearY: .01 };

@@ -143,7 +143,7 @@ export class WaterSpray {
       if (Math.abs(car.body.translation().x - viewX) < 28) for (const [axle, wheel] of car.wheels.entries()) {
         const p = wheel.translation(), water = sim.course.waters.find(w => p.x + 1.3 > w.start && p.x - 1.3 < w.end);
         if (!water) continue;
-        const activity = splashActivity(car.hydro, { position: p, center: wheel.worldCom(), angle: wheel.rotation(), velocity: wheel.linvel(), omega: wheel.angvel() }, water);
+        const activity = splashActivity(car.hydros[axle], { position: p, center: wheel.worldCom(), angle: wheel.rotation(), velocity: wheel.linvel(), omega: wheel.angvel() }, water);
         const strength = Math.min(1.7, Math.sqrt(activity.energy) * .23); total += strength;
         for (const side of [0, 1]) {
           const slot = car.id * 4 + axle * 2 + side;

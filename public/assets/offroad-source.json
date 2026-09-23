@@ -1,0 +1,12 @@
+{
+  "title": "GroundVehicle",
+  "author": "Analytical Graphics, Inc.",
+  "year": 2018,
+  "license": "Apache-2.0",
+  "source": "https://github.com/CesiumGS/cesium/tree/main/Apps/SampleData/models/GroundVehicle",
+  "revision": "113c068e9af33dba22e5cc54f5a762b593ca3829",
+  "download": "https://raw.githubusercontent.com/CesiumGS/cesium/113c068e9af33dba22e5cc54f5a762b593ca3829/Apps/SampleData/models/GroundVehicle/GroundVehicle.glb",
+  "originalSHA256": "06511a34941a4c7e9385b47bc374bcdec05178b385f393af93e4b9071ecd992d",
+  "adaptedSHA256": "9b70b59eb8e63c319ad01eddc60397c94493cd3a62af54b61e10f884e33f3bf6",
+  "changes": "Removed stock wheels; adapted dimensions for two drawn axles; resized and compressed PBR textures."
+}

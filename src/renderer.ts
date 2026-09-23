@@ -5,17 +5,18 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { courseRunout, groundAt, type Course, type Obstacle, type Segment, type Surface, type Water } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
-import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
+import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 import { landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
 import { waterMaterial, WaterSpray } from './water-visuals';
 import { RouteLayout } from './route-layout';
 import { archBands, archSection } from './structures';
+import { terrainWarp } from './terrain-shape';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
-const COLORS = [0xdbf18b, 0xf17850, 0x79cbd9, 0xa398ea];
+
 type Quality = 'auto' | 'high' | 'eco';
-interface CarVisual { root: THREE.Group; wheels: THREE.Group[]; revision: number; tag?: THREE.Sprite }
+interface CarVisual { root: THREE.Group; wheels: THREE.Group[]; revisions: number[]; tag?: THREE.Sprite }
 type TerrainMaterials = Record<Surface, THREE.MeshStandardMaterial>;
 const temp = new THREE.Vector3();
 
@@ -55,7 +56,9 @@ function terrainGeometry(segments: Segment[], z0: number, z1: number, sides = fa
     const at = (t: number) => ({ x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t });
     return Array.from({ length: count }, (_, i) => ({ a: at(i / count), b: at((i + 1) / count) }));
   });
-  for (const s of fine) {
+  const bands = sides ? [z0, z1] : [z0, -9, -6, -3, -1, .03, 1, 1.97, z1].filter((z, i, a) => (z >= z0 && z <= z1 && a.indexOf(z) === i)).sort((a, b) => a - b);
+  for (const s of fine) for (let band = 1; band < bands.length; band++) {
+    const z0 = bands[band - 1], z1 = bands[band];
     const i = positions.length / 3;
     if (sides) {
       positions.push(s.a.x, s.a.y, z1, s.b.x, s.b.y, z1, s.a.x, -10, z1, s.b.x, -10, z1);
@@ -94,7 +97,7 @@ function iceTexture() {
 export class GameRenderer {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(49, 1, .1, 150);
+  camera = new THREE.PerspectiveCamera(44, 1, .1, 150);
   terrain = new THREE.Group();
   cars: CarVisual[] = [];
   rocks: THREE.Object3D[] = [];
@@ -111,6 +114,7 @@ export class GameRenderer {
   mats!: TerrainMaterials;
   cliffMat!: THREE.MeshStandardMaterial;
   rockTemplate: THREE.Group | null = null;
+  vehicleTemplate!: THREE.Group;
   skyTexture: THREE.DataTexture | null = null;
   quality: Quality = 'auto';
   target = new THREE.Vector3();
@@ -130,7 +134,7 @@ export class GameRenderer {
     this.renderer.toneMappingExposure = 1.05;
     this.renderer.shadowMap.enabled = true; this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     host.append(this.renderer.domElement);
-    this.renderer.domElement.setAttribute('aria-label', '3D-Rennstrecke');
+    this.renderer.domElement.setAttribute('aria-label', '3D-Expedition');
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     const room = new RoomEnvironment(); this.env = pmrem.fromScene(room, .04); room.dispose(); pmrem.dispose();
     this.scene.environment = this.env.texture; this.scene.environmentIntensity = .35;
@@ -149,14 +153,20 @@ export class GameRenderer {
       const t = await loader.loadAsync(`${BASE}assets/${id}/${file}.jpg`);
       t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
       if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-      onProgress(++loaded / 8); return t;
+      onProgress(++loaded / 9); return t;
     };
-    const [rock, normal, rough, ground, groundNormal, groundRough, model, sky] = await Promise.all([
+    const [rock, normal, rough, ground, groundNormal, groundRough, model, sky, vehicle] = await Promise.all([
       tex('rock_face', 'color', true), tex('rock_face', 'normal'), tex('rock_face', 'roughness'),
       tex('rocky_terrain', 'color', true), tex('rocky_terrain', 'normal'), tex('rocky_terrain', 'roughness'),
-      new GLTFLoader().loadAsync(`${BASE}assets/boulder.glb`).then(m => { onProgress(++loaded / 8); return m; }),
-      new HDRLoader().loadAsync(`${BASE}assets/sky.hdr`).then(t => { onProgress(++loaded / 8); return t; })
+      new GLTFLoader().loadAsync(`${BASE}assets/boulder.glb`).then(m => { onProgress(++loaded / 9); return m; }),
+      new HDRLoader().loadAsync(`${BASE}assets/sky.hdr`).then(t => { onProgress(++loaded / 9); return t; }),
+      new GLTFLoader().loadAsync(`${BASE}assets/offroad.glb`).then(m => { onProgress(++loaded / 9); return m; })
     ]);
+    this.vehicleTemplate = vehicle.scene;
+    this.vehicleTemplate.traverse(o => { if (o instanceof THREE.Mesh) {
+      if (!o.geometry.attributes.normal) o.geometry.computeVertexNormals();
+      o.castShadow = true; o.receiveShadow = true; o.userData.sharedVehicle = true;
+    } });
     sky.mapping = THREE.EquirectangularReflectionMapping;
     sky.generateMipmaps = true; sky.minFilter = THREE.LinearMipmapLinearFilter;
     this.skyTexture = sky;
@@ -216,7 +226,7 @@ export class GameRenderer {
     this.scene.fog = new THREE.FogExp2(alpine ? 0xafc7d6 : quarry ? 0xb6b7ac : 0xcfcbc0, .015);
     this.sun.color.set(alpine ? 0xe4efff : 0xffd5a0);
     this.mats.stone.color.set(alpine ? 0xcad5d6 : quarry ? 0xa0a39b : 0xcdb394);
-    this.mats.road.color.set(alpine ? 0xe3e8e6 : quarry ? 0xaaaaa0 : 0xd4b891);
+    this.mats.road.color.copy(this.mats.stone.color);
     this.cliffMat.color.set(alpine ? 0xa7b5bd : quarry ? 0x9b9e92 : 0xbc8a65);
     const completeGround = [...course.segments, ...courseRunout(course)];
     for (const surface of ['stone', 'ice', 'mud', 'road'] as Surface[]) {
@@ -465,14 +475,16 @@ export class GameRenderer {
       const inverse = object.matrixWorld.clone().invert(), attribute = object.geometry.attributes.position;
       for (let i = 0; i < attribute.count; i++) {
         position.fromBufferAttribute(attribute, i).applyMatrix4(object.matrixWorld);
-        const p = this.layout.point(position.x, position.z); position.x = p.x; position.z = p.z;
+        const natural = terrainWarp(position.x, position.y, position.z);
+        const p = this.layout.point(natural.x, natural.z); position.x = p.x; position.y = natural.y; position.z = p.z;
         position.applyMatrix4(inverse); attribute.setXYZ(i, position.x, position.y, position.z);
       }
       attribute.needsUpdate = true; object.geometry.computeVertexNormals(); object.geometry.computeBoundingBox(); object.geometry.computeBoundingSphere();
     });
     for (const rock of this.rocks) {
       rock.userData.trackX = rock.position.x;
-      const p = this.layout.point(rock.position.x, rock.position.z); rock.position.x = p.x; rock.position.z = p.z; rock.rotation.y += p.yaw;
+      const q = terrainWarp(rock.position.x, rock.position.y, rock.position.z);
+      const p = this.layout.point(q.x, q.z); rock.position.y = q.y; rock.position.x = p.x; rock.position.z = p.z; rock.rotation.y += p.yaw;
     }
   }
 
@@ -505,53 +517,14 @@ export class GameRenderer {
   }
 
   makeCar(car: Vehicle): CarVisual {
-    const group = new THREE.Group();
-    const paint = new THREE.MeshStandardMaterial({ color: COLORS[car.id], metalness: .32, roughness: .31 });
-    const metal = new THREE.MeshStandardMaterial({ color: 0x384444, metalness: .82, roughness: .33 });
-    const black = new THREE.MeshStandardMaterial({ color: 0x151c1d, metalness: .1, roughness: .76 });
-    const chrome = new THREE.MeshStandardMaterial({ color: 0xa1adb0, metalness: .9, roughness: .23 });
-    const light = new THREE.MeshStandardMaterial({ color: 0xffedc7, emissive: 0xffc568, emissiveIntensity: .45, roughness: .2 });
-    group.add(box(2.42, .33, 1.35, paint, 0, -.02));
-    group.add(box(2.2, .19, 1.26, black, 0, -.24));
-    const nose = box(.65, .24, 1.2, paint, 1.06, .12); nose.rotation.z = -.13; group.add(nose);
-    group.add(box(.62, .32, 1.1, metal, -1, .18));
-    for (let i = 0; i < 6; i++) group.add(box(.04, .04, .85, black, -.9 + i * .07, .36));
-    // Two seats, safety cage, headlamps, pontoons and functional exposed axles.
-    for (const z of [-.4, .4]) {
-      group.add(box(.5, .13, .4, black, -.05, .23, z));
-      const seat = box(.13, .59, .42, black, -.28, .45, z); seat.rotation.z = .13; group.add(seat);
-      for (const x of [-.64, .65]) group.add(cylinderBetween(new THREE.Vector3(x, .12, z * 1.6), new THREE.Vector3(x - .17, 1, z * 1.45), .045, metal));
-      group.add(cylinderBetween(new THREE.Vector3(-.81, 1, z * 1.45), new THREE.Vector3(.48, 1, z * 1.45), .045, metal));
-      group.add(cylinderBetween(new THREE.Vector3(-1.35, -.17, z * 1.95), new THREE.Vector3(1.35, -.17, z * 1.95), .18, black, 12));
-      for (const x of [-1.35, 1.35]) { const cap = new THREE.Mesh(new THREE.SphereGeometry(.18, 12, 8), black); cap.position.set(x, -.17, z * 1.95); group.add(cap); }
-      group.add(box(.14, .15, .25, light, 1.39, .16, z));
-      for (const x of AXLES) {
-        group.add(cylinderBetween(new THREE.Vector3(x, -.27, 0), new THREE.Vector3(x, -.39, z * 2.5), .05, metal));
-        group.add(cylinderBetween(new THREE.Vector3(x * .75, .12, z * 1.5), new THREE.Vector3(x, -.36, z * 2.3), .05, chrome));
-        const spring = new THREE.CatmullRomCurve3(Array.from({ length: 45 }, (_, i) => {
-          const t = i / 44; return new THREE.Vector3(x * (.75 + t * .25) + Math.cos(t * Math.PI * 12) * .04, .12 - .48 * t, z * (1.5 + .8 * t) + Math.sin(t * Math.PI * 12) * .04);
-        }));
-        group.add(new THREE.Mesh(new THREE.TubeGeometry(spring, 44, .013, 4, false), paint));
-      }
-    }
-    for (const x of [-.81, .48]) group.add(cylinderBetween(new THREE.Vector3(x, 1, -.58), new THREE.Vector3(x, 1, .58), .045, metal));
-    group.add(box(.33, .11, .11, metal, .48, .93, 0));
-    group.add(box(.28, .07, .07, light, .55, .94, 0));
-    // Compact helmeted driver gives scale without obscuring the drawn wheels.
-    const suit = new THREE.MeshStandardMaterial({ color: 0x343b39, roughness: .9 });
-    const head = new THREE.Mesh(new THREE.SphereGeometry(.18, 16, 12), paint); head.position.set(.02, .73, .38); group.add(head);
-    const visor = new THREE.Mesh(new THREE.SphereGeometry(.184, 16, 8, -.7, 1.4, .8, 1.1), black); visor.rotation.y = Math.PI / 2; visor.position.copy(head.position); group.add(visor);
-    group.add(box(.28, .34, .3, suit, -.05, .42, .38));
-    group.add(cylinderBetween(new THREE.Vector3(.04, .52, .4), new THREE.Vector3(.38, .42, .4), .06, suit));
-    mergeRigidGroup(group); this.scene.add(group);
+    const group = new THREE.Group(); group.add(this.vehicleTemplate.clone(true));
+    // The imported body keeps its detailed PBR maps. Only the drawn wheels and
+    // visible axle connections are generated by the game.
+    const metal = new THREE.MeshStandardMaterial({ color: 0x46514b, metalness: .7, roughness: .4 });
+    for (const x of AXLES) group.add(cylinderBetween(new THREE.Vector3(x, -.25, -.97), new THREE.Vector3(x, -.25, .97), .07, metal));
+    this.scene.add(group);
     const wheels = Array.from({ length: 4 }, () => { const g = new THREE.Group(); this.scene.add(g); return g; });
-    let tag: THREE.Sprite | undefined;
-    if (car.id === 0) {
-      const c = document.createElement('canvas'); c.width = 128; c.height = 72; const ctx = c.getContext('2d')!;
-      ctx.fillStyle = '#d9ef8b'; ctx.beginPath(); ctx.roundRect(18, 4, 92, 43, 20); ctx.fill(); ctx.beginPath(); ctx.moveTo(57, 47); ctx.lineTo(71, 47); ctx.lineTo(64, 59); ctx.fill(); ctx.fillStyle = '#223328'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('DU', 64, 34);
-      const map = new THREE.CanvasTexture(c); map.colorSpace = THREE.SRGBColorSpace; tag = new THREE.Sprite(new THREE.SpriteMaterial({ map, depthTest: false, depthWrite: false })); tag.scale.set(1.22, .68, 1); tag.renderOrder = 5; this.scene.add(tag);
-    }
-    return { root: group, wheels, revision: -1, tag };
+    return { root: group, wheels, revisions: [-1, -1] };
   }
 
   wheelGeometry(g: THREE.Group, shape: Point[]) {
@@ -560,7 +533,7 @@ export class GameRenderer {
     const rim = new THREE.MeshStandardMaterial({ color: 0x8c9691, metalness: .8, roughness: .32 });
     // Each straight edge and rounded joint matches a physical capsule. A
     // globally sampled TubeGeometry used to cut across short corners.
-    for (let i = 1; i < shape.length; i++) g.add(cylinderBetween(new THREE.Vector3(shape[i - 1].x, shape[i - 1].y, 0), new THREE.Vector3(shape[i].x, shape[i].y, 0), STROKE_RADIUS, rubber, 10));
+    for (const [a, b] of shapeEdges(shape)) g.add(cylinderBetween(new THREE.Vector3(a.x, a.y, 0), new THREE.Vector3(b.x, b.y, 0), STROKE_RADIUS, rubber, 10));
     for (const p of shape) { const cap = new THREE.Mesh(new THREE.SphereGeometry(STROKE_RADIUS, 10, 6), rubber); cap.position.set(p.x, p.y, 0); g.add(cap); }
     for (const p of spokeTips(shape)) {
       g.add(cylinderBetween(new THREE.Vector3(), new THREE.Vector3(p.x, p.y, 0), SPOKE_RADIUS, rim, 6));
@@ -577,8 +550,13 @@ export class GameRenderer {
     for (const car of sim.cars) {
       const visual = this.cars[car.id]; if (!visual) continue;
       const p = car.body.translation(), spatial = this.layout.point(p.x, LANES[car.id]); visual.root.position.set(spatial.x, p.y, spatial.z); visual.root.rotation.set(0, spatial.yaw, car.body.rotation(), 'YXZ');
-      if (visual.revision !== car.revision) {
-        visual.wheels.forEach(w => this.wheelGeometry(w, car.shape)); visual.revision = car.revision;
+      for (let axle = 0; axle < 2; axle++) if (visual.revisions[axle] !== car.axleRevisions[axle]) {
+        this.wheelGeometry(visual.wheels[axle], car.shapes[axle]);
+        const opposite = visual.wheels[axle + 2]; opposite.clear();
+        for (const child of visual.wheels[axle].children) {
+          const copy = child.clone(); copy.userData.sharedWheel = true; opposite.add(copy);
+        }
+        visual.revisions[axle] = car.axleRevisions[axle];
       }
       visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(), point = this.layout.point(wp.x, LANES[car.id] + (i < 2 ? .97 : -.97)); w.position.set(point.x, wp.y, point.z); w.rotation.set(0, point.yaw, body.rotation(), 'YXZ'); });
       if (visual.tag) { visual.tag.visible = sim.cars.length > 1; visual.tag.position.set(spatial.x, p.y + 1.72, spatial.z); }
@@ -598,10 +576,10 @@ export class GameRenderer {
     const factor = this.snapNextFrame ? 1 : 1 - Math.exp(-dt * 4); this.snapNextFrame = false;
     this.viewX += (player.x - this.viewX) * factor;
     const y = Math.max(.2, player.y - .6);
-    const cameraPoint = this.layout.point(this.viewX - (menu ? 10 : 9.5), menu ? 18 : 18.5), targetPoint = this.layout.point(this.viewX + 1.5, -.5);
-    temp.set(cameraPoint.x, y + (menu ? 10.5 : 10), cameraPoint.z);
+    const cameraPoint = this.layout.point(this.viewX - 3.5, 16), targetPoint = this.layout.point(this.viewX + 3.2, 0);
+    temp.set(cameraPoint.x, y + 8, cameraPoint.z);
     this.camera.position.lerp(temp, factor);
-    temp.set(targetPoint.x, y - .2, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
+    temp.set(targetPoint.x, y - 1.15, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
     const sun = this.layout.point(this.viewX - 16, 15), sunTarget = this.layout.point(this.viewX + 4, -3);
     this.sun.position.set(sun.x, 25, sun.z); this.sun.target.position.set(sunTarget.x, 0, sunTarget.z);
     for (const rock of this.rocks) rock.visible = Math.abs(rock.userData.trackX - this.viewX) < 78;
@@ -636,7 +614,7 @@ export class GameRenderer {
 
   disposeObject(root: THREE.Object3D) {
     const materials = new Set<THREE.Material>();
-    root.traverse(o => { if (o instanceof THREE.Mesh) { o.geometry.dispose(); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
+    root.traverse(o => { if (o instanceof THREE.Mesh && !o.userData.sharedVehicle && !o.userData.sharedWheel) { o.geometry.dispose(); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
     for (const mat of materials) mat.dispose();
   }
 }

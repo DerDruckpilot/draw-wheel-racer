@@ -1,8 +1,8 @@
 # FORMDRIVE
 
-Ein eigenständiges Physik-Abenteuer für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
+Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.5.0 – Solo-Expeditionen: Gas dosieren, bremsen, zurückfahren und das Ziellager erreichen. Ohne Gegner oder Zeitlimit.**
+**Version 1.6.0 – Querformat, zwei Radentwürfe, Wisch-Tempomat und ein importierter Geländetruck.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -11,7 +11,8 @@ Ein eigenständiges Physik-Abenteuer für das iPhone im Hochformat: Während der
 1. Öffne die Spieladresse in Safari.
 2. Tippe auf **Teilen → Zum Home-Bildschirm** und lasse **Als Web-App öffnen** eingeschaltet.
 3. Starte das neue Icon und warte beim ersten Start auf **Offline bereit**.
-4. Zeichne unten eine Form. Beim Loslassen wird sie zu den Rädern. Halte GAS zum Fahren; ziehe nach oben für mehr Gas oder nach unten zum Kriechen. AUTO hält das Gas beim Zeichnen. Bremse und Zurück helfen an schwierigen Stellen.
+4. Drehe das Gerät quer. Zeichne links die Hinterräder und rechts die Vorderräder; mehrere abgesetzte Striche sind möglich. Tippe jeweils auf **Montieren**.
+5. Rechts GAS halten; nach oben wischen aktiviert den Tempomaten. Gas antippen oder links bremsen löst ihn. Halte das linke Pedal nach dem Stillstand weiter, um rückwärts zu fahren.
 
 Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
 
@@ -21,11 +22,11 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 - Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
 - Sterne für das Erreichen des Ziellagers, eine Fahrt ohne Bergung und drei optionale Fundstücke.
 - Checkpoints vor den Hindernisgruppen; gesammelte Fundstücke bleiben beim Bergen erhalten.
-- Freihandräder, sechs Vorlagen einschließlich kleiner Räder und flacher Zacken, Rückgängig und gespeicherte Lieblingsform.
+- Zwei unabhängige Freihand-Entwürfe mit mehreren Strichen, manueller Montage, Strich-Rückgängig und Leeren; keine fertige Radauswahl.
 - 25 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
-- Flache Furten und tiefe Seen: Der Buggy schwimmt, die gezeichneten Räder paddeln.
+- Flache Furten und tiefe Seen: Der Geländetruck schwimmt, die gezeichneten Räder paddeln.
 - Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
-- Vollflächige Spielwelt hinter einem schwebenden Zeichenfeld; kompakte Bedienelemente im Hochformat.
+- Vollflächige Spielwelt hinter zwei transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
 - Wasser mit HDR-Reflexionen, Ufer- und Kielwasserschaum sowie Spritzern aus der tatsächlichen Bewegung der Radkontur.
 - Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
 - Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
@@ -36,9 +37,11 @@ Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Ei
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.5.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.6.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
 
-Die Fahrsteuerung verändert die gewünschte Raddrehzahl; auch beim Kriechen bleibt das hohe Anfahrmoment verfügbar. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
+Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
+
+Der Geländetruck stammt aus [Cesium GroundVehicle](https://github.com/CesiumGS/cesium/tree/main/Apps/SampleData/models/GroundVehicle), Copyright 2018 Analytical Graphics, Inc., Apache-2.0. Originalräder wurden entfernt, Proportionen angepasst und PBR-Texturen für Mobilgeräte komprimiert. [Änderungen in Version 1.6](docs/UPDATE-1.6.md).
 
 ## Lokal entwickeln
 
@@ -72,10 +75,10 @@ Die GitHub-Actions-Pipeline prüft Physik und vollständige Streckenfahrten, bau
 ## Vorgaben
 
 - Freihand-Zeichenfeld während des Spiels dauerhaft sichtbar.
-- Zeichnungen werden beim Loslassen unmittelbar zu Fahrzeugrädern.
+- Mehrere Striche pro Achse; Montage erst über den jeweiligen Knopf.
 - Unterschiedliche Untergründe und Hindernisse, ausdrücklich einschließlich Wasser.
 - Möglichst plausible Physik, insbesondere tatsächliche Wechselwirkung zwischen Radform und Gelände.
-- iPhone 16 Pro Max mit iOS 27 (Angabe des Auftraggebers), Hochformat, installierbare PWA.
+- iPhone 16 Pro Max mit iOS 27 (Angabe des Auftraggebers), Querformat, installierbare PWA.
 - Möglichst detaillierte, realistische 3D-Grafik mit hochwertigen kostenlosen Modellen und Texturen.
 - Fremdcode und 3D-Modelle dürfen unter passenden Lizenzen verwendet werden.
 
@@ -92,6 +95,6 @@ Die GitHub-Actions-Pipeline prüft Physik und vollständige Streckenfahrten, bau
 
 Three.js für die 3D-Darstellung, Rapier für die Physik, polygon-clipping für Konturvereinigungen, TypeScript für die Spiellogik und Vite mit Workbox für den PWA-Build. Die Simulation hat feste Schritte von 1/120 Sekunde, begrenztes Motordrehmoment, gefederte Achsträger und strichbasierte Kollisionsformen mit bis zu 512 Punkten.
 
-Fremdassets: Poly Haven, CC0. Bibliotheken und Lizenzhinweise: [Quellen & Physik](public/credits.html). Die Werbeabbildung diente als Referenz; sie und die Marken/Spielassets des beworbenen Spiels wurden nicht übernommen.
+Fremdassets: Poly Haven (CC0) und Cesium/Analytical Graphics (Apache-2.0). Bibliotheken und Lizenzhinweise: [Quellen & Physik](public/credits.html). Die Werbeabbildung diente als Referenz; sie und die Marken/Spielassets des beworbenen Spiels wurden nicht übernommen.
 
 Das Repository ist öffentlich. Die Spieladresse wird über GitHub Pages bereitgestellt. Quellcode und statischer Build benötigen keine geheimen Schlüssel und keinen eigenen Backendserver.

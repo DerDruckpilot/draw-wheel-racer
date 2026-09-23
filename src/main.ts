@@ -23,9 +23,6 @@ const icons = {
   check: '<path d="m5 12 4 4L19 6"/>',
 };
 const svg = (key: keyof typeof icons) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[key]}</svg>`;
-const shapeIcon = (name: ShapeName) => {
-  const points = preset(name); return `<svg viewBox="-1.4 -1.4 2.8 2.8" aria-hidden="true"><polyline points="${points.map(p => `${p.x},${-p.y}`).join(' ')}" fill="none" stroke="currentColor" stroke-width=".17" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-};
 interface Saved { level: number; best: Record<number, { time: number; stars: number }>; expeditions: Record<number, ExpeditionRecord>; favorite: Point[] | null; sound: boolean; quality: 'auto' | 'high' | 'eco'; tutorial: boolean; expeditionTutorial: boolean }
 const defaultSave = (): Saved => ({ level: 0, best: {}, expeditions: {}, favorite: null, sound: false, quality: 'auto', tutorial: false, expeditionTutorial: false });
 let saved: Saved = defaultSave();
@@ -66,20 +63,18 @@ document.querySelector('#app')!.innerHTML = `
     <div class="loading-bar" id="loading-bar"><span></span></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </section>
-  <section class="draw-panel" aria-label="Räder zeichnen">
-    <div class="draw-heading"><div><span class="eyebrow dark">DEINE RADFORM</span><h2>Zeichne deinen Weg.</h2></div><div class="draw-tools"><button class="small-icon" id="undo-button" aria-label="Vorherige Radform">${svg('undo')}</button><button class="small-icon" id="save-shape" aria-label="Radform als Favorit speichern">${svg('save')}</button></div></div>
-    <div class="drawing-field"><canvas id="drawing-canvas" aria-label="Zeichenfläche: Zeichne mit dem Finger eine Radform. Beim Loslassen werden die Räder ersetzt."></canvas><span class="draw-hint">FREIHAND · BEIM LOSLASSEN MONTIERT</span></div>
-    <div class="presets"><button data-shape="round" aria-label="Runde Räder">${shapeIcon('round')}<span>Rund</span></button><button data-shape="compact" aria-label="Kleine Räder für Durchfahrten">${shapeIcon('compact')}<span>Klein</span></button><button data-shape="claw" aria-label="Offene C-Räder">${shapeIcon('claw')}<span>Klaue</span></button><button data-shape="grip" aria-label="Gezackte Räder">${shapeIcon('grip')}<span>Zacken</span></button><button data-shape="paddle" aria-label="Paddelräder">${shapeIcon('paddle')}<span>Paddel</span></button><button data-shape="triangle" aria-label="Dreieckige Räder">${shapeIcon('triangle')}<span>Dreieck</span></button><button id="load-shape" aria-label="Gespeicherte Radform laden">${svg('save')}<span>Favorit</span></button></div>
-    <div class="drive-controls" id="drive-controls" aria-label="Fahrsteuerung" hidden>
-      <button data-pedal="reverse" aria-label="Rückwärts fahren" aria-pressed="false"><span>↶</span><small>ZURÜCK</small></button>
-      <button data-pedal="brake" aria-label="Bremsen" aria-pressed="false"><span>Ⅱ</span><small>BREMSE</small></button>
-      <button id="cruise-button" aria-label="Tempomat" aria-pressed="false"><span>⇥</span><small>AUTO</small></button>
-      <button data-pedal="gas" aria-label="Gas geben, nach oben ziehen für mehr Gas" aria-pressed="false"><span>GAS</span><small>HALTEN · ↑ MEHR</small><i></i></button>
-    </div>
+  <section class="cockpit" id="drive-controls" aria-label="Fahren und Räder zeichnen">
+    <button class="pedal brake-pedal" data-pedal="brake" aria-label="Bremse und Rückwärtsgang" aria-pressed="false"><b>Ⅱ / ↶</b><span>BREMSE</span><small>HALTEN: RÜCKWÄRTS</small></button>
+    <div class="axle-pads">${['rear', 'front'].map((axle, i) => `<section class="axle-pad" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen">
+      <div class="axle-toolbar"><span>${i ? 'VORNE' : 'HINTEN'}</span><button class="mount-button" id="mount-${axle}" disabled>Montieren ${svg('check')}</button></div>
+      <div class="drawing-field"><canvas id="drawing-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen, mehrere Striche möglich"></canvas><span class="draw-hint" id="hint-${axle}">DEINE RADFORM</span></div>
+      <div class="draft-tools"><button id="undo-${axle}" aria-label="Letzten Strich ${i ? 'vorne' : 'hinten'} entfernen">${svg('undo')}</button><button id="clear-${axle}" aria-label="Zeichenfläche ${i ? 'vorne' : 'hinten'} leeren">${svg('close')}</button></div>
+    </section>`).join('')}</div>
+    <button class="pedal gas-pedal" data-pedal="gas" aria-label="Gas, nach oben wischen aktiviert den Tempomat" aria-pressed="false"><b>↑</b><span>GAS</span><small>↑ WISCHEN: TEMPOMAT</small><i></i></button>
   </section>
 </main>
 <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close small-icon" id="close-modal" aria-label="Dialog schließen">${svg('close')}</button><div id="modal-content"></div></div></dialog>
-<div class="landscape-note" aria-live="polite">Für die beste Sicht: iPhone hochkant halten.</div>`;
+<div class="orientation-note" role="status"><span>↻</span><strong>Dein Weg liegt quer.</strong><p>Drehe dein iPhone ins Querformat.<br>Bei Bedarf die Ausrichtungssperre ausschalten.</p></div>`;
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const modal = $<HTMLDialogElement>('modal');
@@ -106,12 +101,22 @@ let slow = false;
 function toast(message: string) {
   $('toast').textContent = message; $('toast').classList.add('visible'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('visible'), 3200);
 }
-const pad = new DrawingPad($<HTMLCanvasElement>('drawing-canvas'), shape => {
-  if (sim && !sim.requestShape(shape)) return false;
-  document.querySelectorAll('[data-shape]').forEach(b => b.classList.remove('selected'));
-  return true;
-}, message => { if (message !== 'Neue Radform übernommen') toast(message); });
-const controls = new DriveControls($('drive-controls'), (drive, brake) => { if (sim) { sim.cars[0].drive = drive; sim.cars[0].brake = brake; } });
+const pads = ['rear', 'front'].map((name, axle) => {
+  let pad: DrawingPad;
+  const refresh = () => {
+    if (!pad) return;
+    const button = $<HTMLButtonElement>(`mount-${name}`);
+    button.disabled = !pad.enabled || !pad.dirty || pad.busy || pad.active;
+    button.innerHTML = `${pad.busy ? 'Wird gebaut …' : pad.dirty ? 'Montieren' : pad.shape.length ? 'Montiert' : 'Montieren'} ${svg('check')}`;
+    $(`hint-${name}`).textContent = pad.draft.length ? (pad.dirty ? 'ENTWURF · NOCH NICHT MONTIERT' : 'WEITERMALEN ODER LEEREN') : 'DEINE RADFORM';
+  };
+  pad = new DrawingPad($<HTMLCanvasElement>(`drawing-${name}`), shape => !sim || sim.requestShape(shape, 0, axle), toast, refresh);
+  $(`mount-${name}`).onclick = () => { if (!modal.open) void pad.mount(); };
+  $(`undo-${name}`).onclick = () => { if (pad.enabled) pad.undo(); };
+  $(`clear-${name}`).onclick = () => { if (pad.enabled) pad.clear(); };
+  return pad;
+});
+const controls = new DriveControls($('drive-controls'), (drive, brake) => { if (sim) { sim.cars[0].drive = drive; sim.cars[0].brake = brake; } }, () => sim?.cars[0].body.linvel().x ?? 0);
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const region = (id: number) => id === 12 ? 'EXPERIMENT' : id < 4 ? 'CANYON' : id < 8 ? 'ALPINE' : 'STEINBRUCH';
@@ -122,18 +127,18 @@ function setState(next: typeof state) {
   const home = state === 'home' || state === 'loading';
   $('home-content').hidden = !home; $('race-hud').hidden = home; $('drive-info').hidden = home;
   $('pause-button').hidden = home || state === 'finished'; $('countdown').hidden = state !== 'countdown';
-  $('drive-controls').hidden = home || state === 'finished';
+  $('drive-controls').classList.toggle('not-driving', home || state === 'finished');
   controls.enabled = state === 'racing';
   if (!controls.enabled) controls.reset();
-  pad.enabled = state !== 'loading' && state !== 'finished';
+  for (const pad of pads) { pad.enabled = state !== 'loading' && state !== 'finished'; if (!pad.enabled) pad.cancel(); else pad.render(); }
   if (sim) sim.started = state === 'racing';
   document.querySelector('.game')!.setAttribute('data-state', state);
 }
 
 function loadLevel(id: number, stayHome = true) {
-  pad.cancel();
+  pads.forEach(pad => pad.cancel());
   sim?.dispose(); currentLevel = id; saved.level = id;
-  sim = new Simulation(createExpedition(id), 1); renderer.setCourse(sim); sim.requestShape(pad.shape);
+  sim = new Simulation(createExpedition(id), 1, pads.map(pad => pad.shape)); renderer.setCourse(sim);
   accumulator = 0; lastResetCount = 0; lastTerrain = ''; lastWaterHint = -60; lastApproach = -1; slow = false;
   lastCollected = 0; lastCheckpoint = 2;
   clearTimeout(toastTimer); $('toast').classList.remove('visible');
@@ -149,11 +154,14 @@ function loadLevel(id: number, stayHome = true) {
 
 function begin() {
   if (state === 'loading') return;
+  if (pads.some(pad => !pad.shape.length)) { toast('Zeichne für beide Achsen eine Form und tippe jeweils auf Montieren.'); return; }
+  const orientation = screen.orientation as ScreenOrientation & { lock?: (mode: string) => Promise<void> };
+  orientation.lock?.('landscape').catch(() => {});
   sound.unlock().catch(() => {});
   countdown = 3; accumulator = 0; $('countdown').textContent = '3'; setState('countdown');
   if (!saved.expeditionTutorial) {
     saved.expeditionTutorial = true; persist();
-    toast('Gas halten zum Fahren. AUTO hält das Gas beim Zeichnen. Dein Ziel: ankommen.');
+    toast('Rechts Gas, links bremsen und zurück. Wische am Gas nach oben für den Tempomat.');
   }
 }
 
@@ -185,7 +193,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.5.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.6.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -201,7 +209,7 @@ function showInstall() {
   $('install-done').onclick = closeModal;
 }
 function showHelp() {
-  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Orange Fundstücke sind zusätzliche Herausforderungen.</li><li><strong>Gas halten und dosieren.</strong> Ziehe den Finger nach oben für mehr Gas, nach unten zum Kriechen. Bremse vor schwierigen Landungen. Mit Zurück kannst du Anlauf nehmen.</li><li><strong>Zeichne deine Räder.</strong> Beim Loslassen wird deine Linie zur Radkontur. Größe, Ausläufer und Materialmenge wirken auf die Fahrt. AUTO hält das Gas, damit du einhändig zeichnen kannst; ein Pedal beendet den Tempomat.</li><li><strong>Nutze Gelände und Wasser.</strong> Ausläufer stützen sich an Kanten ab und schieben eingetauchtes Wasser zurück. Runde Räder rollen ruhig, große Formen passen nicht durch jeden Felsgang.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt. Gesammelte Fundstücke bleiben bei einer Bergung erhalten.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
+  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Orange Fundstücke sind zusätzliche Herausforderungen.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Erst Montieren übernimmt den Entwurf auf die jeweilige Achse. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Nutze Gelände und Wasser.</strong> Ausläufer stützen sich an Kanten ab und schieben eingetauchtes Wasser zurück. Runde Räder rollen ruhig, große Formen passen nicht durch jeden Felsgang.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt. Gesammelte Fundstücke bleiben bei einer Bergung erhalten.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
   $('help-done').onclick = closeModal;
 }
 
@@ -224,11 +232,7 @@ $('settings-button').onclick = () => { if (state !== 'loading') showSettings(); 
 $('pause-button').onclick = showPause;
 $('home-button').onclick = () => { if (state === 'racing' || state === 'countdown') showPause(); else if (state !== 'loading') { if (modal.open) modal.close(); loadLevel(currentLevel); } };
 $('rescue-button').onclick = () => { if (state !== 'racing') return; controls.reset(); sim.resetCar(); accumulator = 0; toast('Zurück am Checkpoint'); };
-$('undo-button').onclick = () => pad.undo();
-$('save-shape').onclick = () => { saved.favorite = pad.visibleShape.map(p => ({ ...p })); persist(); toast('Deine Radform ist gespeichert.'); };
-$('load-shape').onclick = () => { if (saved.favorite) { pad.set(saved.favorite); } else toast('Speichere zuerst eine Form mit dem Lesezeichen oben.'); };
-document.querySelectorAll<HTMLButtonElement>('[data-shape]').forEach(b => b.onclick = () => { if (!pad.enabled) return; pad.usePreset(b.dataset.shape as ShapeName); b.classList.add('selected'); sound.beep(430, .06); });
-document.addEventListener('visibilitychange', () => { if (document.hidden) { if (state === 'racing' || state === 'countdown') showPause(); sound.update(0, false); pad.cancel(); } accumulator = 0; });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { if (state === 'racing' || state === 'countdown') showPause(); sound.update(0, false); pads.forEach(pad => pad.cancel()); } accumulator = 0; });
 window.addEventListener('keydown', e => { if (e.code === 'Escape' && !modal.open && state === 'racing') { e.preventDefault(); showPause(); } });
 window.addEventListener('offline', () => toast('Offline unterwegs · dein Spiel läuft weiter.'));
 
@@ -285,6 +289,7 @@ async function boot() {
           if (countdown <= 0) { setState('racing'); sound.beep(840, .2); }
         }
         if (state === 'racing') {
+          controls.update();
           accumulator += dt * (slow ? .45 : 1);
           let steps = 0;
           while (accumulator >= FIXED_DT && steps < 12) { sim.tick(); accumulator -= FIXED_DT; steps++; }
@@ -305,15 +310,16 @@ async function boot() {
         for (let i = 0; i < Math.min(steps, 20000); i++) { sim.tick(); if (i % 12 === 11) renderer.advanceEffects(sim, .1); }
       };
       (window as any).__FORMDRIVE__ = {
+        draft: (axle: number, shape: Point[]) => { pads[axle].draft = shape; pads[axle].render(); },
         framing: () => renderer.playerFraming(),
         drive: (value: number, brake = 0) => { sim.cars[0].drive = clamp(value, -1, 1); sim.cars[0].brake = clamp(brake, 0, 1); },
         sceneImage: () => { renderer.render(sim, 0, state === 'home'); return renderer.renderer.domElement.toDataURL('image/png'); },
-        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
-        water: () => { const lake = sim.course.waters.find(w => w.deep && sim.course.zones.some(z => z.kind === 'lake' && z.start <= w.start && z.end >= w.end)) ?? sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pad.usePreset('paddle'); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
+        water: () => { const lake = sim.course.waters.find(w => w.deep && sim.course.zones.some(z => z.kind === 'lake' && z.start <= w.start && z.end >= w.end)) ?? sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pads.forEach(pad => pad.usePreset('paddle')); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         load: (id: number) => loadLevel(clamp(id, 0, 12)),
-        preset: (name: ShapeName) => pad.usePreset(name),
-        obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pad.usePreset(name); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); previewSteps(steps); sim.started = false; renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
+        preset: (name: ShapeName) => pads.forEach(pad => pad.usePreset(name)),
+        obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pads.forEach(pad => pad.usePreset(name)); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); previewSteps(steps); sim.started = false; renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         finish: () => { sim.cars[0].finished = true; sim.cars[0].finishTime = Math.max(1, sim.elapsed); finish(); }
       };
     }
@@ -359,4 +365,8 @@ function updateHud() {
   if (state === 'racing' && car.checkpoint > lastCheckpoint) { if (!justCollected) toast('Lager erreicht · neuer Checkpoint'); lastCheckpoint = car.checkpoint; }
   $('rescue-button').classList.toggle('suggested', car.stuck > 3);
 }
+matchMedia('(orientation: portrait)').addEventListener('change', e => {
+  if (e.matches && (state === 'racing' || state === 'countdown')) showPause();
+  pads.forEach(pad => pad.cancel()); controls.reset();
+});
 boot();

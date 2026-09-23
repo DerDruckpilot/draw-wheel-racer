@@ -64,3 +64,13 @@ Antwortformat: Nummern mit eigenen Antworten; für alle anderen Punkte kann ausd
 ## Noch nicht entschieden
 
 Three.js und Rapier werden für die feste Fahrspur verwendet. Die Wasserentscheidung ist geklärt. Interne Umsetzung, Tests und bekannte Grenzen stehen in IMPLEMENTIERUNG.md. Eine Softwarelizenz für das Gesamtprojekt wurde noch nicht ausgewählt; diese Entscheidung ist für die Bereitstellung des beauftragten Spiels nicht erforderlich.
+
+## Änderung 1.6: Querformat und getrennte Achsen
+
+Die jüngste Nutzervorgabe ersetzt Hochformat, automatische Montage beim Absetzen
+und die gemeinsame Radform: Querformat, Bremse/Rückwärts links, Gas rechts,
+Tempomat durch Aufwärtswischen; zwei mittige Zeichenfelder für hinten/vorne,
+mehrere Striche und explizite Montage. Keine fertigen Radvorlagen in der
+Oberfläche. Ein kostenloses importiertes Offroad-Modell ersetzt das generierte
+Fahrzeug. Sprunglücken werden als geschlossene Gräben modelliert, freiliegende
+Geländekanten seitlich unregelmäßig geformt. Details: [UPDATE-1.6.md](UPDATE-1.6.md).

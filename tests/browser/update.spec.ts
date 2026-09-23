@@ -25,14 +25,13 @@ test('an update installed during the first visit reloads only after confirmation
   try {
     await page.addInitScript(() => {
       (window as any).__visit = crypto.randomUUID();
-      if (!localStorage.getItem('formdrive.v1')) localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false }));
+      if (!localStorage.getItem('formdrive.v1')) localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false, favorite: [{x:-1,y:0},{x:1,y:0}], expeditions: {0:{completed:true,noRescue:true,allCaches:false,fewestRescues:0}} }));
     });
     const port = (server.address() as { port: number }).port;
     await page.goto(`http://127.0.0.1:${port}/draw-wheel-racer/`);
     await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 60000 });
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-    await page.locator('#save-shape').click();
     const favorite = await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.v1')!).favorite);
     const visit = await page.evaluate(() => (window as any).__visit);
     release = 2;

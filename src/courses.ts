@@ -50,7 +50,16 @@ export function createCourse(id: number, expedition = false): Course {
   if (expedition) { c.expedition = true; c.caches = []; }
   let x = -12;
   const line = (length: number, profile: Point[], surface: Surface = 'stone', gaps: number[] = []) => {
-    for (let i = 1; i < profile.length; i++) if (!gaps.includes(i)) c.segments.push({ a: { x: x + profile[i - 1].x, y: profile[i - 1].y }, b: { x: x + profile[i].x, y: profile[i].y }, surface });
+    for (let i = 1; i < profile.length; i++) {
+      const a = { x: x + profile[i - 1].x, y: profile[i - 1].y }, b = { x: x + profile[i].x, y: profile[i].y };
+      if (!gaps.includes(i)) c.segments.push({ a, b, surface });
+      else if (expedition) {
+        // Authored jumps are actual ravines, not missing triangles showing sky.
+        const bottom = Math.min(a.y, b.y) - 4.2;
+        const left = { x: a.x + .16, y: bottom }, right = { x: b.x - .19, y: bottom + .16 };
+        c.segments.push({ a, b: left, surface }, { a: left, b: right, surface }, { a: right, b, surface });
+      }
+    }
     x += length;
   };
   line(24, [{ x: 0, y: 0 }, { x: 24, y: 0 }], 'road');

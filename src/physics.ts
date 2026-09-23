@@ -1,17 +1,18 @@
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle, Water } from './courses';
 import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
-import { clamp, preset, radiusOf, sanitizeShape, shapeLength, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
+import { clamp, preset, radiusOf, sanitizeShape, shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 import { roofOutline } from './structures';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
-export const DRIVE_TORQUE = 420;
+export const DRIVE_TORQUE = 1200;
 export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
+  shapes: Point[][]; hydros: HydroShape[][]; radialTravels: number[]; desiredShapes: (Point[] | null)[]; axleRevisions: number[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
   changeCooldown: number; buoyancy: number; drive: number; brake: number; motorDirection: number; shapeChanges: number; aiShape: ShapeName;
@@ -29,7 +30,7 @@ export class Simulation {
   started = false;
   ai = true;
   collected = new Set<number>();
-  constructor(public course: Course, carCount = 4) {
+  constructor(public course: Course, carCount = 4, private initialShapes: Point[][] = [preset('round'), preset('round')]) {
     this.world = new RAPIER.World({ x: 0, y: -9.81 });
     this.world.timestep = FIXED_DT;
     this.world.numSolverIterations = 8;
@@ -76,7 +77,8 @@ export class Simulation {
     const x = 2 - id * .14;
     const group = ((2 << id) << 16) | 1 | (32 << id);
     const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 1.48).setLinearDamping(.045).setAngularDamping(1.6).setCcdEnabled(true));
-    this.world.createCollider(RAPIER.ColliderDesc.cuboid(1.15, .27).setMass(7.5).setFriction(.35).setCollisionGroups(group), body);
+    // Low engine/underframe ballast and longitudinal mass distribution.
+    this.world.createCollider(RAPIER.ColliderDesc.cuboid(1.15, .27).setMassProperties(7.5, { x: .18, y: -.12 }, 6.8).setFriction(.35).setCollisionGroups(group), body);
     this.world.createCollider(RAPIER.ColliderDesc.roundCuboid(.62, .36, .055).setTranslation(-.05, .6).setMass(.5).setFriction(.5).setCollisionGroups(group), body);
     const wheels: RAPIER.RigidBody[] = [];
     const carriers: RAPIER.RigidBody[] = [];
@@ -92,31 +94,30 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
 
-  replaceColliders(car: Vehicle) {
+  replaceColliders(car: Vehicle, changed = [0, 1]) {
     const group = ((2 << car.id) << 16) | 1 | (32 << car.id);
-    const length = shapeLength(car.shape);
-    car.hydro = wheelHydro(car.shape);
-    const properties = wheelMassProperties(car.shape);
-    // The support radius of a bar changes much more than that of a circle.
-    // Use its actual lift per turn for gearing; it still has the same stall torque.
-    const supports = Array.from({ length: 48 }, (_, i) => {
-      const a = i * Math.PI / 24;
-      return Math.max(.15, ...car.shape.map(p => p.x * Math.cos(a) + p.y * Math.sin(a) + STROKE_RADIUS));
-    });
-    car.radialTravel = Math.max(...supports) - Math.min(...supports);
-    car.motorIntegrals.fill(0);
-    for (const w of car.wheels) {
+    car.shape = car.shapes[0];
+    for (const [index, w] of car.wheels.entries()) {
+      if (!changed.includes(index)) continue;
+      const shape = car.shapes[index];
+      car.hydros[index] = wheelHydro(shape);
+      const properties = wheelMassProperties(shape);
+      const supports = Array.from({ length: 48 }, (_, i) => {
+        const a = i * Math.PI / 24;
+        return Math.max(.15, ...shape.map(p => p.x * Math.cos(a) + p.y * Math.sin(a) + STROKE_RADIUS));
+      });
+      car.radialTravels[index] = Math.max(...supports) - Math.min(...supports);
+      car.motorIntegrals[index] = 0;
       const previousOmega = w.angvel();
       const previousInertia = w.principalInertia();
       while (w.numColliders()) this.world.removeCollider(w.collider(0), true);
       this.world.createCollider(RAPIER.ColliderDesc.ball(.15).setMass(0).setFriction(TYRE_FRICTION).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setCollisionGroups(group), w);
-      for (let i = 1; i < car.shape.length; i++) {
-        const a = car.shape[i - 1], b = car.shape[i];
+      for (const [a, b] of shapeEdges(shape)) {
         const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
         if (len < .0001) continue;
         const desc = RAPIER.ColliderDesc.capsule(len / 2, STROKE_RADIUS)
@@ -125,7 +126,7 @@ export class Simulation {
         this.world.createCollider(desc, w);
       }
       // A minimal rigid spoke is both visible and physical; density is intentionally low.
-      for (const tip of spokeTips(car.shape)) {
+      for (const tip of spokeTips(shape)) {
         const distance = Math.hypot(tip.x, tip.y);
         if (distance > .2) this.world.createCollider(RAPIER.ColliderDesc.capsule(distance / 2, SPOKE_RADIUS).setTranslation(tip.x / 2, tip.y / 2).setRotation(Math.atan2(tip.y, tip.x) - Math.PI / 2).setMass(0).setFriction(TYRE_FRICTION).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setCollisionGroups(group), w);
       }
@@ -137,29 +138,33 @@ export class Simulation {
       const inertia = w.principalInertia();
       const omega = previousInertia > 0 && inertia > 0 ? previousOmega * Math.min(1, Math.sqrt(previousInertia / inertia)) : previousOmega;
       w.setAngvel(clamp(omega, -20, 20), true);
+      car.axleRevisions[index]++;
     }
     car.revision++;
-    if (!Number.isFinite(length)) throw new Error('Invalid wheel geometry');
+    car.hydro = car.hydros[0]; car.radialTravel = Math.max(...car.radialTravels);
   }
 
-  requestShape(points: Point[], id = 0) {
+  requestShape(points: Point[], id = 0, axle?: number) {
     const shape = sanitizeShape(points);
     if (!shape) return false;
     // Reject a numerically invalid contour before replacing a working wheel.
     try { wheelHydro(shape); } catch { return false; }
-    this.cars[id].desiredShape = shape;
+    if (axle !== undefined && axle !== 0 && axle !== 1) return false;
+    for (const index of axle === undefined ? [0, 1] : [axle]) this.cars[id].desiredShapes[index] = shape;
     if (!this.started) { this.cars[id].changeCooldown = 0; this.applyPending(this.cars[id]); }
     return true;
   }
 
   applyPending(car: Vehicle) {
-    if (!car.desiredShape || car.changeCooldown > 0) return;
-    const newRadius = radiusOf(car.desiredShape), oldRadius = radiusOf(car.shape);
+    if (car.desiredShape) { car.desiredShapes = [car.desiredShape, car.desiredShape]; car.desiredShape = null; }
+    if (!car.desiredShapes.some(Boolean) || car.changeCooldown > 0) return;
+    const next = car.desiredShapes.map((shape, i) => shape ?? car.shapes[i]);
+    const newRadius = Math.max(...next.map(radiusOf));
     let lift = 0;
-    if (newRadius > oldRadius) {
-      for (const w of car.wheels) {
+    if (next.some((shape, i) => radiusOf(shape) > radiusOf(car.shapes[i]))) {
+      for (const [i, w] of car.wheels.entries()) {
         const pos = w.translation(), rot = w.rotation(), co = Math.cos(rot), si = Math.sin(rot);
-        for (const p of car.desiredShape) {
+        for (const p of next[i]) {
           const px = pos.x + p.x * co - p.y * si, py = pos.y + p.x * si + p.y * co;
           lift = Math.max(lift, groundAt(this.course, px) + STROKE_RADIUS + .02 - py);
         }
@@ -176,8 +181,9 @@ export class Simulation {
         if (car.wheels.some(w => overlaps(w.translation().x, w.translation().y + shift, newRadius, newRadius))) return;
       }
     }
-    car.shape = car.desiredShape; car.desiredShape = null;
-    this.replaceColliders(car);
+    const changed = car.desiredShapes.flatMap((s, i) => s ? [i] : []);
+    car.shapes = next; car.desiredShapes = [null, null];
+    this.replaceColliders(car, changed);
     if (this.started) car.shapeChanges++;
     if (lift > 0) {
       for (const b of [car.body, ...car.wheels, ...car.carriers]) {
@@ -190,7 +196,7 @@ export class Simulation {
 
   resetCar(id = 0, countReset = true) {
     const car = this.cars[id];
-    const x = car.checkpoint, r = radiusOf(car.shape);
+    const x = car.checkpoint, r = Math.max(...car.shapes.map(radiusOf));
     const y = Math.max(0, groundAt(this.course, x)) + r - AXLE_Y + .1;
     car.body.setTranslation({ x, y }, true); car.body.setRotation(0, true);
     car.body.setLinvel({ x: 0, y: 0 }, true); car.body.setAngvel(0, true);
@@ -242,20 +248,18 @@ export class Simulation {
       }
       // Each axle has its own speed regulator and full stall torque. An airborne
       // front axle reaching its speed limit cannot starve the loaded rear axle.
-      // Stable climbing pitch must NOT close the throttle (the old controller
-      // did this at just 40 degrees). Intervene when the nose lifts too far.
+      // A steep land pitch does not reduce motor demand. The driver manages
+      // balance with the pedals; only the floating hull retains a soft limiter.
       const direction = car.drive < 0 ? -1 : 1;
       if (direction !== car.motorDirection) { car.motorIntegrals.fill(0); car.motorTorques.fill(0); car.motorCut = false; car.motorDirection = direction; }
       const pitch = Math.atan2(Math.sin(car.body.rotation()), Math.cos(car.body.rotation())) * direction;
       const afloat = clamp(car.water * 3, 0, 1);
       const pitchRate = car.body.angvel() * direction;
-      // Hysteresis lets gravity lower the nose after an overshoot. A continuous
-      // partial throttle instead held it balanced on the rear wheel forever.
-      const liftTravel = clamp(car.radialTravel, 0, 1);
-      if (pitch + Math.max(0, pitchRate) * (.3 - liftTravel * .15) > 1.08) car.motorCut = true;
-      else if (pitch < .82 - liftTravel * .17) car.motorCut = false;
+      // Pitch on land is controlled by the driver. Even a steep, stationary
+      // lever must receive engine torque; a world-angle cutoff caused deadlocks.
       const marineControl = clamp((1.05 - pitch - Math.max(0, pitchRate) * .3) / .35, 0, 1);
-      const wheelieControl = (car.motorCut ? 0 : 1) * (1 - afloat) + marineControl * afloat;
+      const wheelieControl = (1 - afloat) + marineControl * afloat;
+      car.motorCut = afloat > .9 && marineControl < .01;
       const demand = car.finished || car.brake > 0 ? 0 : clamp(Math.abs(car.drive), 0, 1);
       const throttle = demand > .01 ? wheelieControl : 0;
       const cruiseSpeed = (6.5 - car.id * .18) / (1 + car.radialTravel * 1.6 * (1 - afloat));
@@ -309,7 +313,7 @@ export class Simulation {
   applyWater(car: Vehicle, water: Water) {
     for (const body of [car.body, ...car.wheels]) {
       const pose = { position: body.translation(), center: body.worldCom(), angle: body.rotation(), velocity: body.linvel(), omega: body.angvel(), invMass: body.invMass(), invInertia: body.invPrincipalInertia() };
-      for (const shape of body === car.body ? HULL_HYDRO : car.hydro) {
+      for (const shape of body === car.body ? HULL_HYDRO : car.hydros[car.wheels.indexOf(body)]) {
         const force = waterForces(shape, pose, water, FIXED_DT);
         body.addForce({ x: force.x, y: force.y }, true); body.addTorque(force.torque, true);
         car.buoyancy += force.buoyancy; car.displacedVolume += force.volume; car.waterDragPower += force.dragPower;
@@ -324,13 +328,14 @@ export class Simulation {
       const p = car.body.translation(), a = car.body.rotation(), dx = cache.x - p.x, dy = cache.y - p.y;
       const x = dx * Math.cos(a) + dy * Math.sin(a), y = -dx * Math.sin(a) + dy * Math.cos(a);
       let contact = (Math.abs(x) <= 1.4 && Math.abs(y) <= .52) || (Math.abs(x + .05) <= .925 && Math.abs(y - .6) <= .665);
-      for (const w of car.wheels) {
+      for (const [axle, w] of car.wheels.entries()) {
         const wp = w.translation(), wx = cache.x - wp.x, wy = cache.y - wp.y;
         if (contact || Math.hypot(wx, wy) > 1.65) continue;
         const angle = w.rotation(), q = { x: wx * Math.cos(angle) + wy * Math.sin(angle), y: -wx * Math.sin(angle) + wy * Math.cos(angle) };
         contact = Math.hypot(q.x, q.y) <= .4;
-        for (let i = 1; i < car.shape.length && !contact; i++) {
-          const u = car.shape[i - 1], v = car.shape[i], sx = v.x - u.x, sy = v.y - u.y;
+        for (const [u, v] of shapeEdges(car.shapes[axle])) {
+          if (contact) break;
+          const sx = v.x - u.x, sy = v.y - u.y;
           const t = clamp(((q.x - u.x) * sx + (q.y - u.y) * sy) / Math.max(.000001, sx * sx + sy * sy), 0, 1);
           contact = Math.hypot(q.x - u.x - t * sx, q.y - u.y - t * sy) <= STROKE_RADIUS + .25;
         }

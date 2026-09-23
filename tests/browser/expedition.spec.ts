@@ -1,82 +1,56 @@
-import { test, expect } from '@playwright/test';
+import {test,expect} from '@playwright/test';
+import {drawStroke,fitDrawnWheels,snapshot} from './helpers';
 
-test('the curved route keeps the entire vehicle in the portrait camera at the three structures and on water', async ({ page, browserName }) => {
-  test.skip(browserName !== 'webkit', 'Camera framing is independent of the browser renderer.');
-  await page.addInitScript(() => localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco' })));
-  await page.goto('?test=1'); await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
-  for (const width of [440, 375]) {
-    await page.setViewportSize({ width, height: 956 });
-    for (const id of [3, 4, 2]) {
-      await page.evaluate(id => { const api = (window as any).__FORMDRIVE__; api.load(id); api.obstacle('tunnel', 300, 'compact'); }, id);
-      const box = await page.evaluate(() => (window as any).__FORMDRIVE__.framing());
-      expect(box.left).toBeGreaterThan(.01); expect(box.right).toBeLessThan(.99); expect(box.top).toBeGreaterThan(.1); expect(box.bottom).toBeLessThan(.8);
+test('landscape cockpit fits both pads between the pedals and frames the vehicle',async({page,browserName})=>{
+  test.skip(browserName!=='webkit','Layout and WebGL framing coverage in WebKit.');
+  await page.addInitScript(()=>localStorage.setItem('formdrive.v1',JSON.stringify({quality:'eco'})));
+  await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});
+  for(const [width,height] of [[956,440],[844,390],[667,375]]){
+    await page.setViewportSize({width,height});
+    await expect.poll(()=>page.evaluate(()=>document.querySelector('.game')!.getBoundingClientRect().width)).toBe(width);
+    const l=await page.evaluate(()=>{
+      const r=(q:string)=>document.querySelector(q)!.getBoundingClientRect().toJSON();
+      return {left:r('[data-pedal="brake"]'),right:r('[data-pedal="gas"]'),rear:r('#drawing-rear'),front:r('#drawing-front'),scene:r('#scene'),scroll:document.documentElement.scrollWidth,buttons:[...document.querySelectorAll('.cockpit button')].map(b=>{const r=b.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===b};})};
+    });
+    expect(l.scene.width).toBe(width);expect(l.scene.height).toBe(height);expect(l.scroll).toBeLessThanOrEqual(width);
+    expect(l.left.right).toBeLessThan(l.rear.x);expect(l.rear.right).toBeLessThan(l.front.x);expect(l.front.right).toBeLessThan(l.right.x);
+    expect(l.rear.height).toBeGreaterThanOrEqual(110);expect(l.front.width).toBeGreaterThanOrEqual(140);
+    // Disabled pedals on the home screen intentionally ignore hit testing.
+    for(const b of l.buttons){expect(b.x).toBeGreaterThanOrEqual(0);expect(b.right).toBeLessThanOrEqual(width);expect(b.bottom).toBeLessThanOrEqual(height);}
+    for(const id of [3,4,2]){
+      await page.evaluate(id=>{const a=(window as any).__FORMDRIVE__;a.load(id);a.obstacle('tunnel',300,'compact');},id);
+      const frame=await page.evaluate(()=>(window as any).__FORMDRIVE__.framing());
+      expect(frame.left).toBeGreaterThan(.05);expect(frame.right).toBeLessThan(.9);expect(frame.top).toBeGreaterThan(.08);expect(frame.bottom).toBeLessThan(.66);
     }
-    await page.evaluate(() => (window as any).__FORMDRIVE__.water());
-    const box = await page.evaluate(() => (window as any).__FORMDRIVE__.framing());
-    expect(box.left).toBeGreaterThan(.01); expect(box.right).toBeLessThan(.99);
   }
+  await page.setViewportSize({width:440,height:956});await expect(page.locator('.orientation-note')).toBeVisible();
+  const manifest=await page.request.get('manifest.webmanifest');expect((await manifest.json()).orientation).toBe('landscape');
 });
 
-test('solo expedition pedals, drawing, recovery, results and old saves', async ({ page, browserName }) => {
-  test.skip(browserName !== 'webkit', 'Touch-style control and layout coverage in WebKit; shared flow also runs in Chromium.');
-  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.addInitScript(() => {
-    if (!localStorage.getItem('formdrive.v1')) localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', tutorial: true, best: { 0: { time: 12, stars: 3 } }, favorite: [{ x: -1, y: 0 }, { x: 1, y: 0 }] }));
-  });
-  await page.goto('?test=1');
-  await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
-  const snapshot = () => page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
-  expect((await snapshot()).carCount).toBe(1);
-  await page.locator('#start-button').click();
-  await expect(page.locator('.game')).toHaveAttribute('data-state', 'racing');
-  expect((await snapshot()).controls.drive).toBe(0);
-  expect(await page.locator('#race-hud').innerText()).not.toMatch(/POSITION|RENNZEIT/);
-  const gas = page.locator('[data-pedal="gas"]'), bounds = (await gas.boundingBox())!;
-  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2); await page.mouse.down();
-  expect((await snapshot()).controls.drive).toBeCloseTo(.65);
-  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y - 40);
-  expect((await snapshot()).controls.drive).toBe(1);
-  await page.mouse.up(); expect((await snapshot()).controls.drive).toBe(0);
-  await page.locator('#cruise-button').click(); expect((await snapshot()).controls.cruise).toBe(true);
-  const brake = (await page.locator('[data-pedal="brake"]').boundingBox())!;
-  await page.mouse.move(brake.x + 25, brake.y + 20); await page.mouse.down();
-  expect((await snapshot()).controls).toEqual({ drive: 0, brake: 1, cruise: false });
-  await page.mouse.up();
-  const reverse = (await page.locator('[data-pedal="reverse"]').boundingBox())!;
-  await page.mouse.move(reverse.x + 20, reverse.y + 20); await page.mouse.down();
-  expect((await snapshot()).controls.drive).toBeLessThan(0);
-  await page.locator('[data-pedal="reverse"]').dispatchEvent('pointercancel', { pointerId: 1 });
-  expect((await snapshot()).controls.drive).toBe(0); await page.mouse.up();
-  // The driving input survives a simultaneous, independent drawing gesture.
-  await page.keyboard.down('ArrowRight');
-  const revision = (await snapshot()).player.revision;
-  const pad = (await page.locator('#drawing-canvas').boundingBox())!;
-  await page.mouse.move(pad.x + 90, pad.y + 80); await page.mouse.down();
-  await page.mouse.move(pad.x + 220, pad.y + 80, { steps: 4 }); await page.mouse.up();
-  await expect.poll(async () => (await snapshot()).player.revision).toBeGreaterThan(revision);
-  expect((await snapshot()).controls.drive).toBe(1); await page.keyboard.up('ArrowRight');
-  await page.keyboard.down('Space'); expect((await snapshot()).controls.brake).toBe(1); await page.keyboard.up('Space');
-  await page.locator('#cruise-button').click(); await page.locator('#pause-button').click();
-  expect((await snapshot()).controls).toEqual({ drive: 0, brake: 0, cruise: false });
-  await page.locator('#resume-game').click(); expect((await snapshot()).controls.drive).toBe(0);
-  for (const [width, height] of [[440, 956], [375, 667], [956, 440]]) {
-    await page.setViewportSize({ width, height });
-    await expect.poll(() => page.evaluate(() => document.querySelector('.game')!.getBoundingClientRect().width)).toBe(Math.min(width, height < 600 ? width : 620));
-    const layout = await page.evaluate(() => {
-      const pad = document.querySelector('#drawing-canvas')!.getBoundingClientRect();
-      return [...document.querySelectorAll<HTMLButtonElement>('#drive-controls button')].map(b => { const r = b.getBoundingClientRect(); return { x: r.x, bottom: r.bottom, top: r.top, right: r.right, height: r.height, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === b, padBottom: pad.bottom }; });
-    });
-    for (const b of layout) { expect(b.x).toBeGreaterThanOrEqual(0); expect(b.right).toBeLessThanOrEqual(width); expect(b.bottom).toBeLessThanOrEqual(height); expect(b.height).toBeGreaterThanOrEqual(44); expect(b.top).toBeGreaterThan(b.padBottom); expect(b.hit).toBe(true); }
-  }
-  await page.setViewportSize({ width: 440, height: 956 });
-  await page.locator('#rescue-button').click(); expect((await snapshot()).player.resets).toBeGreaterThan(0);
-  await page.evaluate(() => (window as any).__FORMDRIVE__.finish());
-  await expect(page.locator('#modal-title')).toHaveText('Im Lager angekommen.');
-  await expect(page.locator('.mission-results')).toContainText('Ziellager erreicht');
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.v1')!));
-  expect(saved.best[0]).toEqual({ time: 12, stars: 3 }); expect(saved.expeditions[0].completed).toBe(true); expect(saved.expeditions[0].noRescue).toBe(false);
-  expect(saved.favorite).toEqual([{ x: -1, y: 0 }, { x: 1, y: 0 }]);
-  await page.reload(); await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
-  await page.locator('#choose-course').click(); await expect(page.locator('[data-level="0"]')).toContainText('GESCHAFFT');
-  expect(errors).toEqual([]);
+test('gas swipe latches cruise, left pedal brakes then reverses, and drawing stays independent',async({page,browserName})=>{
+  test.skip(browserName!=='webkit','Pointer lifecycle coverage in WebKit.');
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{if(!localStorage.getItem('formdrive.v1'))localStorage.setItem('formdrive.v1',JSON.stringify({quality:'eco',best:{0:{time:12,stars:3}},favorite:[{x:-1,y:0},{x:1,y:0}]}));});
+  await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});await fitDrawnWheels(page);
+  await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
+  const gas=(await page.locator('[data-pedal="gas"]').boundingBox())!;
+  const swipe=async()=>{await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.7);await page.mouse.down();await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.7-55,{steps:3});await page.mouse.up();};
+  await swipe();expect((await snapshot(page)).controls.cruise).toBe(true);expect((await snapshot(page)).controls.drive).toBe(.65);
+  await page.locator('[data-pedal="gas"]').click();expect((await snapshot(page)).controls.drive).toBe(0);
+  await swipe();const brake=(await page.locator('[data-pedal="brake"]').boundingBox())!;
+  await page.mouse.move(brake.x+brake.width/2,brake.y+brake.height/2);await page.mouse.down();
+  expect((await snapshot(page)).controls).toEqual({drive:0,brake:1,cruise:false});
+  await expect.poll(async()=>(await snapshot(page)).controls.drive).toBeLessThan(0);
+  await page.mouse.up();expect((await snapshot(page)).controls.drive).toBe(0);
+  await page.mouse.move(gas.x+30,gas.y+60);await page.mouse.down();await page.locator('[data-pedal="gas"]').dispatchEvent('pointercancel',{pointerId:1});
+  expect((await snapshot(page)).controls.drive).toBe(0);await page.mouse.up();
+  await page.keyboard.down('ArrowRight');const before=(await snapshot(page)).player.axleRevisions;
+  await drawStroke(page,'rear',[[-.8,-.8],[.8,.8]]);expect((await snapshot(page)).player.axleRevisions).toEqual(before);
+  await page.locator('#mount-rear').click();await expect.poll(async()=>(await snapshot(page)).player.axleRevisions[0]).toBeGreaterThan(before[0]);
+  expect((await snapshot(page)).player.axleRevisions[1]).toBe(before[1]);expect((await snapshot(page)).controls.drive).toBe(.8);await page.keyboard.up('ArrowRight');
+  await page.keyboard.down('Space');expect((await snapshot(page)).controls.brake).toBe(1);await page.keyboard.up('Space');
+  await swipe();await page.locator('#pause-button').click();expect((await snapshot(page)).controls).toEqual({drive:0,brake:0,cruise:false});await page.locator('#resume-game').click();
+  await page.locator('#rescue-button').click();await page.evaluate(()=>(window as any).__FORMDRIVE__.finish());
+  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('formdrive.v1')!));expect(saved.best[0]).toEqual({time:12,stars:3});expect(saved.expeditions[0].completed).toBe(true);expect(saved.favorite).toEqual([{x:-1,y:0},{x:1,y:0}]);
+  await page.reload();await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});await page.locator('#choose-course').click();await expect(page.locator('[data-level="0"]')).toContainText('GESCHAFFT');expect(errors).toEqual([]);
 });
