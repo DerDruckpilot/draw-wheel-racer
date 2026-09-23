@@ -47,24 +47,24 @@ test('cache collection uses contact, survives recovery and cannot be farmed twic
 
 test('completion rewards ignore speed and preserve separate expedition achievements', () => {
   const first = recordExpedition(undefined, 2, 3, 3);
-  assert.equal(expeditionStars(first), 2); assert.equal(first.noRescue, false);
+  assert.equal(expeditionStars(first), 1); assert.equal(first.noRescue, false);
   const second = recordExpedition(first, 0, 1, 3);
-  assert.equal(expeditionStars(second), 3); assert.equal(second.fewestRescues, 0);
+  assert.equal(expeditionStars(second), 2); assert.equal(second.fewestRescues, 0);
   assert.equal(recordExpedition(undefined, 0, 0, 0).allCaches, false);
   assert.deepEqual(restoreExpeditions({ 0: second, 1: { time: 30, stars: 3 }, 99: second, bad: second }), { 0: second });
 });
 
-test('all expeditions are deterministic with three reachable-height optional caches and safe recovery ledges', () => {
+test('all expeditions are deterministic without automatic collectibles and with safe recovery ledges', () => {
   for (let id = 0; id < 12; id++) {
     const c = createExpedition(id); assert.deepEqual(c, createExpedition(id));
-    assert.equal(c.caches!.length, 3);
+    assert.equal(c.caches!.length, 0);
     for (const p of c.caches!) { const aboveGround = p.y - groundAt(c, p.x); assert.ok(aboveGround >= 1.49 && aboveGround <= 2.66); }
     for (const cp of c.checkpoints) {
       assert.equal(groundAt(c, cp), 0);
       assert.ok(!c.obstacles.some(o => o.kind === 'ceiling' && Math.abs(cp - o.x) < o.width / 2 + 2.5));
     }
     const combinations = c.features.filter(f => ['ridge', 'grotto', 'floodpass', 'ravine'].includes(f));
-    if (id > 0) assert.ok(combinations.length > 0);
+    assert.ok(c.features.length>=6);
   }
 });
 

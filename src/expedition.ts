@@ -1,6 +1,6 @@
 import { EXPEDITION_COUNT } from './courses';
 export interface ExpeditionRecord { completed: boolean; noRescue: boolean; allCaches: boolean; fewestRescues: number }
-export const expeditionStars = (record: ExpeditionRecord) => Number(record.completed) + Number(record.noRescue) + Number(record.allCaches);
+export const expeditionStars = (record: ExpeditionRecord) => Number(record.completed) + Number(record.noRescue);
 export function recordExpedition(previous: ExpeditionRecord | undefined, rescues: number, found: number, total: number): ExpeditionRecord {
   return { completed: true, noRescue: (previous?.noRescue ?? false) || rescues === 0, allCaches: (previous?.allCaches ?? false) || (total > 0 && found === total), fewestRescues: Math.min(previous?.fewestRescues ?? Infinity, rescues) };
 }

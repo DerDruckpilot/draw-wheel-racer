@@ -19,7 +19,7 @@ test('minimal solo cockpit clears mounted drafts, presses real pedal faces and k
  await page.mouse.up();await expect(pedal).not.toHaveClass(/held/);
  // A deterministic drive crosses a real checkpoint; no obstacle-solution toast follows.
  await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.preset('round');a.drive(.8);a.step(1200);});
- await expect(page.locator('#toast')).toContainText(/Checkpoint|Fundstück/);
+ await expect(page.locator('#toast')).toContainText(/Checkpoint/);
  const message=await page.locator('#toast').boundingBox(),logo=await page.locator('.wordmark').boundingBox();
  expect(message!.x).toBeLessThan(35);expect(message!.y).toBeGreaterThan(logo!.y+logo!.height);expect(message!.x+message!.width).toBeLessThan(235);
  await page.locator('#pause-button').click();await page.locator('#back-home').click();

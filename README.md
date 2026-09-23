@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.7.0 – reduziertes Cockpit, animierte Pedale, zäher Matsch und drei Expertenexpeditionen.**
+**Version 1.8.0 – geschlossene Felsdurchgänge, eigene Winterwelten und 15 neu aufgebaute Expeditionen.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -20,10 +20,10 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 
 - 15 Solo-Expeditionen in drei Landschaften, darunter drei Expertenstrecken, und ein freies Testgelände.
 - Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
-- Sterne für das Erreichen des Ziellagers, eine Fahrt ohne Bergung und drei optionale Fundstücke.
-- Checkpoints vor den Hindernisgruppen; gesammelte Fundstücke bleiben beim Bergen erhalten.
+- Ein Stern für das Ziellager, ein zweiter für eine Fahrt ohne Bergung; keine automatischen Sammelkisten.
+- Checkpoints vor den Hindernisgruppen; freies Experimentieren ohne Zeitlimit.
 - Zwei unabhängige Freihand-Entwürfe mit mehreren Strichen, manueller Montage, Strich-Rückgängig und Leeren; keine fertige Radauswahl.
-- 31 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
+- 43 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
 - Flache Furten und tiefe Seen: Der Geländetruck schwimmt, die gezeichneten Räder paddeln.
 - Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
 - Vollflächige Spielwelt hinter zwei quadratischen, transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
@@ -31,7 +31,7 @@ Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt kei
 - Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
 - Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
 
-Neue Blockhalden, Lehmgruben, Nadelöhre, Bruchstufen, Eisrinnen und Treibholzketten kombinieren unterschiedliche Anforderungen ohne Zwischenlager innerhalb einer Gruppe. Die drei Expertenstrecken heißen **Die Lehmklamm**, **Am Eisbruch** und **Kein leichter Weg**. [Änderungen in Version 1.7](docs/UPDATE-1.7.md).
+Zwölf neue Hindernistypen kombinieren lange Engstellen, hohe Kletterwände, wechselnde Stufen, Auswaschungen, Krater, gebrochene Holzstege, Lehmausstiege, überflutete Höhlen und Gletscherbrüche. Alle 15 Expeditionen haben neue Abfolgen mit sechs bis neun Gruppen. Eis liegt außerhalb des Testgeländes ausschließlich in Winterwelten. [Änderungen in Version 1.8](docs/UPDATE-1.8.md).
 
 Die Physik arbeitet im seitlichen Profil. Wasser und Schlamm nutzen die tatsächlich eingetauchten Konturen. Schlamm ergänzt viskosen Widerstand und eine regularisierte Fließgrenze; es gibt kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
 
@@ -39,7 +39,7 @@ Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Ei
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.7.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.8.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
 
 Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
 
@@ -60,6 +60,7 @@ Lokale Adresse: `http://127.0.0.1:5173/draw-wheel-racer/`.
 npm test
 npm run test:courses
 npm run test:expeditions
+npm run test:balance
 npm run test:races
 npm run build
 npm run preview -- --port 4173

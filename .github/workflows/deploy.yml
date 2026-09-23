@@ -23,6 +23,7 @@ jobs:
       - run: npm test
       - run: npm run test:courses
       - run: npm run test:expeditions
+      - run: npm run test:balance
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

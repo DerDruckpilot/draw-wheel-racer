@@ -84,3 +84,12 @@ Geländekanten seitlich unregelmäßig geformt. Details: [UPDATE-1.6.md](UPDATE-
 - Eine einzelne Fahrspur mit Umgebung, längs und quer auslaufende Bauwerksflanken statt abgeschnittener Enden.
 - Schlammkräfte hängen von benetzten Konturen und Materialgeschwindigkeit ab. Ein zähes Oberflächenmodell und braune Klumpen ergänzen die Physik.
 - Bestehende Level- und Spielstand-IDs bleiben erhalten. Drei Expertenstrecken werden als IDs 13–15 ergänzt; das Testgelände bleibt ID 12 und steht am Ende der Auswahl.
+
+
+## Überarbeitung 1.8
+
+- Durchgänge vollständig geschlossen modellieren; keine Felsflächen für die Sicht entfernen. Verdeckt sichtbare Fahrzeugkonturen dienen nur der Orientierung.
+- Eis als Teil zusammenhängender Winterlandschaften. Keine Eisstreifen in Canyon- und Steinbruchexpeditionen.
+- Automatische Sammelkisten entfernen. Zwei nachvollziehbare Abschlussziele: ankommen und ohne Bergung ankommen.
+- Alle 15 Expeditionen neu kombinieren, zwölf weitere Hindernistypen ergänzen und feste Allround-Konturen ausdrücklich als Gegenprobe testen.
+- Hohes Motordrehmoment und geometrische Kontaktphysik erhalten; Schwierigkeit aus Platz, Auflage, Untergrund und Abfolge erzeugen. Keine Radnamen-Boni oder versteckten Formvorgaben.

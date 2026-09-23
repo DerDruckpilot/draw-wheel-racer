@@ -12,7 +12,7 @@ export type ShapeName = 'round' | 'compact' | 'claw' | 'grip' | 'paddle' | 'tria
 export const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 export function preset(name: ShapeName): Point[] {
-  if (name === 'compact') return preset('round').map(p => ({ x: p.x * .6, y: p.y * .6 }));
+  if (name === 'compact') return preset('round').map(p => ({ x: p.x * .46, y: p.y * .46 }));
   if (name === 'round') return Array.from({ length: 73 }, (_, i) => ({ x: Math.cos(i / 72 * Math.PI * 2) * 0.82, y: Math.sin(i / 72 * Math.PI * 2) * 0.82 }));
   if (name === 'claw') return Array.from({ length: 65 }, (_, i) => ({ x: Math.cos((i / 64 * 1.65 + 0.175) * Math.PI) * 0.96, y: Math.sin((i / 64 * 1.65 + 0.175) * Math.PI) * 0.96 }));
   if (name === 'triangle') return [{ x: 0, y: 1.04 }, { x: -.95, y: -.64 }, { x: .95, y: -.64 }, { x: 0, y: 1.04 }];

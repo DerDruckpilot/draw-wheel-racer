@@ -42,17 +42,17 @@ test('solo corridor and structure shoulders merge into land, with exact clearanc
  for(const id of [0,8,13,15])assert.ok(createExpedition(id).obstacles.filter(o=>o.kind==='boulder').every(o=>o.lane===0));
 });
 
-test('expert routes preserve legacy IDs, author six new hazards and provide grounded recovery points',()=>{
+test('expert routes preserve legacy IDs, retain a varied hazard selection and provide grounded recovery points',()=>{
  const saved=recordExpedition(undefined,0,3,3);assert.deepEqual(restoreExpeditions({0:saved,13:saved,15:saved,16:saved}),{0:saved,13:saved,15:saved});
  assert.equal(EXPEDITION_COUNT,16);assert.equal(createExpedition(12).name,'Testgelände');
  const found=new Set<string>();
  for(const id of [13,14,15]){
-  const c=createExpedition(id);assert.deepEqual(c,createExpedition(id));assert.ok(c.difficulty>=5);assert.equal(c.caches!.length,3);
+  const c=createExpedition(id);assert.deepEqual(c,createExpedition(id));assert.ok(c.difficulty>=5);assert.equal(c.caches!.length,0);
   c.features.forEach(f=>found.add(f));
   for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);
   for(let i=1;i<c.segments.length;i++)assert.deepEqual(c.segments[i].a,c.segments[i-1].b);
  }
- for(const f of ['talus','mudpit','squeeze','stairfall','icegully','logjam'])assert.ok(found.has(f));
+ for(const f of ['talus','mudpit','squeeze','notch','icefissure','stepwell'])assert.ok(found.has(f));
 });
 
 test('expert needle-eye requires a change of wheel size; oversized rims cannot pass the roof',()=>{

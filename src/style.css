@@ -105,3 +105,12 @@ dialog{max-height:calc(100dvh - 24px);max-width:580px;border-radius:18px}.modal-
 /* Keep every part of the square available to the pen, including its corners. */
 .axle-pad .draft-tools{top:4px;left:0;right:0;width:100%;justify-content:space-between;pointer-events:none}
 .axle-pad .draft-tools button{pointer-events:auto}
+
+/* Keep the sparse cockpit legible against snow without covering the level. */
+.game[data-theme="alpine"] .scene-vignette{background:linear-gradient(180deg,#112321a8,transparent 37%,transparent 78%,#19312d15)}
+.game[data-theme="alpine"] .drawing-field{border-color:#2c494870;background:#17372e1a}
+.game[data-theme="alpine"] .draft-tools button{background:#24443bcc;color:#f5f8e9}
+.game[data-theme="alpine"] .mount-button:disabled{background:#24443b;color:#f5f8e9;opacity:.52}
+.game[data-theme="alpine"] .speed{color:#18362e;text-shadow:0 1px 3px #ffffffa8}
+.game[data-theme="alpine"] .speed span{color:#294e42}
+.game[data-theme="alpine"] .race-hud{text-shadow:0 1px 5px #102c27}

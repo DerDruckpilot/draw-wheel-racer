@@ -9,7 +9,8 @@ import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from '
 import { bankHeight, landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
 import { waterMaterial, WaterSpray } from './water-visuals';
 import { RouteLayout } from './route-layout';
-import { archBands, archSection } from './structures';
+import { archSection } from './structures';
+import { structureMesh } from './structure-mesh';
 import { terrainWarp } from './terrain-shape';
 
 const BASE = import.meta.env.BASE_URL;
@@ -75,7 +76,7 @@ function terrainGeometry(segments: Segment[], z0: number, z1: number, sides = fa
 function iceTexture() {
   const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#8cbbc7'; ctx.fillRect(0, 0, 512, 512);
+  ctx.fillStyle = '#a7b5bd'; ctx.fillRect(0, 0, 512, 512);
   let seed = 8192;
   const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   // Frost flecks and branching fractures over a glossy, continuous ice sheet.
@@ -109,11 +110,14 @@ export class GameRenderer {
   layout!: RouteLayout;
   snapNextFrame = true;
   private lastResets = 0;
+  private roofRay=new THREE.Raycaster();
+  private ghostMat=new THREE.MeshBasicMaterial({color:0xddebc3,transparent:true,opacity:.2,depthWrite:false,depthTest:true,depthFunc:THREE.GreaterDepth});
   sun = new THREE.DirectionalLight(0xffe3b0, 3.2);
   ambient = new THREE.HemisphereLight(0xd4e8ff, 0x6b5540, 2.1);
   mats!: TerrainMaterials;
   cliffMat!: THREE.MeshStandardMaterial;
   rockTemplate: THREE.Group | null = null;
+  private winterRocks={value:0};
   vehicleTemplate!: THREE.Group;
   skyTexture: THREE.DataTexture | null = null;
   quality: Quality = 'auto';
@@ -178,17 +182,27 @@ export class GameRenderer {
     this.mats = {
       stone,
       road: stone.clone(),
-      ice: new THREE.MeshPhysicalMaterial({ map: iceTexture(), color: 0xc1edf9, roughness: .16, metalness: .12, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.1, side: THREE.DoubleSide }),
+      ice: new THREE.MeshPhysicalMaterial({ map: iceTexture(), color: 0x9baeb9, roughness: .28, metalness: .02, clearcoat: .65, clearcoatRoughness: .18, envMapIntensity: .55, side: THREE.DoubleSide }),
       mud: new THREE.MeshStandardMaterial({ map: ground, normalMap: groundNormal, color: 0xb3a28a, roughness: .75, normalScale: new THREE.Vector2(.3, .3), side: THREE.DoubleSide }),
       wood: new THREE.MeshStandardMaterial({ color: 0x8d6745, roughness: .85 })
     };
     this.mats.road.color.set(0xcbbca0);
-    this.rockTemplate = model.scene;
-    this.rockTemplate.updateMatrixWorld(true);
-    const bounds = new THREE.Box3().setFromObject(this.rockTemplate); const center = bounds.getCenter(new THREE.Vector3());
-    // Center the original scan and normalize its largest dimension for art-directed placement.
-    const size = bounds.getSize(new THREE.Vector3());
-    this.rockTemplate.position.sub(center); this.rockTemplate.scale.setScalar(1 / Math.max(size.x, size.y, size.z));
+    for(const mat of [this.mats.stone,this.mats.road,this.cliffMat]){
+      const winter={value:0};mat.userData.winter=winter;
+      mat.onBeforeCompile=shader=>{shader.uniforms.winter=winter;shader.fragmentShader='uniform float winter;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.59,.64)+diffuseColor.rgb*.25,winter);');};
+      mat.customProgramCacheKey=()=> 'winter-terrain';
+    }
+    const scan=model.scene;scan.updateMatrixWorld(true);
+    const bounds=new THREE.Box3().setFromObject(scan),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
+    scan.position.sub(center);
+    scan.traverse(o=>{if(o instanceof THREE.Mesh){for(const mat of Array.isArray(o.material)?o.material:[o.material]){
+      const material=mat as THREE.MeshStandardMaterial;material.color.multiplyScalar(.86);
+      material.onBeforeCompile=shader=>{shader.uniforms.winter=this.winterRocks;
+        shader.vertexShader='varying vec3 snowNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nsnowNormal=normalize(mat3(modelMatrix)*normal);');
+        shader.fragmentShader='varying vec3 snowNormal;uniform float winter;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(.72,.78,.83),winter*smoothstep(.2,.75,snowNormal.y)*.88);');};
+      material.customProgramCacheKey=()=> 'scan-snow';
+    }}});
+    this.rockTemplate=new THREE.Group();this.rockTemplate.add(scan);this.rockTemplate.scale.setScalar(1/Math.max(size.x,size.y,size.z));
   }
 
   setQuality(q: Quality) {
@@ -221,7 +235,7 @@ export class GameRenderer {
     }
     this.cars = [];
     const course = sim.course, alpine = course.theme === 'alpine', quarry = course.theme === 'quarry';
-    this.layout = new RouteLayout(course);
+    this.layout = new RouteLayout(course);this.winterRocks.value=alpine?1:0;
     this.snapNextFrame = true; this.lastResets = 0;
     this.scene.background = this.skyTexture ?? new THREE.Color(0xbacbca);
     this.scene.backgroundIntensity = .9;
@@ -229,7 +243,8 @@ export class GameRenderer {
     this.sun.color.set(alpine ? 0xe4efff : 0xffd5a0);
     this.mats.stone.color.set(alpine ? 0xcad5d6 : quarry ? 0xa0a39b : 0xcdb394);
     this.mats.road.color.copy(this.mats.stone.color);
-    this.cliffMat.color.set(alpine ? 0xa7b5bd : quarry ? 0x9b9e92 : 0xbc8a65);
+    for(const mat of [this.mats.stone,this.mats.road,this.cliffMat]){mat.userData.winter.value=alpine?1:0;}
+    this.cliffMat.color.set(alpine ? 0xe0e6e9 : quarry ? 0xc3c1b6 : 0xe5d3b6);
     const completeGround = [...course.segments, ...courseRunout(course)];
     for (const surface of ['stone', 'ice', 'mud', 'road'] as Surface[]) {
       const parts = completeGround.filter(s => s.surface === surface);
@@ -298,22 +313,9 @@ export class GameRenderer {
       }
     }
     for (const car of sim.cars) this.cars.push(this.makeCar(car));
-    this.addGate(course.length, course.expedition ? 'ZIELLAGER' : 'ZIEL', !course.expedition);
+    this.addGate(course.length, 'ZIEL', !course.expedition);
     if (course.expedition) this.addExpeditionMarkers(course);
     this.bendLandscape();
-    for (const roof of this.roofs) {
-      const material = roof.mesh.material as THREE.MeshStandardMaterial;
-      const uniforms = { center: { value: new THREE.Vector2() }, radius: { value: 0 }, aspect: { value: 1 } };
-      material.userData.cutaway = uniforms; material.transparent = true; material.depthWrite = false;
-      // Only a soft window around the vehicle becomes translucent. The complete
-      // hillside remains present instead of vanishing along a planar half-cut.
-      material.onBeforeCompile = shader => {
-        shader.uniforms.cutCenter = uniforms.center; shader.uniforms.cutRadius = uniforms.radius; shader.uniforms.cutAspect = uniforms.aspect;
-        shader.vertexShader = 'varying vec4 vRockClip;\n' + shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvRockClip = gl_Position;');
-        shader.fragmentShader = 'varying vec4 vRockClip; uniform vec2 cutCenter; uniform float cutRadius; uniform float cutAspect;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', 'float aperture = smoothstep(cutRadius*.35, max(.001,cutRadius), length((vRockClip.xy/vRockClip.w-cutCenter)*vec2(cutAspect,1.0))); diffuseColor.a *= mix(1.0,.08+.92*aperture,step(.1,cutRadius));\n#include <opaque_fragment>');
-      };
-      material.customProgramCacheKey = () => 'local-rock-window-v2';
-    }
     this.viewX = 2; this.camera.position.set(-8, 11, 18); this.target.set(4, 0, -.5); this.camera.lookAt(this.target);
   }
 
@@ -325,10 +327,11 @@ export class GameRenderer {
       if (this.rockTemplate) {
         const r = new THREE.Group(); const scan = this.rockTemplate.clone(true);
         scan.traverse(o => { if (o instanceof THREE.Mesh) { o.userData.shared = true; o.receiveShadow = true; o.castShadow = false; } });
-        r.add(scan); const size = 7 + random() * 15;
-        r.scale.set(size * (.6 + random()), size * (1 + random()), size);
+        r.add(scan); const size = 5 + random() * 11;
+        r.scale.set(size * (.6 + random()), size * (.8 + random() * .6), size);
         r.rotation.y = random() * Math.PI * 2;
-        r.position.set(x, size * .23 - 2, -8 - random() * 12); this.terrain.add(r); this.rocks.push(r);
+        r.position.set(x, 0, -7 - random() * 13);
+        const bottom=new THREE.Box3().setFromObject(r).min.y;r.position.y=bankHeight(x,groundAt(course,x),r.position.z)-bottom-.4;this.terrain.add(r); this.rocks.push(r);
       }
       // Small scree on the verge, kept away from the drivable lanes.
       const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(.18 + random() * .4, 0), this.cliffMat);
@@ -392,119 +395,51 @@ export class GameRenderer {
       const flag = new THREE.Mesh(new THREE.PlaneGeometry(.85, .46), material);
       flag.position.set(x + .42, y + 2.25, -1.1); this.terrain.add(flag); this.checkpointFlags.push({ x: cp, mesh: flag });
     }
-    // Shelter sits outside the driving line; reaching it ends the expedition.
-    const canvas = new THREE.MeshStandardMaterial({ color: 0x687752, roughness: 1 });
-    const tent = new THREE.Mesh(new THREE.ConeGeometry(2.2, 2.2, 4, 1, true), canvas);
-    tent.rotation.y = Math.PI / 4; tent.scale.z = 1.4; tent.position.set(course.length + 4, 1.1, -4); tent.castShadow = true; this.terrain.add(tent);
+    // A grounded expedition camp: supply crates and a warm lantern, no open cone.
+    const timber=new THREE.MeshStandardMaterial({color:0x70634d,roughness:.95});
+    const camp=new THREE.Group();
+    for(const [x,z,w,h] of [[course.length+4,-4,1.2,.8],[course.length+5.2,-4.4,.8,.55]]){
+      const y=bankHeight(x,groundAt(course,x),z);
+      camp.add(box(w,h,.85,timber,x,y+h/2,z));
+      for(const d of [-.32,.32])camp.add(box(.06,h+.03,.89,metal,x+d,y+h/2,z));
+    }
+    const x=course.length+3,z=-3,y=bankHeight(x,groundAt(course,x),z);
+    camp.add(box(.055,2.5,.055,metal,x,y+1.25,z));
+    const lamp=new THREE.MeshStandardMaterial({color:0xffd79c,emissive:0xffc168,emissiveIntensity:.8});
+    camp.add(box(.22,.3,.22,lamp,x,y+2.25,z));
+    camp.add(box(.35,.07,.35,metal,x,y+2.44,z));
+    mergeRigidGroup(camp);this.terrain.add(camp);
   }
 
   addRockStructure(course: Course, o: Obstacle) {
-    const style = o.structure!, bands = archBands(style), base = groundAt(course, o.x);
-    const material = this.cliffMat.clone(); material.side = THREE.DoubleSide;
-    if (style === 'bridge') material.color.set(0xd2c4a5);
-    else material.color.multiplyScalar(1.18);
-    material.normalScale.set(.7, .7);
-    const vertex = (t: number, z: number, top: boolean) => {
-            const shoulder = Math.max(0, Math.abs(z) - 1.35);
-            const jagged = style === 'bridge' ? 0 : Math.sin(z * 2.1 + t * 9 + o.x) * Math.min(1.2, shoulder * .16);
-            const spread = 1 + Math.min(1.6, Math.max(0, Math.abs(z) - 2.7) * .18);
-            const s = o.x + (t - .5) * o.width * spread + jagged;
-            const foot = bankHeight(s, groundAt(course, s), 1 + z);
-            const shape = archSection(o, z, Math.abs(z) <= 1.35 ? base : foot);
-            const crest = style === 'bridge' ? 0 : Math.sin(t * Math.PI) * (style === 'cave' ? 1.8 : .4) * Math.max(0, 1 - shoulder / (bands.at(-1)! - 1.35));
-            return [s, top ? shape.top + crest : shape.bottom, 1 + z];
-          };
-    for (const near of [false, true]) {
-      const positions: number[] = [], uvs: number[] = [];
-      const quad = (a: number[], b: number[], c: number[], d: number[]) => {
-        const normal = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).cross(new THREE.Vector3(d[0] - a[0], d[1] - a[1], d[2] - a[2]));
-        const face = Math.abs(normal.y) > Math.max(Math.abs(normal.x), Math.abs(normal.z)) ? 'top' : Math.abs(normal.x) > Math.abs(normal.z) ? 'end' : 'side';
-        for (const p of [a, b, c, a, c, d]) { positions.push(...p); uvs.push((face === 'end' ? p[2] : p[0]) / 2.3, (face === 'top' ? p[2] : p[1]) / 2.3); }
-      };
-      for (let j = 1; j < bands.length; j++) {
-        if ((bands[j - 1] >= 0) !== near) continue;
-        const gap = 0, za = bands[j - 1] + gap, zb = bands[j] - gap;
-        for (let k = 0; k < 4; k++) {
-          const t0 = k / 4, t1 = (k + 1) / 4;
-
-          const a = vertex(t0, za, false), b = vertex(t1, za, false), c = vertex(t1, zb, false), d = vertex(t0, zb, false);
-          const e = vertex(t0, za, true), f = vertex(t1, za, true), g = vertex(t1, zb, true), h = vertex(t0, zb, true);
-          quad(a, d, c, b); quad(e, f, g, h);
-          if (k === 0) quad(a, e, h, d); if (k === 3) quad(b, c, g, f);
-          if (j === 1) quad(a, b, f, e);
-          if (j === bands.length - 1) quad(d, h, g, c);
-        }
+    const data = structureMesh(course, o), geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));
+    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(data.positions.flatMap((_,i,a)=>i%3===0?[a[i]/3,a[i+2]/3]:[]),2));
+    geometry.setIndex(data.indices); geometry.computeVertexNormals();
+    const material=this.cliffMat.clone(); material.side=THREE.FrontSide; material.normalMap=null; material.roughnessMap=null;
+    // World-space stone grain follows every face without stretching vertical walls.
+    material.onBeforeCompile=shader=>{
+      shader.vertexShader='varying vec3 stonePosition; varying vec3 stoneNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nstonePosition=position;stoneNormal=normal;');
+      shader.fragmentShader='varying vec3 stonePosition; varying vec3 stoneNormal;\n'+shader.fragmentShader.replace('#include <map_fragment>',`vec3 weights=pow(abs(normalize(stoneNormal)),vec3(4.0)); weights/=max(.001,weights.x+weights.y+weights.z);
+      vec3 grain=texture2D(map,stonePosition.yz*.26).rgb*weights.x+texture2D(map,stonePosition.xz*.26).rgb*weights.y+texture2D(map,stonePosition.xy*.26).rgb*weights.z;
+      grain=mix(vec3(dot(grain,vec3(.2126,.7152,.0722))),grain,.22);
+      diffuseColor.rgb*=grain;${course.theme==='alpine'?'diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.74,.80,.85),smoothstep(.2,.8,stoneNormal.y)*.88);':''}`);
+      shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+      vec3 sx=dFdx(-vViewPosition),sy=dFdy(-vViewPosition);vec3 rx=cross(sy,normal),ry=cross(normal,sx);float det=dot(sx,rx);
+      float relief=dot(grain,vec3(.333));vec3 grad=sign(det)*(dFdx(relief)*rx+dFdy(relief)*ry);
+      normal=normalize(max(.000001,abs(det))*normal-.12*grad);`);
+    };
+    material.customProgramCacheKey=()=> 'sealed-stone-triplanar-'+course.theme;
+    const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=true;mesh.receiveShadow=true;this.terrain.add(mesh);
+    this.roofs.push({x:o.x,width:o.width,mesh});
+    if(o.structure==='bridge'){
+      const masonry=new THREE.Group(),stone=this.cliffMat.clone();stone.color.copy(material.color);
+      for(const side of [-1,1])for(let z=-7;z<7;z+=.7){
+        const base=bankHeight(o.x,groundAt(course,o.x),z+1),top=archSection(o,z,base).top;
+        if(top<base+.1)continue;
+        const block=box(.28,.26,.67,stone,o.x+side*(o.width/2-.17),top+.13,z+1);block.rotation.y=Math.sin(z*3)*.04;masonry.add(block);
       }
-      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); geometry.computeVertexNormals();
-      const mesh = new THREE.Mesh(geometry, near ? material.clone() : material); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
-      if (near) this.roofs.push({ x: o.x, width: o.width, mesh });
-    }
-    // Sloping earth/rock aprons bury the vertical end faces on both sides of
-    // the opening. Only the playable mouth stays exposed; the shoulders merge
-    // into surrounding land along AND across the route.
-    for (const side of [-1, 1]) {
-      const positions: number[] = [], uvs: number[] = [];
-      const zs = [1.4, ...bands.filter(z => z > 1.4)];
-      const vertexAt = (end: number, z: number, t: number) => {
-        const wall = vertex(end < 0 ? 0 : 1, z * side, true);
-        const run = (style === 'bridge' ? 3 : 5) + Math.min(7, z * .6);
-        const x = wall[0] + end * run * t;
-        const floor = bankHeight(x, groundAt(course, x), wall[2]) - .07;
-        const blend = t * t * (3 - 2 * t);
-        return [x, wall[1] * (1 - blend) + floor * blend, wall[2]];
-      };
-      for (const end of [-1, 1]) for (let j = 1; j < zs.length; j++) for (let k = 0; k < 6; k++) {
-        const a = vertexAt(end, zs[j-1], k/6), b = vertexAt(end, zs[j], k/6), c = vertexAt(end, zs[j], (k+1)/6), d = vertexAt(end, zs[j-1], (k+1)/6);
-        for (const p of [a,b,c,a,c,d]) {positions.push(...p);uvs.push(p[0]/4,p[2]/4);}
-      }
-      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.computeVertexNormals();
-      const apronMaterial = (style === 'bridge' ? this.mats.stone : material).clone();
-      const mesh = new THREE.Mesh(geometry,apronMaterial);mesh.castShadow=true;mesh.receiveShadow=true;this.terrain.add(mesh);
-      if(side>0)this.roofs.push({x:o.x,width:o.width+2,mesh});
-    }
-    const edge = bands.at(-1)!;
-    if (style === 'bridge') {
-      // Stone parapets and abutments connect the cross-route bridge to its banks.
-      const masonry = new THREE.Group();
-      for (const x of [o.x - o.width / 2 + .18, o.x + o.width / 2 - .18]) for (let z = -edge; z < edge; z += .9) {
-        const h = .45 + .1 * Math.sin(z * 2.7 + x);
-        masonry.add(box(.36, h, .84, material, x, archSection(o, z, bankHeight(x, groundAt(course, x), z + 1)).top + h / 2, z + 1));
-      }
-      mergeRigidGroup(masonry); this.terrain.add(masonry);
-    }
-    // Irregular shoulders sink into the banks instead of stopping at a plate edge.
-    for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
-      if (!this.rockTemplate) continue;
-      const rock = new THREE.Group(), scan = this.rockTemplate.clone(true);
-      const bounds = new THREE.Box3().setFromObject(scan), size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
-      scan.position.sub(center);
-      scan.traverse(object => { if (object instanceof THREE.Mesh) { object.userData.shared = true; object.castShadow = true; object.receiveShadow = true; } });
-      rock.add(scan);
-      const height = side > 0 ? 1.4 : style === 'cave' ? 4.2 : 2.6;
-      rock.position.set(o.x + (j - 1) * o.width * .32, base + height * .18, 1 + side * (style === 'cave' ? 4.6 : 3.8));
-      rock.scale.set(Math.max(2.5, o.width * .42) / size.x, height / size.y, 3.4 / size.z); rock.rotation.y = j * .71 + o.x;
-      this.terrain.add(rock); this.rocks.push(rock);
-    }
-    if (style !== 'bridge' && this.rockTemplate) {
-      // Scanned, fractured stones break up the portal silhouette. Their lower
-      // edges remain above the exact clearance inside the wheel corridor.
-      for (const end of [-1, 1]) for (const z of [-3.7, -1.2, 0, 1.2, 3.7]) {
-        const scan = this.rockTemplate.clone(true), rock = new THREE.Group();
-        const bounds = new THREE.Box3().setFromObject(scan), size = bounds.getSize(new THREE.Vector3());
-        scan.position.sub(bounds.getCenter(new THREE.Vector3()));
-        scan.traverse(object => {
-          if (!(object instanceof THREE.Mesh)) return;
-          object.userData.shared = true; object.userData.ownedMaterial = true;
-          object.material = (object.material as THREE.MeshStandardMaterial).clone(); object.castShadow = true; object.receiveShadow = true;
-          if (z >= 0) this.roofs.push({ x: o.x, width: o.width + 1.4, mesh: object });
-        });
-        rock.add(scan);
-        const crown = Math.abs(z) < 2, height = crown ? 1.05 : 2.1;
-        rock.position.set(o.x + end * o.width / 2, crown ? o.y - o.height / 2 + .64 : base + .75, 1 + z);
-        rock.scale.set(1.35 / size.x, height / size.y, (crown ? 1.45 : 1.8) / size.z);
-        rock.rotation.y = Math.sin(z + o.x) * .12;
-        this.terrain.add(rock); this.rocks.push(rock);
-      }
+      mergeRigidGroup(masonry);this.terrain.add(masonry);
     }
   }
 
@@ -547,10 +482,11 @@ export class GameRenderer {
     group.add(box(.18, .16, 4.1, mat, x, 4, 1));
     mergeRigidGroup(group); this.terrain.add(group);
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 128;
-    const ctx = canvas.getContext('2d')!; ctx.fillStyle = finish ? '#dceda3' : '#22362e'; ctx.fillRect(0, 0, 1024, 128); ctx.fillStyle = finish ? '#23362d' : '#e7edcf'; ctx.font = 'bold 58px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, 512, 86);
+    const ctx = canvas.getContext('2d')!; ctx.fillStyle = finish ? '#dceda3' : '#22362e'; ctx.fillRect(0, 0, 1024, 128); ctx.fillStyle = finish ? '#23362d' : '#e7edcf'; ctx.font = 'bold 78px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, 512, 86);
     const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace;
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.8, .6), new THREE.MeshStandardMaterial({ map: t, roughness: .8, side: THREE.DoubleSide }));
-    mesh.rotation.y = Math.PI / 2; mesh.position.set(x, 3.65, 1); this.terrain.add(mesh);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.8, .6), new THREE.MeshStandardMaterial({ map: t, roughness: .8, side: THREE.FrontSide }));
+    mesh.name='goal-front';mesh.rotation.y = -Math.PI / 2; mesh.position.set(x-.11, 3.65, 1); this.terrain.add(mesh);
+    const reverse=mesh.clone();reverse.name='goal-back';reverse.geometry=mesh.geometry.clone();reverse.rotation.y=Math.PI/2;reverse.position.x=x+.11;this.terrain.add(reverse);
     if (finish) {
       const finishGroup = new THREE.Group(); const black = new THREE.MeshStandardMaterial({ color: 0x26302c }), white = new THREE.MeshStandardMaterial({ color: 0xe2e3d5 });
       for (let i = 0; i < 28; i++) for (let j = 0; j < 2; j++) finishGroup.add(box(.45, .012, .5, (i + j) % 2 ? black : white, x + j * .45, .022, -10.5 + i * .5));
@@ -564,6 +500,8 @@ export class GameRenderer {
     // visible axle connections are generated by the game.
     const metal = new THREE.MeshStandardMaterial({ color: 0x46514b, metalness: .7, roughness: .4 });
     for (const x of AXLES) group.add(cylinderBetween(new THREE.Vector3(x, -.25, -.97), new THREE.Vector3(x, -.25, .97), .07, metal));
+    const ghost=this.vehicleTemplate.clone(true);ghost.userData.occlusionOutline=true;ghost.visible=false;
+    ghost.traverse(o=>{if(o instanceof THREE.Mesh){o.material=this.ghostMat;o.castShadow=false;o.receiveShadow=false;o.renderOrder=8;}});group.add(ghost);
     this.scene.add(group);
     const wheels = Array.from({ length: 4 }, () => { const g = new THREE.Group(); this.scene.add(g); return g; });
     return { root: group, wheels, revisions: [-1, -1] };
@@ -582,6 +520,7 @@ export class GameRenderer {
     }
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(.145, .145, .21, 16), rim); hub.rotation.x = Math.PI / 2; g.add(hub);
     mergeRigidGroup(g);
+    for(const child of [...g.children])if(child instanceof THREE.Mesh){const ghost=child.clone();ghost.material=this.ghostMat;ghost.castShadow=false;ghost.receiveShadow=false;ghost.renderOrder=8;ghost.userData.sharedWheel=true;ghost.userData.occlusionOutline=true;ghost.visible=false;g.add(ghost);}
   }
 
   render(sim: Simulation, dt: number, menu = false) {
@@ -618,13 +557,16 @@ export class GameRenderer {
     this.camera.position.lerp(temp, factor);
     temp.set(targetPoint.x, y - 1.15, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();
-    const apertureCenter = this.layout.point(player.x, 1);
-    temp.set(apertureCenter.x, player.y + .1, apertureCenter.z).project(this.camera);
-    for (const roof of this.roofs) {
-      const uniforms = (roof.mesh.material as THREE.MeshStandardMaterial).userData.cutaway;
-      const cutaway = sim.course.expedition && Math.abs(player.x - roof.x) < roof.width / 2 + .6;
-      uniforms.center.value.set(temp.x, temp.y); uniforms.aspect.value = this.camera.aspect; uniforms.radius.value = cutaway ? .65 : 0;
+    // Preserve the solid scenery. A fine vehicle silhouette supplies orientation
+    // only while the car is hidden inside a passage, without deleting rock faces.
+    const candidates=this.roofs.filter(r=>Math.abs(player.x-r.x)<r.width/2+1.2);
+    let hidden=false;
+    if(candidates.length){
+      const at=this.layout.point(player.x,1);temp.set(at.x,player.y+.3,at.z).sub(this.camera.position);
+      this.roofRay.far=Math.max(.1,temp.length()-.4);this.roofRay.set(this.camera.position,temp.normalize());
+      hidden=this.roofRay.intersectObjects(candidates.map(r=>r.mesh),false).length>0;
     }
+    this.scene.traverse(o=>{if(o.userData.occlusionOutline)o.visible=hidden;});
     const sun = this.layout.point(this.viewX - 16, 15), sunTarget = this.layout.point(this.viewX + 4, -3);
     this.sun.position.set(sun.x, 25, sun.z); this.sun.target.position.set(sunTarget.x, 0, sunTarget.z);
     for (const rock of this.rocks) rock.visible = Math.abs(rock.userData.trackX - this.viewX) < 78;
@@ -660,7 +602,7 @@ export class GameRenderer {
 
   disposeObject(root: THREE.Object3D) {
     const materials = new Set<THREE.Material>();
-    root.traverse(o => { if (o instanceof THREE.Mesh && !o.userData.sharedVehicle && !o.userData.sharedWheel) { o.geometry.dispose(); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
+    root.traverse(o => { if ((o instanceof THREE.Mesh || o instanceof THREE.LineSegments) && !o.userData.sharedVehicle && !o.userData.sharedWheel) { o.geometry.dispose(); for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m); } });
     for (const mat of materials) mat.dispose();
   }
 }

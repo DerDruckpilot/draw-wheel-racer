@@ -1,4 +1,4 @@
-# FORMDRIVE 1.7 – Implementierung
+# FORMDRIVE 1.8 – Implementierung
 
 Stand: 23. September 2026. Dieses Dokument beschreibt die tatsächliche Implementierung; ältere Konzept- und Roadmap-Dokumente sind die Recherchehistorie.
 
@@ -10,7 +10,7 @@ Stand: 23. September 2026. Dieses Dokument beschreibt die tatsächliche Implemen
 - Größenlimit, sichtbare Achsmarkierung, Rückgängig je Strich und Leeren des Entwurfs. Keine Vorlagen oder Favoritenauswahl in der Oberfläche.
 - Straße, Fels, Eis, Schlamm, Stufen, Steigungen, Sprunglücken, Baumstämme, Wippen und niedrige Durchfahrten.
 - Flache Furten und tiefe Schwimmabschnitte mit Auftrieb und formabhängiger Paddelwirkung.
-- Pause, Checkpoint-Bergung, drei optionale Fundstücke pro Expedition und dauerhafte Sterne für Zielankunft, bergungsfreie Fahrt und alle Fundstücke. Alle Strecken sind frei wählbar.
+- Pause, Checkpoint-Bergung, dauerhafte Sterne für Zielankunft und bergungsfreie Fahrt. Alle Strecken sind frei wählbar.
 - Abschaltbarer synthetischer Motorsound; automatische, hohe und sparsame Grafikqualität.
 - Installierbare PWA mit vollständigem lokalem Asset-Cache und bewusst bestätigten App-Updates.
 
@@ -35,13 +35,13 @@ TypeScript, Vite, Three.js, Rapier 2D, vite-plugin-pwa/Workbox. Exakte Versionen
 - `src/main.ts`: Zustände, Oberfläche, Spielstand und PWA-Integration.
 - `src/audio.ts`: lokal erzeugter Ton ohne zusätzliche Audiodateien.
 
-Die aktuelle Oberfläche, das Schlammmodell, die integrierten Felsflanken und Expertenstrecken stehen in [UPDATE-1.7.md](UPDATE-1.7.md). Die Modellquelle und getrennten Achsen sind in [UPDATE-1.6.md](UPDATE-1.6.md) dokumentiert.
+Die aktuelle Weltgeometrie, Winterdarstellung und Schwierigkeitsprüfung stehen in [UPDATE-1.8.md](UPDATE-1.8.md). Das Schlammmodell und Cockpit stehen in [UPDATE-1.7.md](UPDATE-1.7.md). Die Modellquelle und getrennten Achsen sind in [UPDATE-1.6.md](UPDATE-1.6.md) dokumentiert.
 
 ## Schlamm und Einzelspieler-Ansicht
 
 Schlammbecken besitzen einen festen unregelmäßigen Untergrund unter dem sichtbaren Pegel. Die benetzte Rad- und Rumpfkontur erfährt Druck, viskosen Widerstand, Scherung und eine regularisierte Fließgrenze. Dissipation wird auf ein energiestabiles Impulsmaß begrenzt. Eine runde Kontur bekommt keinen besonderen Bonus; vorspringende Flächen können Material nach hinten bewegen. Die Oberfläche bewegt sich langsam, zeigt Radspuren und schleudert kurze braune Klumpen. Verformbare Erde und dauerhafte Spurrillen sind nicht simuliert.
 
-Die sichtbare Fahrbahn ist 4,4 Einheiten breit und enthält ausschließlich das Spielerfahrzeug. Seitliche Böschungen füllen weiterhin die Umgebung. Bauwerke besitzen bis ins Gelände auslaufende Querprofile und längs anschließende Fels- bzw. Erdböschungen. Nur ein weiches Sichtfenster am Fahrzeug wird bei Durchfahrt transparent. Hindernis-Lösungshinweise entfallen; Statusmeldungen erscheinen unter dem Spielnamen.
+Die sichtbare Fahrbahn ist 4,4 Einheiten breit und enthält ausschließlich das Spielerfahrzeug. Seitliche Böschungen füllen weiterhin die Umgebung. Bauwerke bestehen aus einer vollständig geschlossenen, gemeinsam indizierten Oberfläche mit auslaufenden Füßen unterhalb des Geländes. Es gibt keine transparent ausgeschnittenen Felsflächen. Eine dezente Fahrzeugdarstellung hinter verdeckenden Flächen hält die Lage im Tunnel erkennbar. Hindernis-Lösungshinweise entfallen; Statusmeldungen erscheinen unter dem Spielnamen.
 
 ## Physikmodell
 
@@ -63,9 +63,9 @@ Felsprofile, Stufen, Rillen, Mulden und Inseln verwenden reproduzierbare unregel
 
 Gas setzt die gewünschte Raddrehzahl; auch wenig Gas kann das maximale Anfahrmoment aufbauen. Rückwärtsfahrt spiegelt die Antriebsrichtung. Die Bremse wirkt durch begrenzte, gleich große Gegenmomente auf Rad und Chassis; die effektive Rotationsträgheit begrenzt ihren Impuls. Geschwindigkeit und Reibung werden nicht künstlich überschrieben. Neutral lässt das Fahrzeug rollen. Pause, Sichtbarkeitsverlust, Fokusverlust und Pointerabbruch lösen gehaltene Eingaben; nach einer Pause ist der Tempomat aus.
 
-Neue Kombinationen: langer Felsgrat mit Abfahrt, erhöhter Felsgang nach einem Aufstieg, tiefe Flutpassage mit vier unregelmäßigen Inseln und Schlucht mit Abfahrt, Lücke und Gegenanstieg. Sie verwenden dieselben Kontakte und Wasserkräfte wie die bisherigen Hindernisse. Ein Checkpoint liegt vor der jeweiligen Kombination. Die zwölf Expeditionen erhalten eigene Abfolgen. Das Testgelände enthält alle 25 Typen.
+Alle 15 Expeditionen haben sechs bis neun kombinierte Hindernisgruppen. Zwölf neue Typen ergänzen die bisherigen 31. Das Testgelände enthält alle 43. Ein Checkpoint liegt vor jeder Gruppe; innerhalb zusammengesetzter Aufgaben muss die Lösung zusammenhängend gelingen. Die Umgebung folgt dem jeweiligen Biotop, mit Eis ausschließlich in Winterstrecken (Ausnahme: Testgelände).
 
-Orange Fundstücke sind optionale Sammelobjekte. Kontakte werden gegen Rumpf/Käfig und die tatsächlichen Strichabschnitte der Räder geprüft (mit der Größe des Fundstücks als Toleranz). Eine höhere Kiste pro Strecke fordert zusätzliche Reichweite oder einen passend abgepassten Sprung. Fundstücke bleiben bei einer Bergung innerhalb derselben Fahrt erhalten; Neustart setzt sie zurück. Der Erstabschluss ist unabhängig von Zeit oder Fundstücken möglich. Sterne für Abschluss, null Bergungen und alle Fundstücke werden getrennt über abgeschlossene Fahrten zusammengeführt.
+Die bisherigen automatischen Fundstücke entfallen. Ein Stern gilt für Zielankunft, ein zweiter für eine Fahrt ohne Bergung. Frühere Sammlerfelder bleiben als kompatible Altdaten erhalten, erzeugen aber keinen dritten Stern mehr. Die Oberfläche zeigt die Zahl der Bergungen statt eines Sammelzählers.
 
 Der bestehende lokale Speicher bekommt ein eigenes Feld `expeditions`. Alte `best`-Rennergebnisse, Lieblingsform, gewählte Strecke und Einstellungen bleiben erhalten. Es gibt keinen laufenden Checkpoint-Spielstand über einen Neustart der App hinweg.
 
@@ -73,7 +73,7 @@ Der bestehende lokale Speicher bekommt ein eigenes Feld `expeditions`. Alte `bes
 
 Importierter Geländetruck: GroundVehicle aus CesiumJS, Copyright 2018 Analytical Graphics, Inc., Apache-2.0. Originalräder wurden entfernt, Proportionen für die gezeichneten Achsen angepasst und die PBR-Texturen auf höchstens 1K komprimiert. Die mobile GLB-Datei ist etwa 1,9 MB groß. Photogrammetrie-Fels von Poly Haven, für wiederholte Hintergrunddarstellung auf rund 8.000 Dreiecke reduziert. Farb-, Normalen- und Rauheitstexturen in 1K; draußen aufgenommenes HDRI für Himmel und Umgebungslicht. Materialdetail und mobile Renderauflösung werden getrennt behandelt.
 
-Die Spielwelt füllt die gesamte Bildschirmhöhe. Zwei Zeichenfelder liegen mit transparenter Füllung und heller Umrandung mittig darüber. Jedes Feld besitzt Montieren, Strich-Rückgängig und Leeren. Die Kamera hält das Fahrzeug oberhalb der Felder. Gas liegt rechts, Bremse/Rückwärtsgang links. Ziellager, Checkpointfahnen und orange Sammelkisten ersetzen die Rennmarkierungen. Dächer werden in Fahrzeugnähe transparent, damit der Buggy im Felsgang sichtbar bleibt. Der Wassershader kombiniert Tiefenfarbe, gefilterte HDR-Himmelsreflexion, kleine Wellen, Ufer- und Kielwasserschaum. Maximal 1.100 Partikel bilden feine Tropfen, Gischt und auslaufenden Schaum. Emissionen hängen von Kontur und Geschwindigkeit ab und sind zeitbasiert. Bei Pause bleiben die Effekte stehen; Streckenwechsel leeren den Partikelpool. Laufzeitassets liegen vollständig im lokalen Offlinecache; es gibt keine externen Asset-Downloads und keine planaren Echtzeit- oder Bildschirmreflexionen.
+Die Spielwelt füllt die gesamte Bildschirmhöhe. Zwei Zeichenfelder liegen mit transparenter Füllung und heller Umrandung mittig darüber. Jedes Feld besitzt Montieren, Strich-Rückgängig und Leeren. Die Kamera hält das Fahrzeug oberhalb der Felder. Gas liegt rechts, Bremse/Rückwärtsgang links. Ziellager und Checkpointfahnen ersetzen Rennmarkierungen. Felsdächer bleiben geschlossen und deckend. Beide Seiten des Zielschildes verwenden eigene Geometrie und korrekt ausgerichtete Vorderseiten; keine doppelte Verformung einer geteilten Schildgeometrie. Der Wassershader kombiniert Tiefenfarbe, gefilterte HDR-Himmelsreflexion, kleine Wellen, Ufer- und Kielwasserschaum. Maximal 1.100 Partikel bilden feine Tropfen, Gischt und auslaufenden Schaum. Emissionen hängen von Kontur und Geschwindigkeit ab und sind zeitbasiert. Bei Pause bleiben die Effekte stehen; Streckenwechsel leeren den Partikelpool. Laufzeitassets liegen vollständig im lokalen Offlinecache; es gibt keine externen Asset-Downloads und keine planaren Echtzeit- oder Bildschirmreflexionen.
 
 Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet mit maximal 1,6-facher Auflösung und kann bei langsamen Bildern reduzieren. Sparsam: einfache Pixelauflösung ohne Schatten. Das ist keine garantierte Bildrate auf dem Ziel-iPhone; Messungen am tatsächlichen Gerät sind noch erforderlich.
 
@@ -81,11 +81,12 @@ Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet 
 
 - `npm test`: Eingabegrenzen, Vortrieb über Kontakt, Eis-Traktion, Energieverhalten ohne Antrieb, offene Formen, wiederholte Radwechsel, Auftrieb/Paddelantrieb und Instanziierung aller Strecken. Dazu Regressionstests für Anfahren mit Dreiecksrädern, den Vergleich Paddel/Rundrad in tiefem Wasser, die Durchquerungszeit einer Furt und gegensätzliche Formanforderungen an Stufen/Durchfahrten einschließlich Befreiung durch Zeichnen. Ein weiterer Test prüft das zurückgestellte Vergrößern unter einem niedrigen Dach bis zur sicheren Ausfahrt.
 - `npm run test:courses`: vollständige Fahrten aller zwölf Rennen und des Testgeländes mit einer Wechselstrategie zwischen Rundrad, flachen Zacken, kleinen Rädern und Paddeln. Erwartet Zielankunft ohne Bergung; protokolliert Zeit, Lage und Bergungen.
-- `npm run test:expeditions`: sämtliche zwölf Expeditionen und das Testgelände mit echten Physikschritten, einer Formwechselstrategie und langsamerer Abfahrt. Keine Teleportation oder Bergung zur Ziellösung.
+- `npm run test:expeditions`: sämtliche 15 Expeditionen und das Testgelände mit echten Physikschritten, Formwechseln, dosiertem Gas, Bremsen und kurzen Rückwärtsmanövern. Der Offline-Referenzfahrer darf ein umgekipptes Fahrzeug an seinem echten Checkpoint bergen; mehr als zwei Bergungen oder eine nicht erreichte Ziellinie lassen die Prüfung scheitern. Es wird nicht vorwärts teleportiert.
+- `npm run test:balance`: alle 15 Expeditionen mit unverändertem großem Ring, kleinem Ring oder offenen Haken. Eine erfolgreiche Durchfahrt mit einer dieser unveränderten Referenzformen schlägt als Balancing-Regression fehl.
 - `npm run test:browser`: produktiver Build in Chromium und WebKit mit 956 × 440 CSS-Pixeln; getrennte Entwürfe, Montage, Tempomat, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Separate Chromium-Tests prüfen den vollständigen Neustart ohne Netzwerk und das bestätigte Update nach einer Installation während desselben Seitenbesuchs, einschließlich Erhalt der Lieblingsform.
 - `npm run build`: strenge TypeScript-Prüfung, Produktionsbuild und PWA-Precache-Erzeugung.
 
-Die vollständigen Fahrprüfungen umfassen alle 15 Expeditionen und das Testgelände mit 31 Hindernistypen; zusätzlich bleiben die historischen Rennstrecken als Regression erhalten. Die 52 Physik-, Geometrie- und Fortschrittstests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Neue Steuerungs- und Expeditionsprüfungen: [UPDATE-1.5.md](UPDATE-1.5.md). Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
+Die vollständigen Fahrprüfungen umfassen alle 15 Expeditionen und das Testgelände mit 43 Hindernistypen; zusätzlich bleiben die historischen Rennstrecken als Regression erhalten. Die 57 Physik-, Geometrie- und Fortschrittstests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Neue Steuerungs- und Expeditionsprüfungen: [UPDATE-1.5.md](UPDATE-1.5.md). Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
 
 Der Countdown verwendet tatsächlich verstrichene Zeit unabhängig vom begrenzten Physik-Zeitschritt. Ein Browserregressionstest erzwingt eine niedrige Bildrate und prüft, dass die Startphase nicht künstlich länger wird.
 

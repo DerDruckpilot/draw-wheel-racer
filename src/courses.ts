@@ -1,11 +1,12 @@
+import { buildChallenge } from './challenges';
 import type { Point, ShapeName } from './shapes';
 export type Surface = 'stone' | 'ice' | 'mud' | 'road' | 'wood';
 export type Feature = 'flat' | 'rocks' | 'steps' | 'ramp' | 'gap' | 'ford' | 'lake' | 'ice' | 'mud' | 'seesaw' | 'logs' | 'tunnel'
   | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb'
-  | 'ridge' | 'grotto' | 'floodpass' | 'ravine' | 'talus' | 'mudpit' | 'squeeze' | 'stairfall' | 'icegully' | 'logjam';
+  | 'ridge' | 'grotto' | 'floodpass' | 'ravine' | 'talus' | 'mudpit' | 'squeeze' | 'stairfall' | 'icegully' | 'logjam' | 'notch' | 'escarpment' | 'rubblegate' | 'siltclimb' | 'tidalcave' | 'brokenbridge' | 'potholes' | 'crater' | 'icefissure' | 'glacier' | 'stepwell' | 'knifeedge';
 export type Theme = 'canyon' | 'alpine' | 'quarry';
 export interface Segment { a: Point; b: Point; surface: Surface }
-export interface Zone { start: number; end: number; kind: Feature; label: string }
+export interface Zone { start: number; end: number; kind: Feature; label: string; feature?: Feature }
 export interface Water { start: number; end: number; level: number; deep: boolean }
 export type Structure = 'bridge' | 'arch' | 'cave';
 export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure }
@@ -25,31 +26,32 @@ const specs: [string, string, Feature[]][] = [
   ['Die letzte Etappe', 'Alles, was du gelernt hast.', ['sawtooth', 'iceclimb', 'rollers', 'lake', 'trenches', 'rocking', 'crawl', 'ramp']]
 ];
 const expeditionSpecs: [string, string, Feature[]][] = [
-  ['Zum Basislager', 'Fahren, formen, ankommen.', ['domes', 'steps', 'tunnel', 'ford']],
-  ['Der Höhenweg', 'Erst hinauf. Dann kontrolliert hinunter.', ['ridge', 'crawl', 'trenches', 'gap']],
-  ['Die versunkene Schlucht', 'Vom tiefen Wasser auf die Felsen.', ['ford', 'floodpass', 'lake', 'grotto']],
-  ['Durch den Canyon', 'Abgründe, Felstore und versunkene Wege.', ['ravine', 'grotto', 'floodpass', 'rocking']],
-  ['Frostspur', 'Schwung bewahren, Halt finden.', ['ice', 'iceclimb', 'grotto', 'ford']],
-  ['Zwischen Eis und Wasser', 'Klettern, paddeln, balancieren.', ['iceclimb', 'floodpass', 'rocking', 'crawl']],
-  ['Die Bruchkante', 'Jede Landung bereitet den nächsten Aufstieg vor.', ['ridge', 'ravine', 'iceclimb', 'tunnel']],
-  ['Über den Nordpass', 'Vier Prüfungen bis zum sicheren Lager.', ['iceclimb', 'grotto', 'floodpass', 'ravine']],
-  ['Der alte Werkpfad', 'Bewegliche Auflagen und enge Felsgänge.', ['rollers', 'mud', 'grotto', 'rocking', 'trenches']],
-  ['Am Sägewerk', 'Über Holz, Wasser und den langen Grat.', ['logs', 'rocking', 'ford', 'ridge', 'crawl']],
-  ['Die Flutgrube', 'Die Ausfahrt muss erst verdient werden.', ['mud', 'floodpass', 'rollers', 'grotto', 'ravine']],
-  ['Das letzte Lager', 'Deine längste Expedition.', ['ridge', 'grotto', 'iceclimb', 'floodpass', 'ravine', 'rocking']]
+  ['Zum Basislager', 'Sechs Prüfungen auf dem Weg ins Hochland.', ['domes','steps','notch','potholes','ford','rubblegate']],
+  ['Der Höhenweg', 'Über Kuppen, durch Engstellen und über schwankendes Holz.', ['ridge','crater','notch','escarpment','brokenbridge','rubblegate']],
+  ['Die versunkene Schlucht', 'Eine Expedition zwischen Ufer, Fels und Strömung.', ['ford','floodpass','tidalcave','escarpment','notch','lake','grotto']],
+  ['Durch den Canyon', 'Die kurze Linie ist selten die leichte.', ['ravine','knifeedge','rubblegate','potholes','brokenbridge','grotto']],
+  ['Frostspur', 'Unterwegs auf dem winterlichen Gletscher.', ['ice','glacier','notch','icefissure','grotto','stepwell']],
+  ['Zwischen Eis und Wasser', 'Gefrorene Schluchten und eine überflutete Höhle.', ['glacier','tidalcave','brokenbridge','rubblegate','icegully','notch']],
+  ['Die Bruchkante', 'Spalten, schmale Durchlässe und hohe Absätze.', ['icefissure','stepwell','notch','glacier','knifeedge','rubblegate']],
+  ['Über den Nordpass', 'Sieben Prüfungen im ewigen Eis.', ['glacier','squeeze','icefissure','brokenbridge','tidalcave','stepwell','notch']],
+  ['Der alte Werkpfad', 'Lehm, lose Auflagen und ausgewaschener Fels.', ['rollers','siltclimb','rubblegate','stepwell','potholes','brokenbridge']],
+  ['Am Sägewerk', 'Der alte Holztransport ist längst aufgegeben.', ['logjam','brokenbridge','notch','crater','escarpment','grotto']],
+  ['Die Flutgrube', 'Tiefer Boden, enge Passagen und ein letzter Grat.', ['mudpit','siltclimb','tidalcave','rollers','rubblegate','knifeedge']],
+  ['Das letzte Lager', 'Eine lange Kette aus unterschiedlichen Entscheidungen.', ['escarpment','notch','brokenbridge','stepwell','tidalcave','rubblegate','crater']]
 ];
 const expertSpecs: [string, string, Feature[]][] = [
-  ['Die Lehmklamm', 'EXPERTE · Ein schmaler Weg durch schweren Boden.', ['talus', 'mudpit', 'squeeze', 'stairfall']],
-  ['Am Eisbruch', 'EXPERTE · Zwischen gefrorenem Fels und altem Holz.', ['icegully', 'squeeze', 'ravine', 'logjam']],
-  ['Kein leichter Weg', 'MEISTER · Sieben Prüfungen, ein Ziellager.', ['stairfall', 'mudpit', 'talus', 'squeeze', 'floodpass', 'icegully', 'logjam']]
+  ['Die Lehmklamm', 'EXPERTE · Schwerer Boden trifft auf knappe Durchfahrten.', ['talus','mudpit','siltclimb','notch','stepwell','squeeze','knifeedge']],
+  ['Am Eisbruch', 'EXPERTE · Spalten und Kletterstellen im Eis.', ['glacier','icefissure','notch','brokenbridge','stepwell','tidalcave','rubblegate']],
+  ['Kein leichter Weg', 'MEISTER · Neun Prüfungen bis zum letzten Lager.', ['stepwell','notch','brokenbridge','crater','mudpit','rubblegate','knifeedge','tidalcave','escarpment']]
 ];
+export const NEW_FEATURES:Feature[]=['notch','escarpment','rubblegate','siltclimb','tidalcave','brokenbridge','potholes','crater','icefissure','glacier','stepwell','knifeedge'];
 export const EXPEDITION_COUNT = 16; // IDs 0–11 stay stable; 12 is the sandbox.
-const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT', talus: 'BLOCKHALDE', mudpit: 'LEHMGRUBE', squeeze: 'NADELÖHR', stairfall: 'BRUCHSTUFEN', icegully: 'EISRINNE', logjam: 'TREIBHOLZ' };
+const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT', talus: 'BLOCKHALDE', mudpit: 'LEHMGRUBE', squeeze: 'NADELÖHR', stairfall: 'BRUCHSTUFEN', icegully: 'EISRINNE', logjam: 'TREIBHOLZ', notch:'FELSSPALT',escarpment:'HOHE FELSWAND',rubblegate:'FELSSCHLEUSE',siltclimb:'LEHMAUSSTIEG',tidalcave:'GEZEITENHÖHLE',brokenbridge:'GEBROCHENER HOLZSTEG',potholes:'AUSWASCHUNGEN',crater:'KRATER',icefissure:'GLETSCHERSPALTEN',glacier:'GLETSCHERBRUCH',stepwell:'WECHSELSTUFEN',knifeedge:'MESSERGRAT' };
 export const surfaceFriction: Record<Surface, number> = { stone: 1.15, road: 1.05, ice: .018, mud: .20, wood: .85 };
 
 export function createCourse(id: number, expedition = false): Course {
   const test = id === 12;
-  const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !['ridge', 'grotto', 'floodpass', 'ravine', 'talus', 'mudpit', 'squeeze', 'stairfall', 'icegully', 'logjam'].includes(f));
+  const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !NEW_FEATURES.includes(f) && !['ridge', 'grotto', 'floodpass', 'ravine', 'talus', 'mudpit', 'squeeze', 'stairfall', 'icegully', 'logjam'].includes(f));
   const spec = test ? ['Testgelände', `Alle ${features.length} Untergründe und Hindernisse.`, features] as [string, string, Feature[]] : expedition && id >= 13 ? expertSpecs[Math.min(2, id - 13)] : (expedition ? expeditionSpecs : specs)[Math.max(0, Math.min(11, id))];
   const theme: Theme = id === 14 ? 'alpine' : test || id < 4 ? 'canyon' : id < 8 ? 'alpine' : 'quarry';
   const c: Course = { id, name: spec[0], subtitle: spec[1], features: spec[2], theme, difficulty: id > 12 ? (id === 15 ? 6 : 5) : test ? 1 : id % 4 + 1, segments: [], waters: [], muds: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
@@ -76,7 +78,9 @@ export function createCourse(id: number, expedition = false): Course {
     let seed = 5371 + id * 8191 + idx * 131;
     const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     c.checkpoints.push(start - 2);
-    if (f === 'talus') {
+    if (buildChallenge(f,c,start,line)) {
+      // The authored challenge adds its physical profile and decision zones.
+    } else if (f === 'talus') {
       line(29, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 13, y: .4 }, { x: 21, y: .15 }, { x: 29, y: 0 }]);
       for (let j = 0; j < 7; j++) {
         const at = start + 5 + j * 2.65 + random() * .5, width = 1.25 + random() * .65, height = .72 + random() * .52;
@@ -249,29 +253,26 @@ export function createCourse(id: number, expedition = false): Course {
       c.obstacles.push({ x: start + 8.5, y: 2.01, width: 8, height: .4, kind: 'ceiling' });
     }
     if (c.zones.length === zoneCount) c.zones.push({ start, end: x, kind: f, label: labels[f] });
-    line(6, [{ x: 0, y: 0 }, { x: 6, y: 0 }], 'road');
+    for(const z of c.zones.slice(zoneCount)){z.feature=f;if(!z.label)z.label=labels[f];}
+    const rest=expedition?4.4+(idx*1.7+id*.31)%3:6;
+    line(rest,[{x:0,y:0},{x:rest,y:0}],'road');
   }
   c.length = x + 8;
   line(28, [{ x: 0, y: 0 }, { x: 28, y: 0 }], 'road');
   if (expedition) {
     const styles: Structure[] = ['bridge', 'arch', 'cave'];
     for (const [i, roof] of c.obstacles.filter(o => o.kind === 'ceiling').entries()) {
-      roof.structure = styles[(id + i) % 3];
-      if (roof.structure === 'bridge') roof.width = Math.min(roof.width, 4.8);
-      if (roof.structure === 'arch') roof.width = Math.min(roof.width, 3.4);
+      const authored=!!roof.structure;
+      roof.structure ??= styles[(id + i) % 3];
+      if (!authored && roof.structure === 'bridge') roof.width = Math.min(roof.width, 5.2);
+      if (!authored && roof.structure === 'arch') roof.width = Math.min(roof.width, 4.2);
+      // Existing passages also demand smaller contours; a large open claw must
+      // fit throughout its rotation, not just slip through a paper-thin portal.
+      const floor=groundAt(c,roof.x),clearance=roof.y-roof.height/2-floor;
+      if(!authored && clearance>1.82 && clearance<2.5)roof.y-=clearance-1.8;
       // Preserve the exact playable corridor; different structures surround it.
       const zone = c.zones.find(z => roof.x >= z.start && roof.x < z.end);
       if (zone) zone.label = roof.structure === 'bridge' ? 'ALTE STEINBRÜCKE' : roof.structure === 'arch' ? 'NATÜRLICHER FELSBOGEN' : 'FELSHÖHLE';
-    }
-  }
-  if (expedition && !test) {
-    // Optional caches use actual hull/wheel contact. One high cache rewards
-    // reaching beyond the standard ring; completion never requires collecting.
-    const land = c.segments.filter(s => s.b.x - s.a.x > 1 && s.a.x > 16 && s.b.x < c.length - 10 && s.a.y >= 0 && s.b.y >= 0 && !c.obstacles.some(o => o.kind === 'ceiling' && s.a.x < o.x + o.width / 2 + 3 && s.b.x > o.x - o.width / 2 - 3));
-    for (const [i, fraction] of [.17, .5, .83].entries()) {
-      const candidates = [...land].sort((a, b) => Math.abs((a.a.x + a.b.x) / 2 - c.length * fraction) - Math.abs((b.a.x + b.b.x) / 2 - c.length * fraction));
-      const s = candidates.find(s => c.caches!.every(p => Math.abs(p.x - (s.a.x + s.b.x) / 2) > 6));
-      if (s) { const at = (s.a.x + s.b.x) / 2; c.caches!.push({ x: at, y: groundAt(c, at) + (i === 1 ? 2.65 : 1.5) }); }
     }
   }
   return c;
@@ -308,6 +309,8 @@ export function zoneAt(c: Course, x: number) { return c.zones.find(z => x >= z.s
 export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
   if (!zone) return 'round';
   if (zone.kind === 'tunnel' || zone.kind === 'crawl') return 'compact';
+  if(zone.kind==='tidalcave')return 'compact';
+  if(zone.kind==='brokenbridge')return 'round';
   if (['rocks', 'steps', 'ramp', 'logs', 'trenches', 'rollers', 'sawtooth', 'causeway', 'iceclimb', 'talus', 'stairfall', 'icegully', 'logjam'].includes(zone.kind)) return 'grip';
   if (['lake', 'ford', 'mud', 'mudpit'].includes(zone.kind)) return 'paddle';
   return 'round';
