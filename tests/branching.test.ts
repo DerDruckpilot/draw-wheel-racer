@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createCourse,createExpedition,EXPEDITION_COUNT,groundAt,type Course} from '../src/courses';
-import {PATH_CENTERS,PATH_WIDTH} from '../src/branching';
+import {PATH_CENTERS,PATH_WIDTH,pathCenter,bandCenter,inBand} from '../src/branching';
+import {branchTerrain,terrainHeight} from '../src/branch-terrain';
 import {initPhysics,Simulation} from '../src/physics';
 import {preset} from '../src/shapes';
 import {waterHeight,waveVelocity} from '../src/waves';
@@ -10,19 +11,21 @@ import {hooks} from '../scripts/expedition-driver';
 await initPhysics();
 const run=(sim:Simulation,seconds:number,control?:()=>void)=>{sim.started=true;for(let i=0;i<seconds*120;i++){control?.();sim.tick();}};
 
-test('every expedition has wide junctions, distinct physical alternatives and reversible rockfall arms',()=>{
+test('expeditions offer curved, merging alternatives with real challenges and no sealed dead-end wall',()=>{
   for(let id=0;id<EXPEDITION_COUNT;id++){
     const c=createExpedition(id);assertJoinedGround(c);
     assert.ok(c.routes!.halfWidth>=9);assert.ok(c.routes!.forks.length>=4);
-    for(const fork of c.routes!.forks){
-      assert.equal(fork.paths.length,3);assert.equal(fork.paths.filter(p=>!p.blocked).length,2);
-      assert.equal(new Set(fork.paths.map(p=>p.features.join('/'))).size,3);
-      for(const side of PATH_CENTERS)for(const x of [fork.decision-2,fork.decision,fork.start-2,fork.end+3])assert.equal(groundAt(c,x,side),0);
-      const blocked=fork.paths.find(p=>p.blocked)!;
-      assert.ok(blocked.features.every(f=>['domes','flexshelf','rocks','washboard'].includes(f)));
-      assert.ok(c.obstacles.some(o=>o.deadEnd&&o.channel===blocked.channel&&o.x>fork.start&&o.x<fork.end));
+    assert.ok(c.routes!.forks.every(f=>f.paths.length>=2));
+    for(const [i,fork] of c.routes!.forks.entries()){
+      assert.equal(new Set(fork.paths.map(p=>p.features.join('/'))).size,fork.paths.length);
+      assert.equal(groundAt(c,fork.decision),0);
+      for(const p of fork.paths){
+        assert.ok(Math.abs(pathCenter(p,fork.start))<1e-8&&Math.abs(pathCenter(p,fork.end))<1e-8);
+        assert.ok(p.features.length>=2);
+      }
+      if(i)assert.ok(fork.start-c.routes!.forks[i-1].end<=8.001,'no empty wide plazas');
     }
-    assert.ok(c.waters.every(w=>!w.fall),'decorative waterfalls have been replaced');
+    assert.ok(!c.obstacles.some(o=>o.deadEnd));assert.ok(c.waters.every(w=>!w.fall));
   }
 });
 
@@ -68,36 +71,58 @@ test('recessed fill and drain plates keep their independent choice after branchi
   assert.ok(sim.mechanics.signals.has(w.control!));assert.ok(!sim.mechanics.signals.has(w.drainControl!));assert.ok(w.level>-2.7);assert.equal(car.resets,0);sim.dispose();
 });
 
-test('a car can investigate the rockfall, reverse out, and steer into another physical arm',()=>{
-  const c=createExpedition(0),fork=c.routes!.forks[0],blocked=fork.paths.find(p=>p.blocked)!,wall=c.obstacles.find(o=>o.deadEnd&&o.x<fork.end)!,other=fork.paths.find(p=>!p.blocked)!;
-  const sim=new Simulation(c,1),car=sim.cars[0];sim.requestShape(hooks);car.drive=.55;
-  const steer=(target:number)=>car.lateral.input=Math.max(-1,Math.min(1,(target-car.lateral.offset)*3))*Math.sign(car.body.linvel().x||1);
-  run(sim,48,()=>steer(blocked.center));
-  assert.ok(car.body.translation().x>fork.start+8);assert.ok(car.body.translation().x<wall.x+1);assert.equal(car.resets,0);
-  car.drive=-.65;
-  for(let i=0;i<120*90&&car.body.translation().x>fork.start-8;i++){steer(blocked.center);sim.tick();}
-  assert.ok(car.body.translation().x<fork.start-8,'the entry remains accessible in reverse');
-  // Keep reversing on the common apron until the new arm is aligned.
-  for(let i=0;i<120*12&&Math.abs(car.lateral.offset-other.center)>.2;i++){steer(other.center);sim.tick();}
+test('a driver can explore a bending arm, reverse to its junction and choose the other arm',()=>{
+  const c=createExpedition(0),fork=c.routes!.forks[0],first=fork.paths[0],other=fork.paths[1];
+  const sim=new Simulation(c,1),car=sim.cars[0];sim.requestShape(hooks);car.drive=.5;sim.started=true;
+  const steer=(p:typeof first)=>{
+    car.lateral.input=Math.max(-1,Math.min(1,(pathCenter(p,car.body.translation().x+Math.sign(car.body.linvel().x||1)*1.5)-car.lateral.offset)*3))*Math.sign(car.body.linvel().x||1);
+    // The return crosses a dome uphill. Use the same available weight control
+    // as the player, rather than assuming a reverse pedal alone climbs it.
+    car.ballastTarget=Math.max(-1,Math.min(1,car.body.rotation()*1.3+car.body.angvel()*.35));
+  };
+  for(let i=0;i<120*30&&car.body.translation().x<fork.start+27;i++){steer(first);sim.tick();}
+  assert.ok(car.body.translation().x>fork.start+25);assert.ok(car.lateral.offset<-4);
+  car.drive=-.6;
+  for(let i=0;i<120*45&&car.body.translation().x>fork.start-3;i++){steer(first);sim.tick();}
+  assert.ok(car.body.translation().x<fork.start-2,'the entry remains accessible in reverse');
   car.drive=.5;
-  for(let i=0;i<120*20&&car.body.translation().x<fork.start+5;i++){steer(other.center);sim.tick();}
-  assert.ok(Math.abs(car.lateral.offset-other.center)<.3);assert.ok(car.body.translation().x>fork.start+4);assert.equal(car.resets,0);sim.dispose();
+  for(let i=0;i<120*30&&car.body.translation().x<fork.start+26;i++){steer(other);sim.tick();}
+  assert.ok(car.lateral.offset>4);assert.ok(car.body.translation().x>fork.start+25);assert.equal(car.resets,0);sim.dispose();
 });
 
 test('wave height is bounded, fades into the shore and orbital flow decays with depth',()=>{
-  const w={start:0,end:40,level:0,deep:true,waves:{amplitude:.75,wavelength:7.8,period:2.9,phase:0},time:0};
-  for(let t=0;t<7;t+=.1){w.time=t;assert.equal(waterHeight(w,0),0);assert.equal(waterHeight(w,40),0);for(let x=0;x<40;x+=.2)assert.ok(Math.abs(waterHeight(w,x))<=.961);}
+  const w={start:0,end:40,level:0,deep:true,waves:{amplitude:.35,wavelength:6.6,period:2.35,phase:0},time:0};
+  for(let t=0;t<7;t+=.1){w.time=t;assert.equal(waterHeight(w,0),0);assert.equal(waterHeight(w,40),0);for(let x=0;x<40;x+=.2)assert.ok(Math.abs(waterHeight(w,x))<=.536);}
   const top=waveVelocity(w,15,0),bottom=waveVelocity(w,15,-3);assert.ok(Math.hypot(bottom.x,bottom.y)<Math.hypot(top.x,top.y)*.1);
+});
+
+test('curved water and road edges share coordinates, and transverse waves fade before the mesh boundary',()=>{
+  const c=createExpedition(17),w=c.waters.find(w=>w.waves)!;
+  let across=0;
+  for(let x=w.start+4;x<w.end-4;x+=1.1){
+    const center=bandCenter(w,x);
+    assert.ok(inBand(w,center,0,x));assert.ok(!inBand(w,center+4,0,x));
+    for(let time=0;time<5;time+=.3){
+      w.time=time;
+      assert.ok(Math.abs(waterHeight(w,x,center+w.depth!/2+.8)-w.level)<1e-8);
+      across=Math.max(across,Math.abs(waterHeight(w,x,center-1)-waterHeight(w,x,center+1)));
+    }
+  }
+  assert.ok(across>.12,'wave crests do not move the entire channel in phase');
+  const path=c.routes!.forks[0].paths[0],s=c.segments.find(s=>s.curve===path.curve&&s.a.x>path.curve.start+22)!;
+  const data=branchTerrain(c,[s]);assert.ok(data.positions.every(Number.isFinite));
+  assert.ok(Math.abs(data.positions[2]-1-(bandCenter(s,s.a.x)-PATH_WIDTH/2))<1e-8);
+  const dryX=c.routes!.forks[0].decision;assert.equal(terrainHeight(c,dryX,0),0);
 });
 
 test('waves create real pitching and active weight compensation reduces it while swimming',()=>{
   const results:{rms:number;max:number}[]=[];
   for(const mode of ['flat','waves','balanced']){
-    const c=createCourse(0,true);Object.assign(c,{segments:[{a:{x:-100,y:-8},b:{x:500,y:-8},surface:'stone'}],length:400,checkpoints:[2],mechanisms:[],masterRoutes:[],obstacles:[],muds:[],zones:[],waters:[{start:-80,end:400,level:0,deep:true,...(mode==='flat'?{}:{waves:{amplitude:.75,wavelength:7.8,period:2.9,phase:0}})}]});
+    const c=createCourse(0,true);Object.assign(c,{segments:[{a:{x:-100,y:-8},b:{x:500,y:-8},surface:'stone'}],length:400,checkpoints:[2],mechanisms:[],masterRoutes:[],obstacles:[],muds:[],zones:[],waters:[{start:-80,end:400,level:0,deep:true,...(mode==='flat'?{}:{waves:{amplitude:.35,wavelength:6.6,period:2.35,phase:0}})}]});
     const sim=new Simulation(c,1),car=sim.cars[0];sim.requestShape(preset('paddle'));for(const b of [car.body,...car.wheels,...car.carriers]){const p=b.translation();b.setTranslation({x:p.x,y:p.y+8},true);}sim.started=true;car.drive=.5;let sum=0,max=0;
     for(let i=0;i<120*24;i++){const pitch=car.body.rotation();car.ballastTarget=mode==='balanced'?Math.max(-1,Math.min(1,pitch*1.3+car.body.angvel()*.35)):0;sim.tick();if(i>480){sum+=pitch*pitch;max=Math.max(max,Math.abs(pitch));}}
     results.push({rms:Math.sqrt(sum/2400),max});assert.equal(car.resets,0);assert.ok(car.body.translation().x>15);sim.dispose();
   }
-  assert.ok(results[1].rms>results[0].rms*5);assert.ok(results[1].max>.5);
+  assert.ok(results[1].rms>results[0].rms*5);assert.ok(results[1].max>.3);
   assert.ok(results[2].rms<results[1].rms*.85);assert.ok(results[2].max<results[1].max*.8);
 });

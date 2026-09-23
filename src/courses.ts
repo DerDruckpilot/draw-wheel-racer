@@ -8,9 +8,9 @@ export type Feature = AdventureFeature | 'flat' | 'rocks' | 'steps' | 'ramp' | '
   | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb'
   | 'ridge' | 'grotto' | 'floodpass' | 'ravine' | 'talus' | 'mudpit' | 'squeeze' | 'stairfall' | 'icegully' | 'logjam' | 'notch' | 'escarpment' | 'rubblegate' | 'siltclimb' | 'tidalcave' | 'brokenbridge' | 'potholes' | 'crater' | 'icefissure' | 'glacier' | 'stepwell' | 'knifeedge';
 export type Theme = 'canyon' | 'alpine' | 'quarry';
-export interface Segment extends Band { ridge?:boolean; a: Point; b: Point; surface: Surface }
+export interface Segment extends Band { ridge?:boolean;island?:number;edgeA?:{left:number;right:number};edgeB?:{left:number;right:number}; a: Point; b: Point; surface: Surface }
 export interface Zone extends Band { start: number; end: number; kind: Feature; label: string; feature?: Feature }
-export interface Water extends Band { waves?:{amplitude:number;wavelength:number;period:number;phase:number};time?:number; start: number; end: number; level: number; deep: boolean; current?: Point; eddies?: { x:number; radius:number; strength:number }[]; fall?: {x:number;top:number;width:number}; control?:string; targetLevel?:number; drainControl?:string;drainLevel?:number; deform?:boolean }
+export interface Water extends Band { sampleLateral?:number;waves?:{amplitude:number;wavelength:number;period:number;phase:number};time?:number; start: number; end: number; level: number; deep: boolean; current?: Point; eddies?: { x:number; radius:number; strength:number }[]; fall?: {x:number;top:number;width:number}; control?:string; targetLevel?:number; drainControl?:string;drainLevel?:number; deform?:boolean }
 export type Structure = 'bridge' | 'arch' | 'cave';
 export interface Obstacle extends Band { deadEnd?:boolean; x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder' | 'platform'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure; lateral?:number; depth?:number }
 export interface Course { routes?:RouteNetwork; id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; muds?: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[]; mechanisms?:MechanismSpec[]; masterRoutes?:MasterRoute[]; freight?:FreightSpec }
@@ -301,7 +301,7 @@ export function groundAt(c: Course, x: number, lateral=0): number {
   if (last && x > last.x && x <= Math.max(c.length + 100, last.x + 80)) return last.y;
   let y = -12;
   for (const s of c.segments) {
-    if (inBand(s,lateral) && x >= s.a.x - .001 && x <= s.b.x + .001) {
+    if (x >= s.a.x - .001 && x <= s.b.x + .001 && inBand(s,lateral,0,x)) {
       const t = (x - s.a.x) / Math.max(.001, s.b.x - s.a.x);
       y = Math.max(y, s.a.y + (s.b.y - s.a.y) * t);
     }
@@ -309,7 +309,7 @@ export function groundAt(c: Course, x: number, lateral=0): number {
   return y;
 }
 
-export function zoneAt(c: Course, x: number, lateral=0) { return c.zones.find(z => inBand(z,lateral) && x >= z.start && x < z.end); }
+export function zoneAt(c: Course, x: number, lateral=0) { return c.zones.find(z => x >= z.start && x < z.end && inBand(z,lateral,0,x)); }
 // Opponents use the same geometry and motors as the player. This is only their
 // drawing strategy; contact forces never inspect a preset name or zone label.
 export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {

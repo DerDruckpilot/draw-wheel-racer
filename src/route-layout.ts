@@ -1,6 +1,6 @@
 import type { Course } from './courses';
 
-/** Arc-length path for the fixed driving line. Physics still uses distance/height.
+/** Arc-length path for the landscape. Physics still uses distance/height.
  * All terrain, obstacles, vehicles and water share this same spatial mapping. */
 export class RouteLayout {
   private samples: { x: number; z: number; dx: number; dz: number }[] = [];
@@ -20,10 +20,13 @@ export class RouteLayout {
   private angle(s: number) {
     if (!this.course.expedition) return 0;
     const phase = this.course.id * .63;
-    return .22 * Math.sin(s * .035 + phase) + .10 * Math.sin(s * .066 - phase * .7);
+    return .96 * Math.sin(s * .014 + phase) + .28 * Math.sin(s * .031 - phase * .7);
   }
   point(s: number, lateral = 0) {
     if (!this.course.expedition) return { x: s, z: lateral, yaw: 0 };
+    // Far scenery compresses outside the playable area so tight landscape
+    // bends cannot fold the distant bank mesh back through the road.
+    if(Math.abs(lateral)>15)lateral=Math.sign(lateral)*(15+24*(1-Math.exp(-(Math.abs(lateral)-15)/24)));
     const u = (s - this.start) / this.step;
     const i = Math.max(0, Math.min(this.samples.length - 2, Math.floor(u))), t = Math.max(0, Math.min(1, u - i));
     const a = this.samples[i], b = this.samples[i + 1], t2 = t * t, t3 = t2 * t;

@@ -1,10 +1,12 @@
 import {branchTerrain} from './branch-terrain';
-import {inBand} from './branching';
+import {bandCenter,curveShift,routeEdges} from './branching';
+import {terrainHeight} from './branch-terrain';
+import {naturalTerrain} from './terrain-material';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries,mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { courseRunout, groundAt, type Course, type Obstacle, type Segment, type Surface, type Water } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
 import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
@@ -197,6 +199,7 @@ export class GameRenderer {
       mat.onBeforeCompile=shader=>{shader.uniforms.winter=winter;shader.fragmentShader='uniform float winter;\n'+shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(.53,.59,.64)+diffuseColor.rgb*.25,winter);');};
       mat.customProgramCacheKey=()=> 'winter-terrain';
     }
+    for(const mat of [this.mats.stone,this.mats.road,this.mats.mud])naturalTerrain(mat);
     const scan=model.scene;scan.updateMatrixWorld(true);
     const bounds=new THREE.Box3().setFromObject(scan),center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());
     scan.position.sub(center);
@@ -260,10 +263,11 @@ export class GameRenderer {
       if(course.routes){const data=branchTerrain(course,parts);geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(data.uvs,2));geometry.setIndex(data.indices);for(const group of data.groups)geometry.addGroup(group.start,group.count,group.material);geometry.computeVertexNormals();}else geometry=terrainGeometry(parts,TRACK_BACK,TRACK_FRONT);
       const mesh = new THREE.Mesh(geometry, course.routes?[this.mats[surface],this.rockMaterial(course)]:this.mats[surface]); mesh.receiveShadow = true; this.terrain.add(mesh);
     }
-    for(const fork of course.routes?.forks??[])for(const z of [-3.5,3.5]){
-      const parts=course.segments.filter(s=>s.ridge&&s.lateral===z&&s.a.x>=fork.start-.01&&s.b.x<=fork.end+.01),data=branchTerrain(course,parts),geometry=new THREE.BufferGeometry();
+    for(const fork of course.routes?.forks??[])for(let island=0;island<fork.paths.length-1;island++){
+      const parts=course.segments.filter(s=>s.ridge&&s.island===island&&s.a.x>=fork.start-.01&&s.b.x<=fork.end+.01),data=branchTerrain(course,parts),geometry=new THREE.BufferGeometry();
       geometry.setAttribute('position',new THREE.Float32BufferAttribute(data.positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(data.uvs,2));geometry.setIndex(data.indices);geometry.computeVertexNormals();
-      const mesh=new THREE.Mesh(geometry,this.rockMaterial(course));mesh.receiveShadow=true;mesh.castShadow=true;this.terrain.add(mesh);this.roofs.push({x:(fork.start+fork.end)/2,width:fork.end-fork.start,mesh});
+      const smooth=mergeVertices(geometry);geometry.dispose();smooth.computeVertexNormals();
+      const mesh=new THREE.Mesh(smooth,this.rockMaterial(course));mesh.receiveShadow=true;mesh.castShadow=true;this.terrain.add(mesh);this.roofs.push({x:(fork.start+fork.end)/2,width:fork.end-fork.start,mesh});
     }
     for (const front of [true, false]) {
       const data = landscapeData(course, front), geometry = new THREE.BufferGeometry();
@@ -333,7 +337,7 @@ export class GameRenderer {
       }
     }
     for (const car of sim.cars) this.cars.push(this.makeCar(car));
-    this.addGate(course.length, 'ZIEL', !course.expedition);
+    this.addGate(course.length, 'ZIEL', !course.expedition,course.routes?2.9:this.roadHalfWidth);
     if (course.expedition) this.addExpeditionMarkers(course);
     this.bendLandscape();
     this.mechanicsView=new MechanicsView(sim,this.layout,this.cliffMat,this.mats.wood,this.mats.ice,this.mats.mud,this.rockTemplate);this.scene.add(this.mechanicsView.root);
@@ -348,15 +352,16 @@ export class GameRenderer {
       if (this.rockTemplate) {
         const r = new THREE.Group(); const scan = this.rockTemplate.clone(true);
         scan.traverse(o => { if (o instanceof THREE.Mesh) { o.userData.shared = true; o.receiveShadow = true; o.castShadow = false; } });
-        r.add(scan); const size = 5 + random() * 11;
+        r.add(scan); const size = 4 + random() * 7;
         r.scale.set(size * (.6 + random()), size * (.8 + random() * .6), size);
         r.rotation.y = random() * Math.PI * 2;
-        r.position.set(x, 0, -(course.routes?15:7) - random() * 13);
-        const bottom=new THREE.Box3().setFromObject(r).min.y;r.position.y=bankHeight(x,groundAt(course,x,-7),r.position.z,this.roadHalfWidth)-bottom-.4;this.terrain.add(r); this.rocks.push(r);
+        r.position.set(x, 0, course.routes?1+routeEdges(course,x).left-size*.8-1.5-random()*4:-7-random()*13);
+        const bottom=new THREE.Box3().setFromObject(r).min.y;r.position.y=(course.routes?terrainHeight(course,x,r.position.z-1):bankHeight(x,groundAt(course,x),r.position.z))-bottom-.4;this.terrain.add(r); this.rocks.push(r);
       }
       // Small scree on the verge, kept away from the drivable lanes.
       const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(.18 + random() * .4, 0), this.cliffMat);
-      pebble.position.set(x + 2, Math.max(-2, groundAt(course, x + 2,7)) + .05, this.roadHalfWidth+.6); pebble.scale.y = .5; pebble.rotation.set(random(), random(), random()); pebble.receiveShadow = true; this.terrain.add(pebble);
+      const verge=course.routes?1+routeEdges(course,x+2).right+.45:this.roadHalfWidth+.6;
+      pebble.position.set(x+2,(course.routes?terrainHeight(course,x+2,verge-1):Math.max(-2,groundAt(course,x+2)))+.05,verge); pebble.scale.y = .5; pebble.rotation.set(random(), random(), random()); pebble.receiveShadow = true; this.terrain.add(pebble);
     }
     // Distant ridges form an unbroken horizon, with erosion-like layered noise.
     const ridge = new THREE.PlaneGeometry(course.length + 100, 60, 100, 14); ridge.rotateX(-Math.PI / 2);
@@ -377,7 +382,8 @@ export class GameRenderer {
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x3d4840, roughness: .65 });
     const posts = new THREE.Group();
     for (let x = 0; x < course.length; x += 9) {
-      for (const z of [1+this.roadHalfWidth-.35,1-this.roadHalfWidth+.25]) {
+      const edges=routeEdges(course,x);
+      for (const z of course.routes?[1+edges.right-.2,1+edges.left+.2]:[1+this.roadHalfWidth-.35,1-this.roadHalfWidth+.25]) {
         const y=groundAt(course,x,z-1);if(y<-.3)continue;
         posts.add(box(.075, .7, .075, darkMat, x, y + .35, z)); posts.add(box(.09, .12, .09, postMat, x, y + .59, z));
       }
@@ -438,7 +444,7 @@ export class GameRenderer {
       shader.vertexShader='varying vec3 stonePosition; varying vec3 stoneNormal;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nstonePosition=position;stoneNormal=normal;');
       shader.fragmentShader='varying vec3 stonePosition; varying vec3 stoneNormal;\n'+shader.fragmentShader.replace('#include <map_fragment>',`vec3 weights=pow(abs(normalize(stoneNormal)),vec3(4.0)); weights/=max(.001,weights.x+weights.y+weights.z);
       vec3 grain=texture2D(map,stonePosition.yz*.26).rgb*weights.x+texture2D(map,stonePosition.xz*.26).rgb*weights.y+texture2D(map,stonePosition.xy*.26).rgb*weights.z;
-      grain=mix(vec3(dot(grain,vec3(.2126,.7152,.0722))),grain,.22);
+      grain=mix(vec3(dot(grain,vec3(.2126,.7152,.0722))),grain,.5);
       diffuseColor.rgb*=grain;${course.theme==='alpine'?'diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.74,.80,.85),smoothstep(.2,.8,stoneNormal.y)*.88);':''}`);
       shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
       vec3 sx=dFdx(-vViewPosition),sy=dFdy(-vViewPosition);vec3 rx=cross(sy,normal),ry=cross(normal,sx);float det=dot(sx,rx);
@@ -495,18 +501,19 @@ export class GameRenderer {
     const material = waterMaterial(course, water, this.skyTexture, this.camera.position, mud);
     // Water continues into the banks; opaque land occludes it at the natural
     // shoreline, instead of ending in a rectangular cut at the front lane.
-    const depth=water.depth===undefined?60:water.depth+1.4;
-    const geo = new THREE.PlaneGeometry(end - start, depth,water.waves?Math.ceil((end-start)/.35):32, 16); const mesh = new THREE.Mesh(geo, material);
-    mesh.rotation.x = -Math.PI / 2; mesh.position.set((start + end) / 2, y + .035, water.lateral===undefined?-3.9:1+water.lateral); mesh.renderOrder = 2;
+    const depth=water.depth===undefined?60:water.depth+5.2;
+    const geo = new THREE.PlaneGeometry(end-start,depth,Math.ceil((end-start)/.4),32);geo.rotateX(-Math.PI/2);
+    const vertices=geo.attributes.position;for(let i=0;i<vertices.count;i++){const x=vertices.getX(i)+(start+end)/2;vertices.setZ(i,vertices.getZ(i)+curveShift(water.curve,x));}
+    const mesh = new THREE.Mesh(geo,material); mesh.position.set((start + end) / 2, y + .035, water.lateral===undefined?-3.9:1+water.lateral); mesh.renderOrder = 2;
     this.terrain.add(mesh); this.waters.push(material);
     material.userData={water,mesh,initialLevel:y};
   }
 
-  addGate(x: number, text: string, finish: boolean) {
+  addGate(x: number, text: string, finish: boolean,halfWidth=this.roadHalfWidth) {
     const mat = new THREE.MeshStandardMaterial({ color: 0x303b37, metalness: .4, roughness: .65 });
     const group = new THREE.Group();
-    for (const z of [1+this.roadHalfWidth-.15,1-this.roadHalfWidth+.15]) group.add(box(.16, 4, .16, mat, x, 2, z));
-    group.add(box(.18, .16, this.roadHalfWidth*2-.3, mat, x, 4, 1));
+    for (const z of [1+halfWidth-.15,1-halfWidth+.15]) group.add(box(.16, 4, .16, mat, x, 2, z));
+    group.add(box(.18, .16, halfWidth*2-.3, mat, x, 4, 1));
     mergeRigidGroup(group); this.terrain.add(group);
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 128;
     const ctx = canvas.getContext('2d')!; ctx.fillStyle = finish ? '#dceda3' : '#22362e'; ctx.fillRect(0, 0, 1024, 128); ctx.fillStyle = finish ? '#23362d' : '#e7edcf'; ctx.font = 'bold 78px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, 512, 86);
@@ -581,9 +588,8 @@ export class GameRenderer {
     const factor = this.snapNextFrame ? 1 : 1 - Math.exp(-dt * 4); this.snapNextFrame = false;
     this.viewX += (player.x - this.viewX) * factor;
     const y = Math.max(.2, player.y - .6);
-    const wide=!!sim.course.routes;
-    const cameraPoint = this.layout.point(this.viewX - (wide?5:3.5), (wide?22:16)+sim.cars[0].lateral.offset*(wide?.85:.45)), targetPoint = this.layout.point(this.viewX + (wide?5:3.2), sim.cars[0].lateral.offset*(wide?.85:.65));
-    temp.set(cameraPoint.x, y + (wide?16:8), cameraPoint.z);
+    const cameraPoint = this.layout.point(this.viewX - 3.8, 15.5+sim.cars[0].lateral.offset), targetPoint = this.layout.point(this.viewX + 3.1, 1+sim.cars[0].lateral.offset);
+    temp.set(cameraPoint.x, y + 9.3, cameraPoint.z);
     this.camera.position.lerp(temp, factor);
     temp.set(targetPoint.x, y - 1.15, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
     this.camera.updateMatrixWorld();

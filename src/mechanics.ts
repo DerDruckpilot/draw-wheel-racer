@@ -1,4 +1,4 @@
-import {inBand,groundGroup,propGroup,ROUTE_GROUPS} from './branching';
+import {bandCenter,inBand,groundGroup,propGroup,ROUTE_GROUPS} from './branching';
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Simulation, Vehicle } from './physics';
 import type { MechanismSpec } from './mechanics-types';
@@ -111,8 +111,8 @@ export class Mechanics {
     for(const m of this.machines){
       if(m.hydro){
         m.body.resetForces(true);m.body.resetTorques(true);
-        const b=m.body,p=b.translation(),w=this.sim.course.waters.find(w=>inBand(w,m.spec.lateral??0)&&p.x>w.start&&p.x<w.end);
-        if(w){const f=waterForces(m.hydro,{position:p,center:b.worldCom(),angle:b.rotation(),velocity:b.linvel(),omega:b.angvel(),invMass:b.invMass(),invInertia:b.invPrincipalInertia()},w,DT);b.addForce({x:f.x,y:f.y},true);b.addTorque(f.torque,true);}
+        const b=m.body,p=b.translation(),w=this.sim.course.waters.find(w=>inBand(w,m.spec.lateral??0,0,p.x)&&p.x>w.start&&p.x<w.end);
+        if(w){w.sampleLateral=m.spec.lateral??0;const f=waterForces(m.hydro,{position:p,center:b.worldCom(),angle:b.rotation(),velocity:b.linvel(),omega:b.angvel(),invMass:b.invMass(),invInertia:b.invPrincipalInertia()},w,DT);b.addForce({x:f.x,y:f.y},true);b.addTorque(f.torque,true);}
       }
       if(m.spec.kind==='gate'){
         const open=this.signals.has(m.spec.signal!);
@@ -149,7 +149,7 @@ export class Mechanics {
     const p=this.sim.cars[0].body.translation();
     (this.sim.course.masterRoutes??[]).forEach((r,i)=>{
       const mark=r.marks[this.routeProgress[i]];
-      if((r.lateral===undefined||Math.abs(this.sim.cars[0].lateral.offset-r.lateral)<2)&&mark&&Math.hypot(p.x-mark.x,p.y-mark.y)<mark.radius&&Math.abs(this.sim.cars[0].body.linvel().y)<3.8)this.routeProgress[i]++;
+      if((r.lateral===undefined||Math.abs(this.sim.cars[0].lateral.offset-bandCenter(r,p.x))<2)&&mark&&Math.hypot(p.x-mark.x,p.y-mark.y)<mark.radius&&Math.abs(this.sim.cars[0].body.linvel().y)<3.8)this.routeProgress[i]++;
     });
     if(this.cargo){
       const c=this.cargo,v=c.body.linvel(),omega=this.sim.cars[0].body.angvel();
@@ -182,7 +182,7 @@ export class Mechanics {
   }
   private deformSoil(car:Vehicle){
     for(const soil of this.soils){
-      if(!inBand(soil.water,car.lateral.offset))continue;
+      if(!inBand(soil.water,car.lateral.offset,0,car.body.translation().x))continue;
       let dirty=false;
       for(const w of car.wheels){
         const p=w.translation();if(p.x<soil.water.start-1||p.x>soil.water.end+1)continue;

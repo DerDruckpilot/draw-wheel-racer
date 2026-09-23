@@ -51,7 +51,7 @@ export class Simulation {
       const desc = RAPIER.ColliderDesc.convexHull(pts);
       if (desc) {
         const collider=this.world.createCollider(desc.setFriction(surfaceFriction[s.surface]).setRestitution(0).setCollisionGroups(s.ridge?(RIDGE_GROUP<<16)|2:(groundGroup(s.channel)<<16)|(s.channel===undefined?0xffff:2|propGroup(s.channel))));
-        if(s.lateral!==undefined)this.steering.sides.push({collider,z:s.lateral,depth:s.depth!,x:(s.a.x+s.b.x)/2,y:(Math.max(s.a.y,s.b.y)-12)/2,width:s.b.x-s.a.x,height:Math.max(s.a.y,s.b.y)+12,support:!s.ridge,fixedCoordinates:true});
+        if(s.lateral!==undefined)this.steering.sides.push({collider,z:s.lateral,depth:s.depth!,x:(s.a.x+s.b.x)/2,y:(Math.max(s.a.y,s.b.y)-12)/2,width:s.b.x-s.a.x,height:Math.max(s.a.y,s.b.y)+12,band:s,support:!s.ridge,fixedCoordinates:true});
         for(const soil of soils){const i=soil.segments.indexOf(s);if(i>=0)soil.colliders[i]=collider;}
       }
     }
@@ -267,11 +267,11 @@ export class Simulation {
           car.aiTimer = .45 + car.id * .12;
         }
       }
-      const water = this.course.waters.find(w => inBand(w,car.lateral.offset) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
-      car.water = water ? clamp(waterHeight(water,p.x) - (p.y - .65), 0, 1) : 0;
+      const water = this.course.waters.find(w => inBand(w,car.lateral.offset,0,p.x) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
+      car.water = water ? clamp(waterHeight(water,p.x,car.lateral.offset) - (p.y - .65), 0, 1) : 0;
       car.buoyancy = 0; car.displacedVolume = 0; car.waterThrust = 0; car.waterDragPower = 0;
       if (water) this.applyWater(car, water);
-      const mud = this.course.muds?.find(w => inBand(w,car.lateral.offset) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
+      const mud = this.course.muds?.find(w => inBand(w,car.lateral.offset,0,p.x) && p.x + 2.7 > w.start && p.x - 2.7 < w.end);
       car.mud = mud ? clamp(mud.level - (p.y - 1.2), 0, 1) : 0;
       if (mud) this.applyWater(car, mud, true);
       // Each axle has its own speed regulator and full stall torque. An airborne
@@ -341,6 +341,7 @@ export class Simulation {
   }
 
   applyWater(car: Vehicle, water: Water, mud = false) {
+    water.sampleLateral=car.lateral.offset;
     for (const body of [car.body, ...car.wheels]) {
       const pose = { position: body.translation(), center: body.worldCom(), angle: body.rotation(), velocity: body.linvel(), omega: body.angvel(), invMass: body.invMass(), invInertia: body.invPrincipalInertia() };
       for (const shape of body === car.body ? HULL_HYDRO : car.hydros[car.wheels.indexOf(body)]) {

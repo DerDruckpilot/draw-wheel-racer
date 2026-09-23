@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.11.0 – Breite Abzweigungen, echte Sackgassen und physische Brandung.**
+**Version 1.12.0 – Verwundene Wege, geschlossene Ufer und eine nähere Kamera.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -16,16 +16,16 @@ Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der
 
 Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
 
-Die senkrechten Regler außen neben den Zeichenfeldern ändern die Radsteifigkeit. Über das Achssymbol aktivierst und kalibrierst du die Neigungssensoren: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt seitlich. Touchregler und Tastatur bleiben verfügbar. Weiter oben am Gaspedal drücken gibt mehr Gas. [Änderungen und physikalische Grenzen](docs/UPDATE-1.11.md).
+Die senkrechten Regler außen neben den Zeichenfeldern ändern die Radsteifigkeit. Über das Achssymbol aktivierst und kalibrierst du die Neigungssensoren: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt seitlich. Touchregler und Tastatur bleiben verfügbar. Weiter oben am Gaspedal drücken gibt mehr Gas. [Änderungen und physikalische Grenzen](docs/UPDATE-1.12.md).
 
 ## Enthalten
 
 - 21 Solo-Expeditionen in drei Landschaften, darunter drei Expertenstrecken, und ein freies Testgelände.
 - Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
 - Ein Stern für das Ziellager, ein zweiter für eine Fahrt ohne Bergung; keine automatischen Sammelkisten.
-- Vier bis fünf breite Verzweigungen pro Expedition mit zwei unterschiedlichen Passagen und einer rückwärts verlassbaren Sackgasse; Checkpoints auf den Verbindungsflächen.
+- Vier bis fünf Verzweigungen pro Expedition: unabhängig geschwungene Passagen um breite Geländeinseln, gemeinsame Ein- und Ausfahrten und kurze Verbindungen. Keine vorgegebenen Sperrwände am Ende eines Arms; schwierige Hindernisse lassen sich versuchen oder rückwärts verlassen.
 - Zwei unabhängige Freihand-Entwürfe mit mehreren Strichen, manueller Montage, Strich-Rückgängig und Leeren; keine fertige Radauswahl.
-- 49 kombinierte Gelände- und Hindernistypen in den aktuellen Expeditionen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
+- 50 kombinierte Gelände- und Hindernistypen in den aktuellen Expeditionen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
 - Flache Furten, tiefe Seen und Brandung: Der Geländetruck schwimmt, die gezeichneten Räder paddeln; Wellen verändern Auftrieb und Kippmoment.
 - Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
 - Vollflächige Spielwelt hinter zwei quadratischen, transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
@@ -43,7 +43,7 @@ Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Ei
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.11.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.12.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
 
 Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
 

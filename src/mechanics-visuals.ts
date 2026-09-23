@@ -1,3 +1,4 @@
+import {bandCenter,curveShift} from './branching';
 import * as THREE from 'three';
 import type { Simulation } from './physics';
 import type { RouteLayout } from './route-layout';
@@ -65,7 +66,7 @@ export class MechanicsView {
     (sim.course.masterRoutes??[]).forEach((route,index)=>route.marks.forEach((mark,j)=>{
       const flag=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:0xe6b65e,roughness:.7});this.ownMaterials.push(mat);
       flag.add(box(.06,1.3,.06,metal,0,-.4,0));const badge=box(.34,.34,.065,mat,0,.22,0);badge.rotation.z=Math.PI/4;flag.add(badge);
-      this.place(flag,mark.x,mark.y,-.7+(route.lateral??0));this.root.add(flag);this.flags.push({mesh:flag,index,mark:j});
+      this.place(flag,mark.x,mark.y,-.7+bandCenter(route,mark.x));this.root.add(flag);this.flags.push({mesh:flag,index,mark:j});
     }));
     for(const w of sim.course.waters)if(w.fall){
       const f=w.fall,mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,side:THREE.DoubleSide,uniforms:{time:{value:0}},vertexShader:'varying vec2 v;void main(){v=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',fragmentShader:`varying vec2 v;uniform float time;
@@ -96,7 +97,7 @@ void main(){vec2 uv=vec2(v.x*5.,v.y*7.+time*3.4);float n=noise(uv)*.65+noise(uv*
     for(const v of this.soilMeshes)if(v.version!==v.soil.version){
       const a=v.mesh.geometry.attributes.position,u=v.mesh.geometry.attributes.uv;let i=0;
       for(const s of v.soil.segments)for(const [z0,z1] of [[1+(v.soil.water.lateral??0)-(v.soil.water.depth??4.1)/2,1+(v.soil.water.lateral??0)],[1+(v.soil.water.lateral??0),1+(v.soil.water.lateral??0)+(v.soil.water.depth??4.1)/2]]){
-        for(const [p,z] of [[s.a,z0],[s.b,z0],[s.a,z1],[s.b,z0],[s.b,z1],[s.a,z1]] as const){const pos=this.layout.point(p.x,z);a.setXYZ(i,pos.x,p.y,pos.z);u.setXY(i++,p.x/5,z/5);}
+        for(const [p,z] of [[s.a,z0],[s.b,z0],[s.a,z1],[s.b,z0],[s.b,z1],[s.a,z1]] as const){const pos=this.layout.point(p.x,z+curveShift(v.soil.water.curve,p.x));a.setXYZ(i,pos.x,p.y,pos.z);u.setXY(i++,p.x/5,z/5);}
       }
       a.needsUpdate=true;u.needsUpdate=true;v.mesh.geometry.computeVertexNormals();v.mesh.geometry.computeBoundingSphere();v.version=v.soil.version;
     }

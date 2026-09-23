@@ -1,3 +1,4 @@
+import {pathCenter} from '../src/branching';
 import { suggestedShape, zoneAt, type Course } from '../src/courses';
 import { preset, type Point } from '../src/shapes';
 import type { Simulation } from '../src/physics';
@@ -36,11 +37,11 @@ export function referenceSteering(sim:Simulation,alternative=false){
   if(sim.course.routes){
     const fork=sim.course.routes.forks.find(f=>x<f.end+4);
     const index=(sim.course.id+(fork?.start??0))%2<1?0:1;
-    const path=fork?.paths.filter(p=>!p.blocked)[alternative?1-index:index];
-    let target=path?.center??0;
-    const control=sim.mechanics.machines.find(m=>m.spec.channel===path?.channel&&['plate','counterweight'].includes(m.spec.kind)&&x>m.spec.x-12&&x<m.spec.x+3.5&&(m.spec.lateral!<(path?.center??0)||sim.course.waters.some(w=>w.drainControl===m.spec.signal&&m.spec.x>w.start+15)));
-    if(control)target+=Math.sign(control.spec.lateral!-target)*.9;
-    else if(sim.course.obstacles.some(o=>o.channel===path?.channel&&o.kind==='boulder'&&Math.abs((o.lateral??0)-(path?.center??0)+.95)<.01&&Math.abs(x-o.x)<7))target+=.95;
+    const path=fork?.paths[alternative?1-index:index];
+    let target=path?pathCenter(path,x+Math.sign(car.body.linvel().x||1)*1.5):0;
+    const control=sim.mechanics.machines.find(m=>m.spec.channel===path?.channel&&['plate','counterweight'].includes(m.spec.kind)&&x>m.spec.x-12&&x<m.spec.x+3.5&&(m.spec.lateral!<(path?pathCenter(path,x):0)||sim.course.waters.some(w=>w.drainControl===m.spec.signal&&m.spec.x>w.start+15)));
+    if(control){const side=Math.sign(control.spec.lateral!-(path?pathCenter(path,control.spec.x):0));target=control.spec.lateral!-side*.97;}
+    else if(sim.course.obstacles.some(o=>o.channel===path?.channel&&o.kind==='boulder'&&Math.abs((o.lateral??0)-(path?pathCenter(path,o.x):0)+.95)<.01&&Math.abs(x-o.x)<7))target+=.95;
     car.lateral.input=Math.max(-1,Math.min(1,(target-car.lateral.offset)*3))*Math.sign(car.body.linvel().x||1);return;
   }
   const switchAhead=sim.mechanics.machines.find(m=>['plate','counterweight'].includes(m.spec.kind)&&m.spec.lateral!==undefined&&x>m.spec.x-14&&x<m.spec.x+3.5&&(m.spec.lateral<0||sim.course.waters.some(w=>w.drainControl===m.spec.signal&&m.spec.x>w.start+15)));

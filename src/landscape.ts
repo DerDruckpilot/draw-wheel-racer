@@ -1,4 +1,6 @@
 import {type Course,type Segment } from './courses';
+import {routeEdges} from './branching';
+import {terrainHeight} from './branch-terrain';
 
 export const TRACK_FRONT = 3.2;
 export const TRACK_BACK = -1.2;
@@ -11,7 +13,22 @@ export function bankHeight(x: number, y: number, z: number,halfWidth=2.2) {
   return y * (1 - blend) + land * blend;
 }
 export function landscapeData(course: Course, front: boolean) {
-  const halfWidth=course.routes?.halfWidth??2.2,edge = course.routes?1+(front ? halfWidth : -halfWidth):front?TRACK_FRONT:TRACK_BACK;
+  if(course.routes){
+    const positions:number[]=[],uvs:number[]=[],indices:number[]=[];
+    const xs=[...new Set([-100,course.length+100,...course.segments.flatMap(s=>[s.a.x,s.b.x])])].sort((a,b)=>a-b);
+    const fine:number[]=[];for(let i=1;i<xs.length;i++){const n=Math.ceil((xs[i]-xs[i-1])/1.2);for(let j=0;j<n;j++)fine.push(xs[i-1]+(xs[i]-xs[i-1])*j/n);}fine.push(xs.at(-1)!);
+    const bands=[0,.4,.85,1.4,2,2.4,4,7,12,22,40,64];
+    for(let i=1;i<fine.length;i++)for(let j=1;j<bands.length;j++){
+      const index=positions.length/3;
+      for(const x of [fine[i-1],fine[i]])for(const d of [bands[j-1],bands[j]]){
+        const edges=routeEdges(course,x),z=(front?edges.right+d:edges.left-d);
+        positions.push(x,terrainHeight(course,x,z),1+z);uvs.push(x/5,(1+z)/5);
+      }
+      if(front)indices.push(index,index+1,index+2,index+1,index+3,index+2);else indices.push(index,index+2,index+1,index+1,index+2,index+3);
+    }
+    return {positions,uvs,indices};
+  }
+  const halfWidth=2.2,edge=front?TRACK_FRONT:TRACK_BACK;
   const bands = front ? [0, 1.2, 3, 6, 10, 18, 32, 64] : [0, 2, 5, 10, 20, 35, 55];
   const segments: Segment[] = [];
   let previous = { x: -100, y: 0 };

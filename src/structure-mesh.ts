@@ -1,5 +1,6 @@
 import { groundAt, type Course, type Obstacle } from './courses';
 import { bankHeight } from './landscape';
+import { terrainHeight } from './branch-terrain';
 import { archSection, structureExtent } from './structures';
 
 /** One sealed solid: roof, soffit, both portals and both buried feet share vertices.
@@ -14,7 +15,7 @@ export function structureMesh(course: Course, o: Obstacle) {
     const t=i/nx, shoulder=Math.max(0,Math.abs(z)-1.35), fade=Math.min(1,shoulder/2);
     const spread=o.structure==='bridge'?1:Math.max(.18,Math.sqrt(1-Math.min(1,shoulder/(extent-1.35))**2));
     const x=o.x+(t-.5)*o.width*spread+fade*(Math.sin(z*.83+o.x)*.28+Math.sin(z*1.63+t*3)*.13);
-    const base=course.routes?Math.max(-5,groundAt(course,x,(o.lateral??0)+z)):bankHeight(x,groundAt(course,x),1+z), shape=archSection(o,z,base);
+    const base=course.routes?Math.max(-5,terrainHeight(course,x,(o.lateral??0)+z)):bankHeight(x,groundAt(course,x),1+z), shape=archSection(o,z,base);
     const crest=o.structure==='bridge'?0:o.structure==='cave'?1.75:.3;
     let y=upper?shape.bottom+(shape.top-shape.bottom)*(1-(o.structure==='bridge'?0:fade*.8)*(1-Math.sin(t*Math.PI)))+Math.sin(t*Math.PI)*crest*Math.max(0,1-shoulder/(extent-1.35)):shape.bottom;
     if (upper) y=Math.max(shape.bottom+.08,y+fade*Math.sin(t*7+z*1.7+o.x)*.12*Math.sin(Math.PI*(z+extent)/(2*extent)));
