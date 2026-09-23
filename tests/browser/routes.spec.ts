@@ -6,8 +6,8 @@ test('wide route selection and physical surf render with the mobile drawing cock
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.addInitScript(()=>localStorage.setItem('formdrive.v1',JSON.stringify({quality:'high',sound:false,expeditionTutorial:true})));
   await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});
-  const route=await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__,c=a.course();a.inspect(c.routes.forks[0].decision,'round');a.drive(.45);a.steer(1);a.step(360);return {halfWidth:c.routes.halfWidth,paths:c.routes.forks[0].paths};});
-  expect(route.halfWidth).toBeGreaterThan(9);expect(route.paths).toHaveLength(3);expect((await snapshot(page)).tuning.lateral.offset).toBeGreaterThan(4);
+  const route=await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__,c=a.course();a.inspect(c.routes.forks[0].decision,'round');a.drive(.45);a.steer(1);a.step(600);return {halfWidth:c.routes.halfWidth,paths:c.routes.forks[0].paths};});
+  expect(route.halfWidth).toBeGreaterThan(9);expect(route.paths).toHaveLength(3);expect((await snapshot(page)).tuning.lateral.offset).toBeGreaterThan(6);
   const frame=await page.evaluate(()=>(window as any).__FORMDRIVE__.framing());expect(frame.top).toBeGreaterThan(.08);expect(frame.bottom).toBeLessThan(.66);
   await page.screenshot({path:'.local/v111-choose-route.png'});
   const motion=await page.evaluate(()=>{
