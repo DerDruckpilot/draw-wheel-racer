@@ -10,7 +10,7 @@ export const hooks:Point[]=Array.from({length:6},(_,i)=>{
     {x:1.12*Math.cos(a),y:1.12*Math.sin(a)},
     {x:1.12*Math.cos(a)-.22*Math.sin(a),y:1.12*Math.sin(a)+.22*Math.cos(a)}];
 }).flat();
-export function referenceDrive(course:Course,x:number){
+export function referenceDrive(course:Course,x:number,y=Infinity){
   const here=zoneAt(course,x),ahead=zoneAt(course,x+2.5);
   const z=here&&['lake','ford','tidalcave'].includes(here.kind)?here:ahead??here;
   const feature=z?.feature;
@@ -18,7 +18,12 @@ export function referenceDrive(course:Course,x:number){
   if(feature==='tidalcave'){key='hooks';shape=hooks;}
   if(feature==='escarpment'||feature==='knifeedge'||feature==='crater'){key='cross';shape=cross;}
   if(feature==='siltclimb')key='paddle';
+  if(feature==='softground'||feature==='current')key='paddle';
+  if(feature==='thinice')key='grip';
+  if(feature==='loosefield')key='grip';
+  if(feature==='precisionjump')key='grip';
+  if(feature==='highroute'){key=y<.7?'paddle':'grip';}
   if(feature==='stepwell')key='grip';
   if(feature==='rubblegate'&&z?.kind==='steps'){key='cross';shape=cross;}
-  return {key,shape:shape??preset(key as Parameters<typeof preset>[0]),drive:z?.kind==='ridge'?.5:.8};
+  return {key,shape:shape??preset(key as Parameters<typeof preset>[0]),drive:feature==='highroute'&&key==='grip'?1:z?.kind==='ridge'?.5:.8};
 }

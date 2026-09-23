@@ -18,11 +18,13 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
     const n = (j * width + i) * 4; data[n] = data[n + 1] = data[n + 2] = Math.round(depth * 255); data[n + 3] = 255;
   }
   const depthMap = new THREE.DataTexture(data, width, height); depthMap.minFilter = depthMap.magFilter = THREE.LinearFilter; depthMap.needsUpdate = true;
+  const rutMap=new THREE.DataTexture(new Uint8Array(64),64,1,THREE.RedFormat);rutMap.minFilter=rutMap.magFilter=THREE.LinearFilter;rutMap.needsUpdate=true;
   const material = new THREE.ShaderMaterial({
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
     uniforms: {
       time: { value: 0 }, mud: { value: mud ? 1 : 0 }, rate: { value: mud ? .12 : 1 }, eye: { value: eye }, sky: { value: sky }, bathymetry: { value: depthMap },
       bounds: { value: new THREE.Vector2(water.start, water.end) },
+      flow:{value:water.current?.x??0},levelDelta:{value:0},rutMap:{value:rutMap},
       colorDeep: { value: new THREE.Color(course.theme === 'alpine' ? '#075268' : '#015a60') },
       colorShallow: { value: new THREE.Color('#218a85') },
       wakes: { value: Array.from({ length: 4 }, () => new THREE.Vector4(-1000, 0, 0, 0)) }
@@ -35,6 +37,7 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
     }`,
     fragmentShader: `varying vec3 vWorld; varying vec2 vTrackUv; uniform float time; uniform float rate; uniform vec3 eye;
     uniform float mud; uniform sampler2D sky; uniform sampler2D bathymetry; uniform vec2 bounds;
+    uniform float flow; uniform float levelDelta; uniform sampler2D rutMap;
     uniform vec3 colorDeep; uniform vec3 colorShallow; uniform vec4 wakes[4];
     float hash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
     float noise(vec2 p){vec2 i=floor(p),f=fract(p); f=f*f*(3.-2.*f);return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y);}
@@ -42,13 +45,13 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
     void main(){
       // Unbent route coordinates keep bathymetry, banks and wakes aligned while
       // the world-space position is used for the eye and sky reflection.
-      vec2 p=vec2(mix(bounds.x,bounds.y,vTrackUv.x),-33.9+(1.-vTrackUv.y)*60.); float h=waves(p), e=.08;
-      vec3 n=normalize(vec3((h-waves(p+vec2(e,0)))*.75, e, (h-waves(p+vec2(0,e)))*.75));
+      vec2 p=vec2(mix(bounds.x,bounds.y,vTrackUv.x),-33.9+(1.-vTrackUv.y)*60.);vec2 moving=p-vec2(flow*time,0.); float h=waves(moving), e=.08;
+      vec3 n=normalize(vec3((h-waves(moving+vec2(e,0)))*.75, e, (h-waves(moving+vec2(0,e)))*.75));
       vec3 v=normalize(eye-vWorld), reflected=reflect(-v,n);
       vec2 env=vec2(atan(reflected.z,reflected.x)*.159154943+.5,asin(clamp(reflected.y,-1.,1.))*.318309886+.5);
       vec3 reflection=texture2D(sky,env,3.5).rgb; reflection=reflection/(1.+max(reflection.r,max(reflection.g,reflection.b)))*1.4;
       float fresnel=.035+.965*pow(1.-max(dot(n,v),0.),5.);
-      float depth=texture2D(bathymetry,vec2((p.x-bounds.x)/(bounds.y-bounds.x),(p.y+33.9)/60.)).r*5.;
+      float depth=max(0.,texture2D(bathymetry,vec2((p.x-bounds.x)/(bounds.y-bounds.x),(p.y+33.9)/60.)).r*5.+levelDelta);
       vec3 water=mix(colorShallow,colorDeep,smoothstep(.1,2.8,depth))*(1.1+h*.17);
       // Wide, broken highlights from the sky and a soft sun lobe, never a sine checkerboard.
       vec3 halfSun=normalize(v+normalize(vec3(-.5,.9,.5)));
@@ -77,6 +80,9 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
           rut+=tracks*wakes[i].z;
         }
         color=clay*(1.-min(.65,rut*.6))+vec3(.28,.22,.13)*spec*.3;
+        float permanent=texture2D(rutMap,vec2((p.x-bounds.x)/(bounds.y-bounds.x),.5)).r;
+        float tracks=exp(-pow((abs(p.y-1.)-.97)*4.,2.));
+        color*=1.-permanent*tracks*.65;
         color+=vec3(.09,.055,.018)*min(.8,foam)*(clumps*.6+.4);
       }else color=mix(color,vec3(.89,.98,.98),clamp(foam,0.,.94));
       gl_FragColor=vec4(color,mix(mix(.70,.94,smoothstep(0.,1.5,depth)),.98,mud));
@@ -84,7 +90,7 @@ export function waterMaterial(course: Course, water: Water, sky: THREE.Texture |
       #include <colorspace_fragment>
     }`
   });
-  material.addEventListener('dispose', () => depthMap.dispose());
+  material.addEventListener('dispose', () => {depthMap.dispose();rutMap.dispose();});
   return material;
 }
 

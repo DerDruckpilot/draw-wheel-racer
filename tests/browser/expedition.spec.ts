@@ -35,6 +35,8 @@ test('gas swipe latches cruise, left pedal brakes then reverses, and drawing sta
   await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});await fitDrawnWheels(page);
   await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
   const gas=(await page.locator('[data-pedal="gas"]').boundingBox())!;
+  await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.8);await page.mouse.down();const gentle=(await snapshot(page)).controls.drive;await page.mouse.up();
+  await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.2);await page.mouse.down();expect((await snapshot(page)).controls.drive).toBe(1);expect(gentle).toBeGreaterThan(.3);expect(gentle).toBeLessThan(.65);await page.mouse.up();
   const swipe=async()=>{await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.7);await page.mouse.down();await page.mouse.move(gas.x+gas.width/2,gas.y+gas.height*.7-55,{steps:3});await page.mouse.up();};
   await swipe();expect((await snapshot(page)).controls.cruise).toBe(true);expect((await snapshot(page)).controls.drive).toBe(.65);
   await page.locator('[data-pedal="gas"]').click();expect((await snapshot(page)).controls.drive).toBe(0);
@@ -48,7 +50,7 @@ test('gas swipe latches cruise, left pedal brakes then reverses, and drawing sta
   await page.keyboard.down('ArrowRight');const before=(await snapshot(page)).player.axleRevisions;
   await drawStroke(page,'rear',[[-.8,-.8],[.8,.8]]);expect((await snapshot(page)).player.axleRevisions).toEqual(before);
   await page.locator('#mount-rear').click();await expect.poll(async()=>(await snapshot(page)).player.axleRevisions[0]).toBeGreaterThan(before[0]);
-  expect((await snapshot(page)).player.axleRevisions[1]).toBe(before[1]);expect((await snapshot(page)).controls.drive).toBe(.8);await page.keyboard.up('ArrowRight');
+  expect((await snapshot(page)).player.axleRevisions[1]).toBe(before[1]);expect((await snapshot(page)).controls.drive).toBe(1);await page.keyboard.up('ArrowRight');
   await page.keyboard.down('Space');expect((await snapshot(page)).controls.brake).toBe(1);await page.keyboard.up('Space');
   await swipe();await page.locator('#pause-button').click();expect((await snapshot(page)).controls).toEqual({drive:0,brake:0,cruise:false});await page.locator('#resume-game').click();
   await page.locator('#rescue-button').click();await page.evaluate(()=>(window as any).__FORMDRIVE__.finish());

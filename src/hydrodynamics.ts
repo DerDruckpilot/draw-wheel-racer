@@ -130,6 +130,12 @@ export function submergedArea(rings: Point[][], water: Water) {
 
 export interface FluidMedium { density: number; viscosity: number; yieldStress: number; shear: number; pressure: number }
 export const MUD_MEDIUM: FluidMedium = { density: 23, viscosity: 38, yieldStress: 28, shear: 8, pressure: 2.2 };
+export function fluidVelocity(water:Water,x:number):Point {
+  let shelter=1;
+  for(const e of water.eddies??[])shelter*=1-e.strength*Math.exp(-(((x-e.x)/e.radius)**2));
+  const down=water.fall?-1.5*Math.exp(-(((x-water.fall.x)/water.fall.width)**2)):0;
+  return {x:(water.current?.x??0)*shelter,y:(water.current?.y??0)+down};
+}
 // Regularized yield stress and viscous shear act on the actual wet contour.
 // No preset-dependent boost: a paddle pushes clay through its exposed faces.
 export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt: number, medium?: FluidMedium): WaterForces {
@@ -162,7 +168,8 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
     const tx = dx / length, ty = dy / length, nx = ty, ny = -tx;
     const cd = shape.dragX * nx * nx + shape.dragY * ny * ny;
     const linear = shape.linearX * nx * nx + shape.linearY * ny * ny;
-    const normalAtStart = (pose.velocity.x - pose.omega * (a.y - pose.center.y)) * nx + (pose.velocity.y + pose.omega * (a.x - pose.center.x)) * ny;
+    const current=fluidVelocity(water,(a.x+b.x)/2);
+    const normalAtStart = (pose.velocity.x - current.x - pose.omega * (a.y - pose.center.y)) * nx + (pose.velocity.y - current.y + pose.omega * (a.x - pose.center.x)) * ny;
     const zero = normalAtStart / (pose.omega * length);
     const intervals = zero > lo && zero < hi ? [lo, zero, hi] : [lo, hi];
     // Two-point Gaussian quadrature integrates the changing velocity along
@@ -172,7 +179,7 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
       const area = length * (to - from) * shape.width / 2;
       const t = from + (to - from) * g;
       const x = a.x + dx * t, y = a.y + dy * t, rx = x - pose.center.x, ry = y - pose.center.y;
-      const vx = pose.velocity.x - pose.omega * ry, vy = pose.velocity.y + pose.omega * rx;
+      const vx = pose.velocity.x - current.x - pose.omega * ry, vy = pose.velocity.y - current.y + pose.omega * rx;
       const vn = vx * nx + vy * ny, vt = vx * tx + vy * ty;
       // Windward pressure: F = 1/2 rho Cd A v_normal². The wake side does
       // not push a second time. Surface shear remains much smaller.

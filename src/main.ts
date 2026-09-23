@@ -21,6 +21,7 @@ const icons = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v.1"/>',
   sound: '<path d="M4 9h4l5-5v16l-5-5H4zM17 8a6 6 0 0 1 0 8"/>',
   check: '<path d="m5 12 4 4L19 6"/>',
+  tune:'<rect x="3" y="7" width="4" height="10" rx="2"/><rect x="17" y="7" width="4" height="10" rx="2"/><path d="M7 12h10M10 8l2-3 2 3M10 16l2 3 2-3"/>',
 };
 const svg = (key: keyof typeof icons) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[key]}</svg>`;
 interface Saved { level: number; best: Record<number, { time: number; stars: number }>; expeditions: Record<number, ExpeditionRecord>; favorite: Point[] | null; sound: boolean; quality: 'auto' | 'high' | 'eco'; tutorial: boolean; expeditionTutorial: boolean }
@@ -47,7 +48,7 @@ document.querySelector('#app')!.innerHTML = `
     <div id="scene"></div><div class="scene-vignette"></div>
     <header class="topbar">
       <button class="wordmark" id="home-button" aria-label="Zur Startansicht">FORM<span>DRIVE</span><i></i></button>
-      <div class="top-actions"><button class="icon-button" id="pause-button" aria-label="Spiel pausieren" hidden>${svg('pause')}</button><button class="icon-button" id="settings-button" aria-label="Einstellungen">${svg('settings')}</button></div>
+      <div class="top-actions"><button class="icon-button" id="tune-button" aria-label="Fahrwerk einstellen" aria-controls="tune-panel" aria-expanded="false">${svg('tune')}</button><button class="icon-button" id="pause-button" aria-label="Spiel pausieren" hidden>${svg('pause')}</button><button class="icon-button" id="settings-button" aria-label="Einstellungen">${svg('settings')}</button></div>
     </header>
     <div class="race-hud" id="race-hud" hidden>
       <div class="race-row"><div class="position"><strong id="progress-value">0</strong><span>%<br>WEG</span></div><div class="race-title"><span id="race-region">EXPEDITION / 01</span><strong id="race-name">Zum Basislager</strong></div><div class="timer"><strong id="finds">0</strong><span>BERGUNGEN</span></div></div>
@@ -56,12 +57,19 @@ document.querySelector('#app')!.innerHTML = `
     </div>
     <div class="home-content" id="home-content">
       <div class="home-heading"><p class="eyebrow"><i></i> DEINE EXPEDITION</p><h1>FORM<br><em>DRIVE.</em></h1><p class="home-tagline">Schaffst du den Weg?<br>Fahre. Zeichne. Klettere.</p></div>
-      <div class="home-bottom"><button class="course-preview" id="choose-course"><span class="course-number" id="course-number">01</span><span><small id="course-region">CANYON</small><strong id="course-name">Zum Basislager</strong></span>${svg('grid')}</button><button class="primary-button" id="start-button" disabled><span>Welt wird geladen …</span><b>${svg('arrow')}</b></button><div class="home-meta"><span id="offline-status"><i></i> WIRD VORBEREITET</span><span>15 EXPEDITIONEN · KEIN ZEITLIMIT</span></div></div>
+      <div class="home-bottom"><button class="course-preview" id="choose-course"><span class="course-number" id="course-number">01</span><span><small id="course-region">CANYON</small><strong id="course-name">Zum Basislager</strong></span>${svg('grid')}</button><button class="primary-button" id="start-button" disabled><span>Welt wird geladen …</span><b>${svg('arrow')}</b></button><div class="home-meta"><span id="offline-status"><i></i> WIRD VORBEREITET</span><span>21 EXPEDITIONEN · KEIN ZEITLIMIT</span></div></div>
     </div>
     <div class="drive-info" id="drive-info" hidden><div class="speed"><strong id="speed">0</strong><span>KM/H</span></div><div class="terrain-chip"><i></i><span id="terrain-label">FESTER BODEN</span></div><button class="rescue-button" id="rescue-button" aria-label="Zum letzten Checkpoint zurücksetzen">${svg('reset')}<span>BERGEN</span></button></div>
     <div class="countdown" id="countdown" hidden>3</div>
     <div class="loading-bar" id="loading-bar"><span></span></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <section class="tune-panel" id="tune-panel" aria-label="Fahrwerk" hidden>
+      <div class="tune-heading"><strong>Fahrwerk</strong><button id="close-tune" aria-label="Fahrwerk schließen">${svg('close')}</button></div>
+      <label for="stiffness-rear">Hinterachse <output id="stiffness-rear-value">Starr</output></label><input id="stiffness-rear" type="range" min="0" max="1" step="0.05" value="1" aria-label="Steifigkeit Hinterachse">
+      <label for="stiffness-front">Vorderachse <output id="stiffness-front-value">Starr</output></label><input id="stiffness-front" type="range" min="0" max="1" step="0.05" value="1" aria-label="Steifigkeit Vorderachse">
+      <label for="ballast">Gewicht <output id="ballast-value">Mitte</output></label><input id="ballast" type="range" min="-1" max="1" step="0.1" value="0" aria-label="Gewicht nach hinten oder vorne verlagern">
+      <div class="tune-ends"><span>← Hinten</span><span>Vorne →</span></div>
+    </section>
   </section>
   <section class="cockpit" id="drive-controls" aria-label="Fahren und Räder zeichnen">
     <button class="pedal brake-pedal" data-pedal="brake" aria-label="Bremse und Rückwärtsgang" aria-pressed="false"><i class="pedal-arm"></i><span class="pedal-face"><i></i><i></i><i></i><i></i></span></button>
@@ -116,10 +124,15 @@ const pads = ['rear', 'front'].map((name, axle) => {
   return pad;
 });
 const controls = new DriveControls($('drive-controls'), (drive, brake) => { if (sim) { sim.cars[0].drive = drive; sim.cars[0].brake = brake; } }, () => sim?.cars[0].body.linvel().x ?? 0);
+function toggleTune(open:boolean){$('tune-panel').hidden=!open;$('tune-button').setAttribute('aria-expanded',String(open));}
+$('tune-button').onclick=()=>{if(sim)toggleTune(!!$('tune-panel').hidden);};$('close-tune').onclick=()=>toggleTune(false);
+for(const [i,name] of ['rear','front'].entries())$('stiffness-'+name).oninput=()=>{const v=+$<HTMLInputElement>('stiffness-'+name).value;if(sim)sim.cars[0].flex[i].stiffness=v;$('stiffness-'+name+'-value').textContent=v>.95?'Starr':v<.2?'Weich':Math.round(v*100)+' %';};
+$('ballast').oninput=()=>{const v=+$<HTMLInputElement>('ballast').value;if(sim)sim.cars[0].ballastTarget=v;$('ballast-value').textContent=Math.abs(v)<.05?'Mitte':v<0?'Hinten':'Vorne';};
+$('tune-panel').addEventListener('keydown',e=>e.stopPropagation());
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
 const courseNumber = (id: number) => id === 12 ? '∞' : String(id > 12 ? id : id + 1).padStart(2, '0');
-const region = (id: number) => id === 12 ? 'EXPERIMENT' : id > 12 ? 'EXPERTE' : id < 4 ? 'CANYON' : id < 8 ? 'GLETSCHER' : 'STEINBRUCH';
+const region = (id: number) => id === 12 ? 'EXPERIMENT' : id >= 16 ? 'ABENTEUER' : id > 12 ? 'EXPERTE' : id < 4 ? 'CANYON' : id < 8 ? 'GLETSCHER' : 'STEINBRUCH';
 
 function setState(next: typeof state) {
   state = next;
@@ -132,6 +145,7 @@ function setState(next: typeof state) {
   if (!controls.enabled) controls.reset();
   for (const pad of pads) { pad.enabled = state !== 'loading' && state !== 'finished'; if (!pad.enabled) pad.cancel(); else pad.render(); }
   if (sim) sim.started = state === 'racing';
+  if(next==='paused'||next==='finished')toggleTune(false);
   document.querySelector('.game')!.setAttribute('data-state', state);
 }
 
@@ -139,6 +153,7 @@ function loadLevel(id: number, stayHome = true) {
   pads.forEach(pad => pad.cancel());
   sim?.dispose(); currentLevel = id; saved.level = id;
   sim = new Simulation(createExpedition(id), 1, pads.map(pad => pad.shape)); renderer.setCourse(sim);
+  toggleTune(false);for(const name of ['rear','front']){$<HTMLInputElement>('stiffness-'+name).value='1';$('stiffness-'+name+'-value').textContent='Starr';}$<HTMLInputElement>('ballast').value='0';$('ballast-value').textContent='Mitte';
   document.querySelector<HTMLElement>('.game')!.dataset.theme=sim.course.theme;
   accumulator = 0; lastResetCount = 0; lastTerrain = ''; slow = false;
    lastCheckpoint = 2;
@@ -189,12 +204,12 @@ function showPause() {
 }
 
 function showCourses() {
-  openModal(`<p class="eyebrow dark">DEIN NÄCHSTES ABENTEUER</p><h2 id="modal-title">Wähle deinen Weg.</h2><p class="modal-copy">Erreiche das Ziellager. Ein Stern fürs Ziel, ein zweiter für eine Fahrt ohne Bergung. Kein Zeitlimit. Alle Expeditionen sind frei wählbar.</p><div class="course-list">${courseList.filter(c => c.id !== 12).concat(courseList[12]).map(c => { const id = c.id; return `${id === 13 ? '<h3 class="collection-label">EXPERTENEXPEDITIONEN</h3>' : id % 4 === 0 && id < 12 ? `<h3 class="collection-label">${region(id)} <span>0${id / 4 + 1}</span></h3>` : ''}<button class="level-card ${id === currentLevel ? 'active' : ''}" data-level="${id}"><span class="level-no">${courseNumber(id)}</span><span class="level-text"><strong>${c.name}</strong><small>${c.subtitle}</small></span><span class="level-record">${saved.expeditions[id] ? `<b>${'★'.repeat(expeditionStars(saved.expeditions[id]))}</b><small>GESCHAFFT</small>` : id === 12 ? 'FREI' : '○'.repeat(c.difficulty)}</span></button>`; }).join('')}</div>`);
+  openModal(`<p class="eyebrow dark">DEIN NÄCHSTES ABENTEUER</p><h2 id="modal-title">Wähle deinen Weg.</h2><p class="modal-copy">Erreiche das Ziellager. Ein Stern fürs Ziel, ein zweiter für eine Fahrt ohne Bergung. Kein Zeitlimit. Alle Expeditionen sind frei wählbar.</p><div class="course-list">${courseList.filter(c => c.id !== 12).concat(courseList[12]).map(c => { const id = c.id; return `${id === 16 ? '<h3 class="collection-label">NEUE MECHANIK-ABENTEUER</h3>' : id === 13 ? '<h3 class="collection-label">EXPERTENEXPEDITIONEN</h3>' : id % 4 === 0 && id < 12 ? `<h3 class="collection-label">${region(id)} <span>0${id / 4 + 1}</span></h3>` : ''}<button class="level-card ${id === currentLevel ? 'active' : ''}" data-level="${id}"><span class="level-no">${courseNumber(id)}</span><span class="level-text"><strong>${c.name}</strong><small>${c.subtitle}</small></span><span class="level-record">${saved.expeditions[id] ? `<b>${'★'.repeat(expeditionStars(saved.expeditions[id]))}</b><small>GESCHAFFT${saved.expeditions[id].masterRoutes?.length ? ' · ◇ '+saved.expeditions[id].masterRoutes!.length : ''}${saved.expeditions[id].freightDelivered ? ' · FRACHT ✓' : ''}</small>` : id === 12 ? 'FREI' : '○'.repeat(c.difficulty)}</span></button>`; }).join('')}</div>`);
   document.querySelectorAll<HTMLButtonElement>('[data-level]').forEach(b => b.onclick = () => { resumeState = null; modal.close(); loadLevel(+b.dataset.level!); });
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.8.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.9.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -210,7 +225,7 @@ function showInstall() {
   $('install-done').onclick = closeModal;
 }
 function showHelp() {
-  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Das Ziel ist die Herausforderung. Eine Fahrt ohne Bergung erhält einen zusätzlichen Stern.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Das Häkchen montiert den Entwurf auf der jeweiligen Achse und leert das Feld für die nächste Form. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Experimentiere.</strong> Deine Kontur bestimmt Kontakt, Masse und Verdrängung. Es gibt keine fest vorgegebene Lösung für einen Abschnitt.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
+  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Das Ziel ist die Herausforderung. Eine Fahrt ohne Bergung erhält einen zusätzlichen Stern.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten: weiter oben am Pedal gibst du mehr Gas. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Das Häkchen montiert den Entwurf auf der jeweiligen Achse und leert das Feld für die nächste Form. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Experimentiere.</strong> Deine Kontur bestimmt Kontakt, Masse und Verdrängung. Es gibt keine fest vorgegebene Lösung für einen Abschnitt.</li><li><strong>Fahrwerk einstellen.</strong> Über das Fahrwerksymbol kannst du die Steifigkeit beider Achsen einzeln verändern und Gewicht nach vorne oder hinten verlagern. Weiche Räder geben unter Kontaktlast nach. Gas und Bremse verändern auch in der Luft die Neigung.</li><li><strong>Bewege die Welt.</strong> Druckplatten und Gegengewichte betätigst du mit dem Fahrzeug. Wasserstände und Strömungen wirken auf deine Konturen. Morsche Bohlen und dünnes Eis zeigen Schäden, bevor sie nachgeben. Lehm behält eingegrabene Spuren.</li><li><strong>Zusätzliche Ziele.</strong> Goldene Rauten markieren optionale Meisterrouten. Passiere ihre Markierungen der Reihe nach und erreiche das Ziel für eine Auszeichnung. Bei der Versorgungsfahrt muss die empfindliche Ladung heil ankommen. Der Zustand von Mechanismen, Ladung und Boden wird an Lagern gesichert.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
   $('help-done').onclick = closeModal;
 }
 
@@ -219,9 +234,12 @@ function finish() {
   const run = recordExpedition(undefined, car.resets, sim.collected.size, total);
   const stars = expeditionStars(run);
   saved.expeditions[currentLevel] = recordExpedition(saved.expeditions[currentLevel], car.resets, sim.collected.size, total);
+  saved.expeditions[currentLevel]=recordExpedition(saved.expeditions[currentLevel],car.resets,sim.collected.size,total,{masterRoutes:sim.mechanics.mastered,freightDelivered:!!sim.mechanics.cargo&&sim.mechanics.cargo.health>0});
   persist(); setState('finished'); resumeState = null; sound.beep(880, .3);
   const nextLevel = currentLevel === 11 ? 13 : currentLevel === 12 || currentLevel === EXPEDITION_COUNT - 1 ? null : currentLevel + 1;
-  const checks = [['Ziellager erreicht', true], ['Ohne Bergung angekommen', car.resets === 0]] as const;
+  const checks: [string,boolean][] = [['Ziellager erreicht', true], ['Ohne Bergung angekommen', car.resets === 0]];
+  for(const r of sim.course.masterRoutes??[])checks.push(['Meisterroute: '+r.name,sim.mechanics.mastered.includes(r.id)]);
+  if(sim.mechanics.cargo)checks.push(['Fracht geliefert · '+Math.round(sim.mechanics.cargo.health)+' % unversehrt',sim.mechanics.cargo.health>0]);
   openModal(`<p class="eyebrow dark">${currentLevel === 12 ? 'TESTFAHRT ABGESCHLOSSEN' : 'EXPEDITION GESCHAFFT'}</p><h2 id="modal-title">Im Lager angekommen.</h2>${currentLevel!==12 ? `<div class="result-stars">${'★'.repeat(stars)}<span>${'☆'.repeat(2 - stars)}</span></div><ul class="mission-results">${checks.map(([label, done]) => `<li class="${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${label}</li>`).join('')}</ul>` : ''}<div class="result-stats"><div><strong>${car.resets}</strong><small>BERGUNGEN</small></div><div><strong>${car.shapeChanges}</strong><small>FORMWECHSEL</small></div><div><strong>${formatTime(car.finishTime)}</strong><small>UNTERWEGS</small></div></div><button class="primary-button full" id="next-level">${nextLevel !== null ? 'Nächste Expedition' : 'Expeditionen entdecken'} ${svg('arrow')}</button><div class="button-pair"><button class="secondary-button" id="race-again">Noch einmal</button><button class="secondary-button" id="finish-home">Zur Auswahl</button></div>`, false);
   $('next-level').onclick = () => { modal.close(); if (nextLevel !== null) { loadLevel(nextLevel); begin(); } else { loadLevel(0); showCourses(); } };
   $('race-again').onclick = () => { modal.close(); loadLevel(currentLevel); begin(); };
@@ -312,6 +330,7 @@ async function boot() {
         for (let i = 0; i < Math.min(steps, 20000); i++) { sim.tick(); if (i % 12 === 11) renderer.advanceEffects(sim, .1); }
       };
       (window as any).__FORMDRIVE__ = {
+        tuning:(rear:number,front:number,ballast:number)=>{sim.cars[0].flex[0].stiffness=clamp(rear,0,1);sim.cars[0].flex[1].stiffness=clamp(front,0,1);sim.cars[0].ballastTarget=clamp(ballast,-1,1);},
         draft: (axle: number, shape: Point[]) => { pads[axle].draft = shape; pads[axle].render(); },
         framing: () => renderer.playerFraming(),
         inspect: (x:number,shape:ShapeName='compact')=>{setState('paused');pads.forEach(p=>p.usePreset(shape));sim.cars[0].checkpoint=x;sim.resetCar(0,false);for(let i=0;i<60;i++)sim.world.step();renderer.snapNextFrame=true;renderer.viewX=x;renderer.render(sim,1);updateHud();},
@@ -319,7 +338,7 @@ async function boot() {
         scenery:()=>({goal:['goal-front','goal-back'].map(n=>{const o=renderer.scene.getObjectByName(n) as any;return o?{name:n,side:o.material.side,rotation:o.rotation.y}:null}),roofs:renderer.roofs.map(r=>({x:r.x,width:r.width,transparent:(r.mesh.material as any).transparent,faces:r.mesh.geometry.index?.count})),theme:sim.course.theme}),
         drive: (value: number, brake = 0) => { sim.cars[0].drive = clamp(value, -1, 1); sim.cars[0].brake = clamp(brake, 0, 1); },
         sceneImage: () => { renderer.render(sim, 0, state === 'home'); return renderer.renderer.domElement.toDataURL('image/png'); },
-        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, drafts: pads.map(pad => pad.draft), player: { mud: sim.cars[0].mud, x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, mudSpray: { count: renderer.mudSpray.activeCount, strengths: [...renderer.mudSpray.strengths] }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        snapshot: () => ({ mechanics:sim.mechanics.snapshot(),tuning:{flex:sim.cars[0].flex,ballast:sim.cars[0].ballast,ballastTarget:sim.cars[0].ballastTarget},state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, drafts: pads.map(pad => pad.draft), player: { mud: sim.cars[0].mud, x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, mudSpray: { count: renderer.mudSpray.activeCount, strengths: [...renderer.mudSpray.strengths] }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
         water: () => { const lake = sim.course.waters.find(w => w.deep && sim.course.zones.some(z => z.kind === 'lake' && z.start <= w.start && z.end >= w.end)) ?? sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pads.forEach(pad => pad.usePreset('paddle')); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         load: (id: number) => loadLevel(clamp(id, 0, EXPEDITION_COUNT - 1)),
@@ -340,6 +359,9 @@ async function boot() {
 function updateHud() {
   const car = sim.cars[0], p = car.body.translation();
   $('finds').textContent = String(car.resets);
+  const routes=sim.course.masterRoutes?.length??0,cargo=sim.mechanics.cargo;
+  if(cargo)$('journey-goal').textContent=cargo.health>0?'FRACHT '+Math.ceil(cargo.health)+' % · INS ZIEL BRINGEN':'FRACHT BESCHÄDIGT · BERGEN';
+  else if(routes)$('journey-goal').textContent='◇ '+sim.mechanics.mastered.length+' / '+routes+' MEISTERROUTEN';
   $('checkpoint-label').textContent = car.checkpoint <= 2 ? 'STARTLAGER' : `LAGER ${sim.course.checkpoints.indexOf(car.checkpoint)}`;
   $('speed').textContent = String(Math.round(Math.abs(car.body.linvel().x) * 3.6));
   const progress = clamp(p.x / sim.course.length * 100, 0, 100);

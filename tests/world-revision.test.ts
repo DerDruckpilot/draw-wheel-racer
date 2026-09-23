@@ -37,7 +37,7 @@ test('frozen ground belongs to winter expeditions and old collectible clutter is
  for(let id=0;id<EXPEDITION_COUNT;id++){
   const c=createExpedition(id);assert.equal(c.caches!.length,0);
   if(id===12)continue;
-  assert.ok(c.features.length>=6);assert.ok(c.features.some(f=>['notch','rubblegate','squeeze'].includes(f)));
+  assert.ok(c.features.length>=6);if(id<16)assert.ok(c.features.some(f=>['notch','rubblegate','squeeze'].includes(f)));
   if(c.segments.some(s=>s.surface==='ice'))assert.equal(c.theme,'alpine');
   for(const cp of c.checkpoints)assert.equal(groundAt(c,cp),0);
   for(let i=1;i<c.segments.length;i++)assert.ok(Math.abs(c.segments[i].a.x-c.segments[i-1].b.x)<1e-7);

@@ -23,7 +23,7 @@ test('minimal solo cockpit clears mounted drafts, presses real pedal faces and k
  const message=await page.locator('#toast').boundingBox(),logo=await page.locator('.wordmark').boundingBox();
  expect(message!.x).toBeLessThan(35);expect(message!.y).toBeGreaterThan(logo!.y+logo!.height);expect(message!.x+message!.width).toBeLessThan(235);
  await page.locator('#pause-button').click();await page.locator('#back-home').click();
- await expect(page.locator('[data-level]')).toHaveCount(16);await expect(page.locator('[data-level="13"]')).toContainText('Die Lehmklamm');expect(await page.locator('[data-level]').last().getAttribute('data-level')).toBe('12');
+ await expect(page.locator('[data-level]')).toHaveCount(22);await expect(page.locator('[data-level="13"]')).toContainText('Die Lehmklamm');expect(await page.locator('[data-level]').last().getAttribute('data-level')).toBe('12');
  await page.locator('[data-level="13"]').click();await page.evaluate(()=>{(window as any).__FORMDRIVE__.obstacle('mudpit',750,'paddle');});
  const mud=await snapshot(page);expect(mud.mudSpray.count).toBeGreaterThan(20);expect(mud.player.resets).toBe(0);
  await page.screenshot({path:'.local/v17-mud-tested.png'});expect(errors).toEqual([]);

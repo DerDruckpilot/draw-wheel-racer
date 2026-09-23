@@ -22,9 +22,9 @@ export function buildChallenge(f:Feature,c:Course,start:number,line:Line):boolea
     line(32,pts([[0,0],[3,0],[6,-.95],[14,-.95],[14.3,-.55],[17,-.55],[17.2,.55],[20,.55],[20.15,1.75],[24,1.75],[28,.6],[32,0]]),'mud');
     c.muds!.push({start:start+3,end:start+17.3,level:-.02,deep:false});zone(0,17,'mudpit');zone(17,25,'steps');zone(25,32,'ridge');
   }else if(f==='tidalcave'){
-    line(35,pts([[0,0],[3,0],[8,-1.1],[21,-1.1],[23,-.5],[23.25,.45],[26,.45],[26.2,1.55],[29,1.55],[35,0]]));
-    c.waters.push({start:start+3,end:start+23,level:-.02,deep:false});roof(15,1.38,9);
-    zone(0,9,'ford');zone(9,22,'tidalcave');zone(22,30,'steps');zone(30,35,'ridge');
+    line(43,pts([[0,0],[3,0],[8,-1.1],[29,-1.1],[31,-.5],[31.25,.45],[34,.45],[34.2,1.55],[37,1.55],[43,0]]));
+    c.waters.push({start:start+3,end:start+31,level:-.02,deep:false});roof(15,1.38,9);
+    zone(0,9,'ford');zone(9,28,'tidalcave');zone(28,38,'steps');zone(38,43,'ridge');
   }else if(f==='brokenbridge'){
     line(32,pts([[0,0],[3,0],[4,-1.7],[24,-1.7],[26,-1],[29,0],[32,0]]));
     for(let j=0;j<3;j++)c.obstacles.push({x:start+7+j*7.2,y:.05+(j===1?.12:0),width:7,height:.23,kind:'beam',tilt:.24});

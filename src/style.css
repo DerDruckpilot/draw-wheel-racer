@@ -114,3 +114,11 @@ dialog{max-height:calc(100dvh - 24px);max-width:580px;border-radius:18px}.modal-
 .game[data-theme="alpine"] .speed{color:#18362e;text-shadow:0 1px 3px #ffffffa8}
 .game[data-theme="alpine"] .speed span{color:#294e42}
 .game[data-theme="alpine"] .race-hud{text-shadow:0 1px 5px #102c27}
+
+/* Live suspension controls are deliberately folded away while drawing. */
+.tune-panel{position:absolute;right:max(18px,env(safe-area-inset-right,0px));top:57px;z-index:8;width:218px;padding:10px 14px 13px;background:#182d26ed;color:#f2f4e7;border:1px solid #f4f6e652;border-radius:15px;backdrop-filter:blur(12px);box-shadow:0 9px 32px #10231e55}
+.tune-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12px}.tune-heading button{background:none;color:#fff;display:grid;place-items:center;width:30px;height:30px}.tune-heading svg{width:17px;height:17px}
+.tune-panel label{display:flex;justify-content:space-between;font-size:10px;gap:10px;margin-top:5px}.tune-panel output{color:#d9ee8e;font-variant-numeric:tabular-nums}
+.tune-panel input{width:100%;height:29px;margin:0;accent-color:#d9ee8e;touch-action:none;cursor:ew-resize}.tune-ends{display:flex;justify-content:space-between;color:#c4d2bd;font-size:8px}
+.game[data-state="loading"] #tune-button{display:none}
+@media(max-height:360px){.tune-panel{top:52px;padding-top:6px;padding-bottom:8px}.tune-panel input{height:24px}.tune-heading{margin-bottom:1px}}

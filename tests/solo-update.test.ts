@@ -43,8 +43,8 @@ test('solo corridor and structure shoulders merge into land, with exact clearanc
 });
 
 test('expert routes preserve legacy IDs, retain a varied hazard selection and provide grounded recovery points',()=>{
- const saved=recordExpedition(undefined,0,3,3);assert.deepEqual(restoreExpeditions({0:saved,13:saved,15:saved,16:saved}),{0:saved,13:saved,15:saved});
- assert.equal(EXPEDITION_COUNT,16);assert.equal(createExpedition(12).name,'Testgelände');
+ const saved=recordExpedition(undefined,0,3,3);assert.deepEqual(restoreExpeditions({0:saved,13:saved,15:saved,22:saved}),{0:saved,13:saved,15:saved});
+ assert.equal(EXPEDITION_COUNT,22);assert.equal(createExpedition(12).name,'Testgelände');
  const found=new Set<string>();
  for(const id of [13,14,15]){
   const c=createExpedition(id);assert.deepEqual(c,createExpedition(id));assert.ok(c.difficulty>=5);assert.equal(c.caches!.length,0);

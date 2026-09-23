@@ -4,6 +4,7 @@ import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from 
 import { clamp, preset, radiusOf, sanitizeShape, shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 import { HULL_HYDRO, MUD_MEDIUM, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 import { roofOutline } from './structures';
+import { Mechanics, prepareSoils, rigidWheel, type FlexState } from './mechanics';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
@@ -11,6 +12,7 @@ export const DRIVE_TORQUE = 1200;
 export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
+  flex:FlexState[]; ballast:number; ballastTarget:number;
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shapes: Point[][]; hydros: HydroShape[][]; radialTravels: number[]; desiredShapes: (Point[] | null)[]; axleRevisions: number[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
@@ -23,6 +25,7 @@ let initialized: Promise<void> | undefined;
 export function initPhysics() { return initialized ??= RAPIER.init(); }
 
 export class Simulation {
+  mechanics:Mechanics;
   world: RAPIER.World;
   cars: Vehicle[] = [];
   beams: Beam[] = [];
@@ -34,13 +37,17 @@ export class Simulation {
     this.world = new RAPIER.World({ x: 0, y: -9.81 });
     this.world.timestep = FIXED_DT;
     this.world.numSolverIterations = 8;
+    const soils=prepareSoils(course.segments,course.muds??[]);
     for (const s of course.segments) {
       // A vertical profile edge has no polygon area. Its wall is already the side
       // of the adjacent solid terrain polygon, so no degenerate hull is created.
       if (Math.abs(s.b.x - s.a.x) < .0001) continue;
       const pts = new Float32Array([s.a.x, s.a.y, s.b.x, s.b.y, s.b.x, -12, s.a.x, -12]);
       const desc = RAPIER.ColliderDesc.convexHull(pts);
-      if (desc) this.world.createCollider(desc.setFriction(surfaceFriction[s.surface]).setRestitution(0).setCollisionGroups(0x0001ffff));
+      if (desc) {
+        const collider=this.world.createCollider(desc.setFriction(surfaceFriction[s.surface]).setRestitution(0).setCollisionGroups(0x0001ffff));
+        for(const soil of soils){const i=soil.segments.indexOf(s);if(i>=0)soil.colliders[i]=collider;}
+      }
     }
     for (let i = 0; i < carCount; i++) this.cars.push(this.createCar(i));
     for (const o of course.obstacles) {
@@ -69,8 +76,10 @@ export class Simulation {
       this.world.createCollider(RAPIER.ColliderDesc.cuboid((s.b.x - s.a.x) / 2, 6)
         .setTranslation((s.a.x + s.b.x) / 2, s.a.y - 6).setFriction(surfaceFriction.stone).setCollisionGroups(0x0001ffff));
     }
+    this.mechanics=new Mechanics(this,soils);
     // Settle the suspension before the countdown.
     for (let i = 0; i < 90; i++) this.world.step();
+    this.mechanics.capture();
   }
 
   createCar(id: number): Vehicle {
@@ -94,7 +103,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, mud: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { flex:[rigidWheel(),rigidWheel()],ballast:0,ballastTarget:0,id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, mud: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -104,6 +113,7 @@ export class Simulation {
     car.shape = car.shapes[0];
     for (const [index, w] of car.wheels.entries()) {
       if (!changed.includes(index)) continue;
+      car.flex[index].amount=0;car.flex[index].load=0;
       const shape = car.shapes[index];
       car.hydros[index] = wheelHydro(shape);
       const properties = wheelMassProperties(shape);
@@ -174,11 +184,13 @@ export class Simulation {
       const shift = lift, bodyPos = car.body.translation(), angle = car.body.rotation();
       const co = Math.cos(angle), si = Math.sin(angle);
       const cage = { x: bodyPos.x - .05 * co - .6 * si, y: bodyPos.y - .05 * si + .6 * co + shift };
-      for (const roof of this.course.obstacles.filter(o => o.kind === 'ceiling')) {
+      for (const roof of this.course.obstacles.filter(o => o.kind === 'ceiling'||o.kind==='platform')) {
         const overlaps = (x: number, y: number, hx: number, hy: number) =>
           Math.abs(x - roof.x) < hx + roof.width / 2 + .02 && Math.abs(y - roof.y) < hy + roof.height / 2 + .02;
         if (overlaps(cage.x, cage.y, Math.abs(co) * .675 + Math.abs(si) * .415, Math.abs(si) * .675 + Math.abs(co) * .415)) return;
         if (car.wheels.some(w => overlaps(w.translation().x, w.translation().y + shift, newRadius, newRadius))) return;
+        const cargo=car.id===0?this.mechanics?.cargo:undefined;
+        if(cargo){const cp=cargo.body.translation();if(overlaps(cp.x,cp.y+shift,.48*Math.abs(co)+.34*Math.abs(si),.48*Math.abs(si)+.34*Math.abs(co)))return;}
       }
     }
     const changed = car.desiredShapes.flatMap((s, i) => s ? [i] : []);
@@ -186,7 +198,8 @@ export class Simulation {
     this.replaceColliders(car, changed);
     if (this.started) car.shapeChanges++;
     if (lift > 0) {
-      for (const b of [car.body, ...car.wheels, ...car.carriers]) {
+      const cargo=car.id===0?this.mechanics?.cargo:undefined;
+      for (const b of [car.body, ...car.wheels, ...car.carriers,...(cargo?[cargo.body]:[])]) {
         const p = b.translation(); b.setTranslation({ x: p.x, y: p.y + lift }, true);
         const v = b.linvel(); b.setLinvel({ x: v.x, y: Math.min(v.y, 0) }, true);
       }
@@ -211,11 +224,14 @@ export class Simulation {
     car.motorIntegrals.fill(0);
     car.motorCut = false;
     if (countReset) car.resets++;
+    if(id===0)this.mechanics?.reset();
   }
 
   tick() {
     if (!this.started) return;
     this.elapsed += FIXED_DT;
+    this.mechanics.beforeStep();
+    let checkpointChanged=false;
     for (const car of this.cars) {
       car.changeCooldown = Math.max(0, car.changeCooldown - FIXED_DT);
       this.applyPending(car);
@@ -224,8 +240,9 @@ export class Simulation {
       for (const w of car.wheels) { w.resetForces(true); w.resetTorques(true); }
       if (p.y < -7 || !Number.isFinite(p.x) || !Number.isFinite(p.y)) { this.resetCar(car.id); continue; }
       if (car.id === 0) this.collectCaches(car);
-      if (!car.finished && p.x >= this.course.length) { car.finished = true; car.finishTime = this.elapsed; }
-      for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint) car.checkpoint = cp;
+      const cargoAlive=(this.mechanics.cargo?.health??100)>0;
+      if (!car.finished && p.x >= this.course.length && cargoAlive) { car.finished = true; car.finishTime = this.elapsed; }
+      for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint && cargoAlive) {car.checkpoint = cp;if(car.id===0)checkpointChanged=true;}
       const zone = zoneAt(this.course, p.x);
       if (car.id && this.ai) {
         car.aiTimer -= FIXED_DT;
@@ -307,6 +324,8 @@ export class Simulation {
       if (car.id && car.stuck > 7) this.resetCar(car.id);
     }
     this.world.step();
+    this.mechanics.afterStep();
+    if(checkpointChanged)this.mechanics.capture();
   }
 
   applyWater(car: Vehicle, water: Water, mud = false) {

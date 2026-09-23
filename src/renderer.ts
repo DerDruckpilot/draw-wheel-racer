@@ -12,6 +12,7 @@ import { RouteLayout } from './route-layout';
 import { archSection } from './structures';
 import { structureMesh } from './structure-mesh';
 import { terrainWarp } from './terrain-shape';
+import { MechanicsView } from './mechanics-visuals';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
@@ -96,6 +97,7 @@ function iceTexture() {
 }
 
 export class GameRenderer {
+  mechanicsView?:MechanicsView;
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(44, 1, .1, 150);
@@ -219,6 +221,7 @@ export class GameRenderer {
   }
 
   setCourse(sim: Simulation) {
+    this.mechanicsView?.dispose();
     // Dispose per-course geometry while retaining the cached texture/material assets.
     const retained = new Set<THREE.Material>([this.cliffMat, ...Object.values(this.mats)]);
     const disposable = new Set<THREE.Material>();
@@ -247,7 +250,7 @@ export class GameRenderer {
     this.cliffMat.color.set(alpine ? 0xe0e6e9 : quarry ? 0xc3c1b6 : 0xe5d3b6);
     const completeGround = [...course.segments, ...courseRunout(course)];
     for (const surface of ['stone', 'ice', 'mud', 'road'] as Surface[]) {
-      const parts = completeGround.filter(s => s.surface === surface);
+      const parts = completeGround.filter(s => s.surface === surface && !sim.mechanics.soils.some(soil=>soil.segments.includes(s)));
       if (!parts.length) continue;
       const mesh = new THREE.Mesh(terrainGeometry(parts, TRACK_BACK, TRACK_FRONT), this.mats[surface]); mesh.receiveShadow = true; this.terrain.add(mesh);
     }
@@ -296,6 +299,12 @@ export class GameRenderer {
           this.terrain.add(group); this.beamMeshes.push(group);
           const pivot = new THREE.Mesh(new THREE.ConeGeometry(.32, .65, 4), metal); pivot.position.set(o.x, o.y - .4, LANES[i]); this.terrain.add(pivot);
         }
+      } else if (o.kind === 'platform') {
+        const geometry=new THREE.BoxGeometry(o.width,o.height,3.3,4,1,4),v=geometry.attributes.position;
+        for(let i=0;i<v.count;i++){const z=v.getZ(i),x=v.getX(i);if(Math.abs(z)>1.06){v.setZ(i,z+Math.sin(o.x+x*2.4)*.16);v.setX(i,x+Math.sin(o.x+z*3)*.13);}}geometry.computeVertexNormals();
+        const platform=new THREE.Mesh(geometry,this.cliffMat);platform.position.set(o.x,o.y,1);platform.castShadow=true;platform.receiveShadow=true;this.terrain.add(platform);
+        const floor=groundAt(course,o.x),height=Math.max(.2,o.y-o.height/2-floor);
+        for(const z of [-.6,2.6]){const pier=new THREE.Mesh(new THREE.CylinderGeometry(.27,.55,height,7),this.cliffMat);pier.position.set(o.x,floor+height/2-.03,z);pier.castShadow=true;this.terrain.add(pier);}
       } else if (o.kind === 'log') {
         const mesh = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, TRACK_FRONT - TRACK_BACK + .5, 16), this.cliffMat);
         mesh.rotation.x = Math.PI / 2; mesh.position.set(o.x, o.y, 1); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
@@ -316,6 +325,7 @@ export class GameRenderer {
     this.addGate(course.length, 'ZIEL', !course.expedition);
     if (course.expedition) this.addExpeditionMarkers(course);
     this.bendLandscape();
+    this.mechanicsView=new MechanicsView(sim,this.layout,this.cliffMat,this.mats.wood,this.mats.ice,this.mats.mud,this.rockTemplate);this.scene.add(this.mechanicsView.root);
     this.viewX = 2; this.camera.position.set(-8, 11, 18); this.target.set(4, 0, -.5); this.camera.lookAt(this.target);
   }
 
@@ -473,6 +483,7 @@ export class GameRenderer {
     const geo = new THREE.PlaneGeometry(end - start, 60, 32, 20); const mesh = new THREE.Mesh(geo, material);
     mesh.rotation.x = -Math.PI / 2; mesh.position.set((start + end) / 2, y + .035, -3.9); mesh.renderOrder = 2;
     this.terrain.add(mesh); this.waters.push(material);
+    material.userData={water,mesh,initialLevel:y};
   }
 
   addGate(x: number, text: string, finish: boolean) {
@@ -540,9 +551,11 @@ export class GameRenderer {
         visual.revisions[axle] = car.axleRevisions[axle];
       }
       visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(), point = this.layout.point(wp.x, LANES[car.id] + (i < 2 ? .97 : -.97)); w.position.set(point.x, wp.y, point.z); w.rotation.set(0, point.yaw, body.rotation(), 'YXZ'); });
+      visual.wheels.forEach((wheel,i)=>{const f=car.flex[i%2],a=f.amount,nx=f.nx,ny=f.ny;for(const child of wheel.children){child.matrixAutoUpdate=false;child.matrix.set(1-a*nx*nx,-a*nx*ny,0,0,-a*nx*ny,1-a*ny*ny,0,0,0,0,1,0,0,0,0,1);}});
       if (visual.tag) { visual.tag.visible = sim.cars.length > 1; visual.tag.position.set(spatial.x, p.y + 1.72, spatial.z); }
     }
     this.advanceEffects(sim, dt);
+    this.mechanicsView?.update(this.clock);
     this.cacheMeshes.forEach((mesh, id) => { const cache = sim.course.caches![id], p = this.layout.point(cache.x, LANES[0]); mesh.position.set(p.x, cache.y, p.z); mesh.visible = !sim.collected.has(id); mesh.rotation.y = this.clock * .45; });
     this.checkpointFlags.forEach(flag => flag.mesh.material.color.set(flag.x <= sim.cars[0].checkpoint ? 0xd9ee8e : 0xe2a252));
     sim.beams.forEach((b, i) => { const mesh = this.beamMeshes[i]; if (mesh) { const bp = b.body.translation(), p = this.layout.point(bp.x, LANES[b.lane]); mesh.position.set(p.x, bp.y, p.z); mesh.rotation.set(0, p.yaw, b.body.rotation(), 'YXZ'); } });
@@ -572,6 +585,14 @@ export class GameRenderer {
     for (const rock of this.rocks) rock.visible = Math.abs(rock.userData.trackX - this.viewX) < 78;
     for (const water of this.waters) {
       water.uniforms.time.value = this.clock;
+      const fluid=water.userData.water as Water,delta=fluid.level-water.userData.initialLevel;
+      water.userData.mesh.position.y=fluid.level+.035;water.uniforms.levelDelta.value=delta;
+      const soil=sim.mechanics.soils.find(s=>s.water===fluid);
+      if(soil && water.userData.soilVersion!==soil.version){
+        const map=water.uniforms.rutMap.value as THREE.DataTexture,data=map.image.data as Uint8Array;
+        for(let j=0;j<64;j++){const x=fluid.start+(fluid.end-fluid.start)*j/63;let nearest=0;for(let k=1;k<soil.nodes.length;k++)if(Math.abs(soil.nodes[k].x-x)<Math.abs(soil.nodes[nearest].x-x))nearest=k;data[j]=Math.round(soil.depths[nearest]/.48*255);}
+        map.needsUpdate=true;water.userData.soilVersion=soil.version;
+      }
       for (const car of sim.cars) {
         const wake = water.uniforms.wakes.value[car.id] as THREE.Vector4;
         const p = car.body.translation(), strength = (water.uniforms.mud.value ? this.mudSpray : this.spray).strengths[car.id];
