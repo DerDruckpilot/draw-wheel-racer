@@ -1,4 +1,5 @@
-import { preset, sanitizeShape, shapeLength, type Point, type ShapeName } from './shapes';
+import { MAX_INPUT_POINTS, preset, sanitizeShape, simplifyStroke, type Point, type ShapeName } from './shapes';
+import { prepareWheel } from './shape-preparation';
 export class DrawingPad {
   shape = preset('round');
   previous = preset('round');
@@ -6,6 +7,8 @@ export class DrawingPad {
   active = false;
   enabled = true;
   private pointer: number | null = null;
+  private mountId = 0;
+  private pendingShape: Point[] | null = null;
   private ctx: CanvasRenderingContext2D;
   private width = 0;
   private height = 0;
@@ -28,7 +31,7 @@ export class DrawingPad {
   point(e: PointerEvent): Point { const rect = this.canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left - this.width / 2) / this.scale, y: -(e.clientY - rect.top - this.height / 2) / this.scale }; }
   down(e: PointerEvent) {
     if (!this.enabled || this.active || e.button !== 0) return;
-    e.preventDefault(); this.canvas.setPointerCapture(e.pointerId); this.pointer = e.pointerId; this.active = true; this.raw = [this.point(e)]; this.render();
+    e.preventDefault(); this.cancelPending(); this.canvas.setPointerCapture(e.pointerId); this.pointer = e.pointerId; this.active = true; this.raw = [this.point(e)]; this.render();
   }
   move(e: PointerEvent) {
     if (!this.active || e.pointerId !== this.pointer) return;
@@ -36,7 +39,14 @@ export class DrawingPad {
     const events = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [e];
     for (const event of events.length ? events : [e]) {
       const p = this.point(event), prev = this.raw.at(-1)!;
-      if (Math.hypot(p.x - prev.x, p.y - prev.y) > .002 && this.raw.length < 4000) this.raw.push(p);
+      if (Math.hypot(p.x - prev.x, p.y - prev.y) > .002) {
+        // Compact only exceptionally long captures; keep recording the end of
+        // the gesture instead of silently stopping after 4000 samples.
+        if (this.raw.length >= MAX_INPUT_POINTS - 1) {
+          this.raw = simplifyStroke(this.raw, .001, MAX_INPUT_POINTS / 2);
+        }
+        this.raw.push(p);
+      }
     }
     this.render();
   }
@@ -44,14 +54,31 @@ export class DrawingPad {
     if (!this.active || e.pointerId !== this.pointer) return;
     this.raw.push(this.point(e)); this.active = false; this.pointer = null;
     const shape = sanitizeShape(this.raw);
-    if (shape && this.onShape(shape)) { this.previous = this.shape; this.shape = shape; this.feedback('Neue Radform übernommen'); }
-    else this.feedback('Linie zu kurz oder zu komplex. Zeichne sie etwas einfacher.');
+    if (shape) void this.mount(shape);
+    else this.feedback('Zeichne eine etwas längere Linie.');
     this.raw = []; this.render();
   }
-  cancel() { this.active = false; this.pointer = null; this.raw = []; this.render(); }
-  set(shape: Point[], notify = true) { this.cancel(); if (notify && !this.onShape(shape)) { this.feedback('Diese Kontur ist zu komplex. Vereinfache sie etwas.'); return; } this.previous = this.shape; this.shape = shape; this.render(); }
+  cancelPending() { this.mountId++; this.pendingShape = null; this.canvas.removeAttribute('aria-busy'); }
+  cancel() { this.cancelPending(); this.active = false; this.pointer = null; this.raw = []; this.render(); }
+  private async mount(shape: Point[]) {
+    const id = ++this.mountId;
+    const preparation = prepareWheel(shape);
+    if (preparation) {
+      this.pendingShape = shape; this.canvas.setAttribute('aria-busy', 'true'); this.render();
+      this.feedback('Deine Radform wird vorbereitet …');
+      const ready = await preparation;
+      if (id !== this.mountId) return;
+      this.pendingShape = null; this.canvas.removeAttribute('aria-busy');
+      if (!ready) { this.feedback('Die Kontur konnte nicht montiert werden. Versuche es noch einmal.'); this.render(); return; }
+    }
+    if (this.onShape(shape)) { this.previous = this.shape; this.shape = shape; this.feedback('Neue Radform übernommen'); }
+    else this.feedback('Die Kontur konnte nicht montiert werden. Versuche es noch einmal.');
+    this.render();
+  }
+  set(shape: Point[], notify = true) { this.cancel(); if (notify) void this.mount(shape); else { this.previous = this.shape; this.shape = shape; this.render(); } }
   usePreset(name: ShapeName) { this.set(preset(name)); }
-  undo() { const p = this.previous; this.set(p); }
+  get visibleShape() { return this.pendingShape ?? this.shape; }
+  undo() { const p = this.pendingShape ? this.shape : this.previous; this.set(p); }
   render() {
     const ctx = this.ctx, w = this.width, h = this.height;
     ctx.clearRect(0, 0, w, h); if (!w) return;
@@ -63,10 +90,9 @@ export class DrawingPad {
       ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = ctx.lineJoin = 'round'; ctx.beginPath();
       points.forEach((p, i) => { const x = w / 2 + p.x * this.scale, y = h / 2 - p.y * this.scale; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
     };
-    draw(this.shape, this.active ? '#c3ccb6' : '#263c2e', this.scale * .19);
+    draw(this.visibleShape, this.active ? '#c3ccb6' : '#263c2e', this.scale * .19);
     if (this.active) draw(this.raw, '#263c2e', this.scale * .19);
     ctx.fillStyle = '#f1f3e8'; ctx.beginPath(); ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#7f926f'; ctx.lineWidth = 1.4; ctx.stroke();
     if (!this.active) { ctx.fillStyle = '#8a9681'; ctx.font = '10px system-ui'; ctx.textAlign = 'left'; ctx.fillText('ACHSE', w / 2 + 9, h / 2 + 3); }
   }
-  get mass() { return (shapeLength(this.shape) * .26 + .35).toFixed(1); }
 }

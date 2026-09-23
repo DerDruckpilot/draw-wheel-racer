@@ -42,6 +42,10 @@ function unionRings(polygons: Polygon[]): Point[][] {
 }
 
 const cache = new Map<string, HydroShape[]>();
+export function cacheWheelHydro(shape: Point[], geometry: HydroShape[]) {
+  if (cache.size >= 64) cache.delete(cache.keys().next().value!);
+  cache.set(JSON.stringify(shape), geometry);
+}
 export function wheelHydro(shape: Point[]): HydroShape[] {
   const key = JSON.stringify(shape), cached = cache.get(key);
   if (cached) return cached;
@@ -55,8 +59,7 @@ export function wheelHydro(shape: Point[]): HydroShape[] {
     { rings: unionRings(spokes), width: Math.PI * SPOKE_RADIUS / 2, ...properties },
   ];
   // A bounded geometry cache is shared by the two axles and computer rivals.
-  if (cache.size >= 64) cache.delete(cache.keys().next().value!);
-  cache.set(key, result);
+  cacheWheelHydro(shape, result);
   return result;
 }
 

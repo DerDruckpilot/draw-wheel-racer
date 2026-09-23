@@ -17,7 +17,7 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('[data-shape="compact"]')).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Runde Räder', exact: true }).click();
   await page.locator('#settings-button').click();
-  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.2.0');
+  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.3.0');
   await page.locator('#close-modal').click();
   await page.screenshot({ path: '.local/test-home.png' });
   const initial = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
@@ -77,7 +77,7 @@ test('production PWA restarts without network', async ({ page, context, browserN
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false })));
-  await page.goto('./');
+  await page.goto('?test=1');
   await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
   // Validate the emitted production service worker, then reload with the network disabled.
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -86,6 +86,19 @@ test('production PWA restarts without network', async ({ page, context, browserN
   await page.reload();
   await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 40000 });
   await expect(page.locator('#offline-status')).toHaveText(/OFFLINE BEREIT/);
+  // The geometry worker has never run in this session. It too must come from
+  // the production precache when a detailed contour is first drawn offline.
+  const bounds = (await page.locator('#drawing-canvas').boundingBox())!;
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2); await page.mouse.down(); await page.mouse.up();
+  await page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('#drawing-canvas')!, rect = canvas.getBoundingClientRect();
+    const scale = Math.min(rect.width * .44, rect.height * .43) / 1.2;
+    for (let i = 0; i <= 448; i++) {
+      const a = i / 448 * Math.PI * 2, r = .8 + .13 * Math.sin(a * 112);
+      canvas.dispatchEvent(new PointerEvent(i === 0 ? 'pointerdown' : i === 448 ? 'pointerup' : 'pointermove', { pointerId: 1, button: 0, buttons: i === 448 ? 0 : 1, clientX: rect.x + rect.width / 2 + Math.cos(a) * r * scale, clientY: rect.y + rect.height / 2 - Math.sin(a) * r * scale, bubbles: true }));
+    }
+  });
+  await expect.poll(() => page.evaluate(() => (window as any).__FORMDRIVE__.snapshot().player.shape), { timeout: 30000 }).toBeGreaterThan(128);
   await page.screenshot({ path: '.local/test-offline.png' });
   await context.setOffline(false);
   expect(errors).toEqual([]);

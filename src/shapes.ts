@@ -1,7 +1,8 @@
 export type Point = { x: number; y: number };
 export const STROKE_RADIUS = 0.095;
 export const MAX_RADIUS = 1.2;
-export const MAX_SHAPE_POINTS = 128;
+export const MAX_SHAPE_POINTS = 512;
+export const MAX_INPUT_POINTS = 32768;
 // About a fifth of a CSS pixel on the phone's drawing pad. Corners above
 // this tolerance survive; no uniform resampling cuts across them.
 export const SHAPE_TOLERANCE = .003;
@@ -42,35 +43,72 @@ export function resample(input: Point[], count: number): Point[] {
 }
 
 export function sanitizeShape(raw: Point[]): Point[] | null {
-  if (!Array.isArray(raw) || raw.length < 2 || raw.length > 5000) return null;
+  if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_INPUT_POINTS) return null;
   const filtered: Point[] = [];
-  for (const p of raw.slice(0, 5000)) {
+  for (const p of raw) {
     if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
-    const scale = Math.min(1, MAX_RADIUS / Math.max(.001, Math.hypot(p.x, p.y)));
+    const distance = Math.hypot(p.x, p.y);
+    // Keep normalization idempotent at the rim: a rounding error of 1 ulp
+    // must not change a worker-prepared contour's cache key on the next mount.
+    const scale = distance > MAX_RADIUS + 1e-10 ? MAX_RADIUS / distance : 1;
     const q = { x: p.x * scale, y: p.y * scale };
     const prev = filtered.at(-1);
     if (!prev || Math.hypot(q.x - prev.x, q.y - prev.y) > .0001) filtered.push(q);
   }
   let length = 0;
   for (let i = 1; i < filtered.length; i++) length += Math.hypot(filtered[i].x - filtered[i - 1].x, filtered[i].y - filtered[i - 1].y);
-  if (length < .35 || length > 22) return null;
-  // Iterative Ramer-Douglas-Peucker, including closed and self-crossing strokes.
-  const keep = new Set([0, filtered.length - 1]);
-  const stack = [[0, filtered.length - 1]];
-  while (stack.length) {
-    const [first, last] = stack.pop()!, a = filtered[first], b = filtered[last];
+  if (length < .35) return null;
+  // Keep the full stroke, including its tail. Only drawings beyond the mobile
+  // collider budget get adaptive spatial simplification, never rejection for
+  // length or complexity. Ordinary contours retain the original .003 tolerance.
+  const result = simplifyStroke(filtered, SHAPE_TOLERANCE, MAX_SHAPE_POINTS);
+  return shapeLength(result) >= .35 ? result : null;
+}
+
+export function simplifyStroke(points: Point[], tolerance: number, budget = MAX_SHAPE_POINTS): Point[] {
+  // Budgeted Ramer-Douglas-Peucker: resolve the largest remaining deviation
+  // first. A dense/retraced stroke cannot trigger repeated quadratic passes or
+  // collapse to two coincident endpoints when a raised tolerance skips a loop.
+  if (points.length < 3) return points.slice();
+  const keep = new Set([0, points.length - 1]);
+  type Span = { first: number; last: number; index: number; error: number };
+  const heap: Span[] = [];
+  const add = (first: number, last: number) => {
+    const a = points[first], b = points[last];
     const dx = b.x - a.x, dy = b.y - a.y, length2 = dx * dx + dy * dy;
-    let max = SHAPE_TOLERANCE ** 2, index = -1;
+    let max = tolerance ** 2, index = -1;
     for (let i = first + 1; i < last; i++) {
-      const p = filtered[i], t = length2 ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / length2, 0, 1) : 0;
+      const p = points[i], t = length2 ? clamp(((p.x - a.x) * dx + (p.y - a.y) * dy) / length2, 0, 1) : 0;
       const distance2 = (p.x - a.x - t * dx) ** 2 + (p.y - a.y - t * dy) ** 2;
       if (distance2 > max) { max = distance2; index = i; }
     }
-    if (index !== -1) { keep.add(index); stack.push([first, index], [index, last]); }
+    if (index === -1) return;
+    const span = { first, last, index, error: max };
+    let i = heap.length; heap.push(span);
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (heap[parent].error >= span.error) break;
+      heap[i] = heap[parent]; i = parent;
+    }
+    heap[i] = span;
+  };
+  add(0, points.length - 1);
+  while (heap.length && keep.size < budget) {
+    const span = heap[0], tail = heap.pop()!;
+    if (heap.length) {
+      let i = 0;
+      while (i * 2 + 1 < heap.length) {
+        let child = i * 2 + 1;
+        if (child + 1 < heap.length && heap[child + 1].error > heap[child].error) child++;
+        if (heap[child].error <= tail.error) break;
+        heap[i] = heap[child]; i = child;
+      }
+      heap[i] = tail;
+    }
+    keep.add(span.index);
+    if (keep.size < budget) { add(span.first, span.index); add(span.index, span.last); }
   }
-  // Reject excessive complexity instead of silently flattening its details.
-  if (keep.size > MAX_SHAPE_POINTS) return null;
-  return [...keep].sort((a, b) => a - b).map(i => filtered[i]);
+  return [...keep].sort((a, b) => a - b).map(i => points[i]);
 }
 
 export function shapeLength(points: Point[]) {
@@ -85,7 +123,7 @@ export function restoreShape(raw: unknown): Point[] | null {
   if (!Array.isArray(raw) || raw.length < 2 || raw.length > MAX_SHAPE_POINTS) return null;
   if (raw.some(p => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.hypot(p.x, p.y) > MAX_RADIUS + 1e-8)) return null;
   const length = shapeLength(raw);
-  if (length < .35 || length > 22) return null;
+  if (length < .35) return null;
   return raw.map(p => ({ x: p.x, y: p.y }));
 }
 

@@ -6,6 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { groundAt, type Course, type Segment, type Surface } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
 import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
+import { landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
@@ -60,6 +61,28 @@ function terrainGeometry(segments: Segment[], z0: number, z1: number, sides = fa
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); g.setIndex(indices); g.computeVertexNormals(); return g;
 }
 
+function iceTexture() {
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#8cbbc7'; ctx.fillRect(0, 0, 512, 512);
+  let seed = 8192;
+  const random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  // Frost flecks and branching fractures over a glossy, continuous ice sheet.
+  for (let i = 0; i < 4200; i++) {
+    ctx.fillStyle = `rgba(231,253,255,${.03 + random() * .12})`;
+    ctx.fillRect(random() * 512, random() * 512, 1 + random() * 6, 1 + random() * 3);
+  }
+  for (let j = 0; j < 22; j++) {
+    let x = random() * 512, y = random() * 512, angle = random() * Math.PI * 2;
+    ctx.beginPath(); ctx.moveTo(x, y);
+    for (let k = 0; k < 6; k++) { angle += (random() - .5) * 1.5; x += Math.cos(angle) * (8 + random() * 30); y += Math.sin(angle) * (8 + random() * 30); ctx.lineTo(x, y); }
+    ctx.strokeStyle = 'rgba(226,250,255,.44)'; ctx.lineWidth = 1 + random(); ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4;
+  return texture;
+}
+
 export class GameRenderer {
   renderer: THREE.WebGLRenderer;
   scene = new THREE.Scene();
@@ -68,7 +91,7 @@ export class GameRenderer {
   cars: CarVisual[] = [];
   rocks: THREE.Object3D[] = [];
   waters: THREE.ShaderMaterial[] = [];
-  beamMeshes: THREE.Mesh[] = [];
+  beamMeshes: THREE.Group[] = [];
   sun = new THREE.DirectionalLight(0xffe3b0, 3.2);
   ambient = new THREE.HemisphereLight(0xd4e8ff, 0x6b5540, 2.1);
   mats!: TerrainMaterials;
@@ -138,7 +161,7 @@ export class GameRenderer {
     this.mats = {
       stone,
       road: stone.clone(),
-      ice: new THREE.MeshStandardMaterial({ map: ground, normalMap: groundNormal, color: 0xc2e8ed, roughness: .13, metalness: .15, normalScale: new THREE.Vector2(.12, .12), side: THREE.DoubleSide }),
+      ice: new THREE.MeshPhysicalMaterial({ map: iceTexture(), color: 0xc1edf9, roughness: .16, metalness: .12, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.1, side: THREE.DoubleSide }),
       mud: new THREE.MeshStandardMaterial({ map: ground, normalMap: groundNormal, color: 0x443024, roughness: .29, normalScale: new THREE.Vector2(.3, .3), side: THREE.DoubleSide }),
       wood: new THREE.MeshStandardMaterial({ color: 0x8d6745, roughness: .85 })
     };
@@ -188,19 +211,36 @@ export class GameRenderer {
     for (const surface of ['stone', 'ice', 'mud', 'road'] as Surface[]) {
       const parts = course.segments.filter(s => s.surface === surface);
       if (!parts.length) continue;
-      const mesh = new THREE.Mesh(terrainGeometry(parts, -11, 3.2), this.mats[surface]); mesh.receiveShadow = true; this.terrain.add(mesh);
+      const mesh = new THREE.Mesh(terrainGeometry(parts, TRACK_BACK, TRACK_FRONT), this.mats[surface]); mesh.receiveShadow = true; this.terrain.add(mesh);
     }
-    const cliff = new THREE.Mesh(terrainGeometry(course.segments, -11, 3.2, true), this.cliffMat); cliff.receiveShadow = true; this.terrain.add(cliff);
-    const backCliff = new THREE.Mesh(terrainGeometry(course.segments, 0, -11, true), this.cliffMat); this.terrain.add(backCliff);
+    for (const front of [true, false]) {
+      const data = landscapeData(course, front), geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(data.positions, 3));
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute(data.uvs, 2));
+      geometry.setIndex(data.indices); geometry.computeVertexNormals();
+      const bank = new THREE.Mesh(geometry, this.mats.stone); bank.receiveShadow = true; this.terrain.add(bank);
+    }
     this.addScenery(course);
     for (const w of course.waters) this.addWater(w.start, w.end, w.level, alpine);
     const metal = new THREE.MeshStandardMaterial({ color: 0x3d4846, roughness: .58, metalness: .6 });
     for (const o of course.obstacles) {
-      if (o.kind === 'beam') {
+      if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < sim.cars.length; i++) {
-          const mesh = box(o.width, o.height, 2.5, this.mats.wood, o.x, o.y, LANES[i]); mesh.castShadow = true; mesh.receiveShadow = true;
-          this.terrain.add(mesh); this.beamMeshes.push(mesh);
-          const pivot = new THREE.Mesh(new THREE.ConeGeometry(.42, .65, 4), metal); pivot.position.set(o.x, -.32, LANES[i]); this.terrain.add(pivot);
+          const group = new THREE.Group();
+          if (o.kind === 'roller') {
+            const drum = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, 2.6, 24), metal); drum.rotation.x = Math.PI / 2; group.add(drum);
+            for (let j = 0; j < 8; j++) {
+              const a = j / 8 * Math.PI * 2, stripe = box(.035, .09, 2.61, this.mats.wood, Math.cos(a) * o.width / 2, Math.sin(a) * o.width / 2);
+              stripe.rotation.z = a; group.add(stripe);
+            }
+            const axle = new THREE.Mesh(new THREE.CylinderGeometry(.09, .09, 3, 10), metal); axle.rotation.x = Math.PI / 2; group.add(axle);
+          } else {
+            group.add(box(o.width, o.height, 2.5, this.mats.wood));
+            for (const z of [-1.05, 1.05]) group.add(box(o.width, .055, .1, metal, 0, o.height / 2 + .01, z));
+          }
+          mergeRigidGroup(group); group.position.set(o.x, o.y, LANES[i]);
+          this.terrain.add(group); this.beamMeshes.push(group);
+          const pivot = new THREE.Mesh(new THREE.ConeGeometry(.32, .65, 4), metal); pivot.position.set(o.x, o.y - .4, LANES[i]); this.terrain.add(pivot);
         }
       } else if (o.kind === 'log') {
         const mesh = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, 14.2, 16), this.cliffMat);
@@ -234,7 +274,7 @@ export class GameRenderer {
       }
       // Small scree on the verge, kept away from the drivable lanes.
       const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(.18 + random() * .4, 0), this.cliffMat);
-      pebble.position.set(x + 2, .05, 2.85); pebble.scale.y = .5; pebble.rotation.set(random(), random(), random()); pebble.receiveShadow = true; this.terrain.add(pebble);
+      pebble.position.set(x + 2, Math.max(-2, groundAt(course, x + 2)) + .05, 2.85); pebble.scale.y = .5; pebble.rotation.set(random(), random(), random()); pebble.receiveShadow = true; this.terrain.add(pebble);
     }
     // Distant ridges form an unbroken horizon, with erosion-like layered noise.
     const ridge = new THREE.PlaneGeometry(course.length + 100, 60, 100, 14); ridge.rotateX(-Math.PI / 2);
@@ -286,7 +326,9 @@ export class GameRenderer {
       #include <colorspace_fragment>
       }`
     });
-    const geo = new THREE.PlaneGeometry(end - start, 14.2, 32, 12); const mesh = new THREE.Mesh(geo, material);
+    // Water continues into the banks; opaque land occludes it at the natural
+    // shoreline, instead of ending in a rectangular cut at the front lane.
+    const geo = new THREE.PlaneGeometry(end - start, 60, 32, 20); const mesh = new THREE.Mesh(geo, material);
     mesh.rotation.x = -Math.PI / 2; mesh.position.set((start + end) / 2, y + .035, -3.9); mesh.renderOrder = 2;
     this.terrain.add(mesh); this.waters.push(material);
   }

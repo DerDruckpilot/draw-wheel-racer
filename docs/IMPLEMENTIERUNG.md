@@ -1,6 +1,6 @@
-# FORMDRIVE 1.2 – Implementierung
+# FORMDRIVE 1.3 – Implementierung
 
-Stand: 22. September 2026. Dieses Dokument beschreibt die tatsächliche Implementierung; ältere Konzept- und Roadmap-Dokumente sind die Recherchehistorie.
+Stand: 23. September 2026. Dieses Dokument beschreibt die tatsächliche Implementierung; ältere Konzept- und Roadmap-Dokumente sind die Recherchehistorie.
 
 ## Inhalt
 
@@ -24,14 +24,18 @@ TypeScript, Vite, Three.js, Rapier 2D, vite-plugin-pwa/Workbox. Exakte Versionen
 - `src/hydrodynamics.ts`: vereinigte Konturen, Flächenmomente, Wasserlinienbeschnitt, verdrängtes Volumen und integrierte Wasserkräfte.
 - `src/renderer.ts`: 3D-Fahrzeuge, Terrain, Materialien, Felsmodelle, Beleuchtung und Wasseroberfläche.
 - `src/drawing.ts`: Pointer-Eingabe und Zeichenvorschau.
+- `src/shape-preparation.ts` und `src/shape-worker.ts`: Hintergrundberechnung aufwendiger Radkonturen.
+- `src/landscape.ts`: anschließende Landschaft vor und hinter den Fahrspuren.
 - `src/main.ts`: Zustände, Oberfläche, Spielstand und PWA-Integration.
 - `src/audio.ts`: lokal erzeugter Ton ohne zusätzliche Audiodateien.
 
 ## Physikmodell
 
-Feste Schritte von 1/120 Sekunde. Ein Fahrzeug besitzt Chassis und Überrollkäfig als Kollisionsformen, zwei Radkörper und zwei leichte Achsträger. Prismenverbindungen mit Feder-Dämpfer-Motoren bilden die Federung; Drehgelenke verbinden die Räder mit den Trägern. Der Antrieb liefert seit Version 1.2 maximal 96 statt 58 Drehmomenteinheiten pro physikalischem Rad, mit Gegenwirkung auf das Chassis. Die Zieldrehzahl bleibt begrenzt. Stetiger Momentaufbau und eine Gasrücknahme bei drohendem Aufbäumen begrenzen harte Lastwechsel. Es gibt keinen pauschalen Vorwärtsschub und keine Aufrichtkraft.
+Feste Schritte von 1/120 Sekunde. Ein Fahrzeug besitzt Chassis und Überrollkäfig als Kollisionsformen, zwei Radkörper und zwei leichte Achsträger. Prismenverbindungen mit Feder-Dämpfer-Motoren bilden die Federung; Drehgelenke verbinden die Räder mit den Trägern. Der Antrieb liefert seit Version 1.3 maximal 160 statt 96 Drehmomenteinheiten pro Achse, mit Gegenwirkung auf das Chassis. Jede Achse besitzt ihren eigenen Drehzahlregler. Eine Kletterübersetzung reduziert bei Schräglage die Zieldrehzahl, erhält aber das Anfahrmoment. Der Kippschutz nimmt bei drohendem Aufbäumen kurz das Gas weg und gibt es nach Absenken der Nase wieder frei; er hält das Fahrzeug nicht dauerhaft mit reduziertem Moment auf dem Hinterrad im Gleichgewicht. Schnelle Momentfreigabe nach Überwinden einer Kante reduziert Überschläge. Beim Schwimmen gilt weiterhin die sanftere Antriebskennlinie. Es gibt keinen pauschalen Vorwärtsschub und keine Aufrichtkraft.
 
-Der Strich wird mit maximal 0,003 Einheiten Abweichung vereinfacht; höchstens 128 Punkte sind zugelassen. Kapseln bilden die verdickten Abschnitte; dünne Speichen verbinden diese mit der Nabe. Flächenmomente der vereinigten Konturen bestimmen Masse, Schwerpunkt und Trägheitsmoment. Oberfläche und Kollisionsform verwenden dieselben Punkte. Die vier sichtbaren Räder teilen sich zwei physikalische Achsen; seitliche Bewegung und Kollision zwischen Fahrspuren werden nicht simuliert.
+Ein Strich wird zunächst mit 0,003 Einheiten Toleranz vereinfacht. Bis zu 512 Konturpunkte bleiben erhalten; darüber werden die größten Konturabweichungen zuerst aufgelöst und kleinere Details adaptiv vereinfacht, statt die Zeichnung als zu komplex abzulehnen. Die frühere Linienlängengrenze von 22 entfällt. Bis zu 32.768 Eingabesamples werden erfasst; bei noch längeren Gesten wird der bisherige Verlauf verdichtet und weiter aufgezeichnet. Anfang und Ende bleiben erhalten. Aufwendige Polygonvereinigungen laufen in einem Web Worker. Bis zur Fertigstellung fahren die bisherigen Räder weiter; eine neuere Zeichnung oder Vorlage hat Vorrang vor einem älteren Rechenergebnis. Bereits gespeicherte Konturen werden unverändert wiederhergestellt.
+
+Kapseln bilden die verdickten Abschnitte; dünne Speichen verbinden diese mit der Nabe. Flächenmomente der vereinigten Konturen bestimmen Masse, Schwerpunkt und Trägheitsmoment. Oberfläche und Kollisionsform verwenden dieselben Punkte. Die vier sichtbaren Räder teilen sich zwei physikalische Achsen; seitliche Bewegung und Kollision zwischen Fahrspuren werden nicht simuliert.
 
 Die niedrigere Reibung eines Kontaktpaars bestimmt die Traktion. Radmaterial, Nabe und Speichen verwenden 0,34; Eis begrenzt die Haftung weiter. Greifende Zacken profitieren von geometrischen Kontakten, nicht von einem Formbonus. Schlamm verwendet zusätzlichen Widerstand, jedoch kein verformbares Bodenmodell und kein physikalisches Einsinken.
 
@@ -52,7 +56,7 @@ Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet 
 - `npm run test:browser`: produktiver Build in Chromium und WebKit mit 440 × 956 CSS-Pixeln; Zeichnen, Favoriten, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Separate Chromium-Tests prüfen den vollständigen Neustart ohne Netzwerk und das bestätigte Update nach einer Installation während desselben Seitenbesuchs, einschließlich Erhalt der Lieblingsform.
 - `npm run build`: strenge TypeScript-Prüfung, Produktionsbuild und PWA-Precache-Erzeugung.
 
-Alle 13 Strecken wurden mit echten Simulationsschritten bis zum Ziel gefahren, ohne Bergungen; die Fahrzeiten lagen nach dem Balancing 1.2 zwischen 51,0 und 85,1 Sekunden. 25 Physik- und Geometrietests bestanden, darunter schräge Wassereinfahrten, Radwechsel beim Schwimmen, kleine Konturänderungen, Massenschwerpunkte, Aussparungen und Energieverhalten der Wasserkräfte. Vergleichswerte und Änderungen stehen in [BALANCING-1.2.md](BALANCING-1.2.md).
+Die vollständigen Streckenfahrten prüfen weiterhin alle zwölf Rennen und das inzwischen auf 21 Hindernistypen erweiterte Testgelände. Die 30 Physik- und Geometrietests umfassen auch die belastete Hinterachse bei frei drehendem Vorderrad, mehrere Anfahrpositionen und Radwinkel, den Eisanstieg mit identischer Geometrie auf Stein, echte Walzenrotation und sehr lange Zeichnungen mit über 128 Konturpunkten. Vergleichswerte und Änderungen stehen in [BALANCING-1.3.md](BALANCING-1.3.md).
 
 Der Countdown verwendet tatsächlich verstrichene Zeit unabhängig vom begrenzten Physik-Zeitschritt. Ein Browserregressionstest erzwingt eine niedrige Bildrate und prüft, dass die Startphase nicht künstlich länger wird.
 

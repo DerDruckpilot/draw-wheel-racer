@@ -115,6 +115,7 @@ function setState(next: typeof state) {
 }
 
 function loadLevel(id: number, stayHome = true) {
+  pad.cancel();
   sim?.dispose(); currentLevel = id; saved.level = id;
   sim = new Simulation(createCourse(id), id === 12 ? 1 : 4); renderer.setCourse(sim); sim.requestShape(pad.shape);
   accumulator = 0; lastResetCount = 0; lastTerrain = ''; lastWaterHint = -60; lastApproach = -1; slow = false;
@@ -167,7 +168,7 @@ function showCourses() {
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.2.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.3.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -207,8 +208,8 @@ $('pause-button').onclick = showPause;
 $('home-button').onclick = () => { if (state === 'racing' || state === 'countdown') showPause(); else if (state !== 'loading') { if (modal.open) modal.close(); loadLevel(currentLevel); } };
 $('rescue-button').onclick = () => { if (state !== 'racing') return; sim.resetCar(); accumulator = 0; toast('Zurück am Checkpoint'); };
 $('undo-button').onclick = () => pad.undo();
-$('save-shape').onclick = () => { saved.favorite = pad.shape.map(p => ({ ...p })); persist(); toast('Deine Radform ist gespeichert.'); };
-$('load-shape').onclick = () => { if (saved.favorite) { pad.set(saved.favorite); toast('Lieblingsform montiert'); } else toast('Speichere zuerst eine Form mit dem Lesezeichen oben.'); };
+$('save-shape').onclick = () => { saved.favorite = pad.visibleShape.map(p => ({ ...p })); persist(); toast('Deine Radform ist gespeichert.'); };
+$('load-shape').onclick = () => { if (saved.favorite) { pad.set(saved.favorite); } else toast('Speichere zuerst eine Form mit dem Lesezeichen oben.'); };
 document.querySelectorAll<HTMLButtonElement>('[data-shape]').forEach(b => b.onclick = () => { if (!pad.enabled) return; pad.usePreset(b.dataset.shape as ShapeName); b.classList.add('selected'); sound.beep(430, .06); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (state === 'racing' || state === 'countdown') showPause(); sound.update(0, false); pad.cancel(); } accumulator = 0; });
 window.addEventListener('keydown', e => { if (e.code === 'Space' && !modal.open && state === 'racing') { e.preventDefault(); showPause(); } });
@@ -283,11 +284,12 @@ async function boot() {
     // Explicit test mode exposes deterministic stepping for browser verification only.
     if (import.meta.env.DEV || new URL(location.href).searchParams.has('test')) {
       (window as any).__FORMDRIVE__ = {
-        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, water: sim.cars[0].water, shape: sim.cars[0].shape.length, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
         water: () => { const lake = sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; sim.requestShape(preset('paddle')); sim.resetCar(0, false); sim.started = true; for (let i = 0; i < 720; i++) sim.tick(); setState('paused'); renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         load: (id: number) => loadLevel(clamp(id, 0, 12)),
         preset: (name: ShapeName) => pad.usePreset(name),
+        obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pad.usePreset(name); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); sim.started = true; for (let i = 0; i < Math.min(steps, 20000); i++) sim.tick(); sim.started = false; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         finish: () => { sim.cars[0].finished = true; sim.cars[0].finishTime = Math.max(1, sim.elapsed); finish(); }
       };
     }
@@ -307,14 +309,20 @@ function updateHud() {
   const progress = clamp(p.x / sim.course.length * 100, 0, 100);
   $('progress-fill').style.width = `${progress}%`; $('progress-dot').style.left = `${progress}%`;
   const zone = zoneAt(sim.course, p.x); const terrain = zone?.label || 'FESTER BODEN';
-  if (terrain !== lastTerrain) { $('terrain-label').textContent = terrain; lastTerrain = terrain; document.querySelector('.terrain-chip')!.classList.toggle('water', zone?.kind === 'lake' || zone?.kind === 'ford'); }
+  if (terrain !== lastTerrain) { $('terrain-label').textContent = terrain; lastTerrain = terrain; document.querySelector('.terrain-chip')!.classList.toggle('water', zone?.kind === 'lake' || zone?.kind === 'ford' || zone?.kind === 'causeway'); }
   const ahead = zoneAt(sim.course, p.x + 6);
   if (state === 'racing' && ahead && ahead.start !== lastApproach) {
     lastApproach = ahead.start;
-    if (ahead.kind === 'tunnel') toast('Niedrige Durchfahrt: Zeichne kleine Räder.');
+    if (ahead.kind === 'tunnel' || ahead.kind === 'crawl') toast('Niedrige Durchfahrt: Zeichne kleine Räder.');
     else if (ahead.kind === 'steps') toast('Hohe Kanten: Kleine Räder haben es hier schwer.');
     else if (ahead.kind === 'ramp') toast('Riffelrampe: Zacken greifen zwischen die Rippen.');
     else if (ahead.kind === 'ford') toast('Furt: Wasser bremst die eingetauchten Räder.');
+    else if (ahead.kind === 'ice') toast('Glatteis: Deine Räder drehen durch. Schwung bleibt länger erhalten.');
+    else if (ahead.kind === 'iceclimb') toast('Eisanstieg: Zacken können sich an den gefrorenen Kanten abstützen.');
+    else if (ahead.kind === 'rollers') toast('Die Walzen drehen frei mit. Suche Halt zwischen ihnen.');
+    else if (ahead.kind === 'trenches') toast('Quergräben: Welche Form überbrückt die Öffnungen?');
+    else if (ahead.kind === 'rocking') toast('Kippplatten: Runde Konturen verteilen die Last gleichmäßiger.');
+    else if (ahead.kind === 'causeway') toast('Versunkener Steg: Deine Form muss paddeln und auf die Steine klettern.');
   }
   if (state === 'racing' && zone?.kind === 'lake' && sim.elapsed - lastWaterHint > 24) { toast('Tiefes Wasser: Flächen quer zur Drehrichtung schieben Wasser zurück.'); lastWaterHint = sim.elapsed; }
   if (state === 'racing' && car.resets > lastResetCount) { toast('Geborgen · zeichne eine neue Lösung.'); lastResetCount = car.resets; }

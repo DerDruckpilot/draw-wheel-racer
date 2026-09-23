@@ -1,12 +1,12 @@
 import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle, Water } from './courses';
-import { groundAt, surfaceFriction, zoneAt } from './courses';
+import { groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
 import { clamp, preset, radiusOf, sanitizeShape, shapeLength, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
-export const DRIVE_TORQUE = 96;
+export const DRIVE_TORQUE = 160;
 export const TYRE_FRICTION = .34;
 const AXLE_Y = -.25;
 export interface Vehicle {
@@ -14,7 +14,7 @@ export interface Vehicle {
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
   changeCooldown: number; buoyancy: number; drive: number; aiShape: ShapeName;
-  hydro: HydroShape[]; motorTorques: number[]; displacedVolume: number; waterThrust: number; waterDragPower: number;
+  hydro: HydroShape[]; motorTorques: number[]; motorCut: boolean; displacedVolume: number; waterThrust: number; waterDragPower: number;
 }
 export interface Beam { body: RAPIER.RigidBody; obstacle: Obstacle; lane: number }
 let initialized: Promise<void> | undefined;
@@ -41,13 +41,17 @@ export class Simulation {
     }
     for (let i = 0; i < carCount; i++) this.cars.push(this.createCar(i));
     for (const o of course.obstacles) {
-      if (o.kind === 'beam') {
+      if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < carCount; i++) {
           const pivot = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(o.x, o.y));
-          const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(o.x, o.y).setAngularDamping(.9));
-          this.world.createCollider(RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2).setMass(5).setFriction(1.1).setCollisionGroups(((32 << i) << 16) | 1 | (2 << i)), body);
+          const roller = o.kind === 'roller';
+          const body = this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(o.x, o.y).setAngularDamping(roller ? .035 : .9));
+          const desc = roller ? RAPIER.ColliderDesc.ball(o.width / 2) : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
+          // A drum intersects the static floor visually; only the car contacts
+          // its circumference. Its fixed bearing allows rotation, not translation.
+          this.world.createCollider(desc.setMass(roller ? 3 : 5).setFriction(1.1).setCollisionGroups(((32 << i) << 16) | (roller ? 0 : 1) | (2 << i)), body);
           const joint = this.world.createImpulseJoint(RAPIER.JointData.revolute({ x: 0, y: 0 }, { x: 0, y: 0 }), pivot, body, true) as RAPIER.RevoluteImpulseJoint;
-          joint.setLimits(-.2, .2);
+          if (!roller) joint.setLimits(-(o.tilt ?? .2), o.tilt ?? .2);
           this.beams.push({ body, obstacle: o, lane: i });
         }
       } else {
@@ -55,7 +59,7 @@ export class Simulation {
         this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(.9).setCollisionGroups(0x0001ffff));
       }
     }
-    // Allow the starting suspension-free rigid assembly to settle before the countdown.
+    // Settle the suspension before the countdown.
     for (let i = 0; i < 90; i++) this.world.step();
   }
 
@@ -79,7 +83,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -179,6 +183,7 @@ export class Simulation {
     });
     car.stuck = 0;
     car.motorTorques.fill(0);
+    car.motorCut = false;
     if (countReset) car.resets++;
   }
 
@@ -199,7 +204,7 @@ export class Simulation {
         car.aiTimer -= FIXED_DT;
         if (car.aiTimer <= 0) {
           const ahead = zoneAt(this.course, p.x + 4);
-          const shape = ahead?.kind === 'tunnel' ? 'compact' : ['steps', 'ramp', 'logs'].includes(ahead?.kind ?? '') ? 'grip' : ahead?.kind === 'lake' && p.x < ahead.end - 4.5 ? 'paddle' : 'round';
+          const shape = suggestedShape(ahead, p.x);
           if (shape !== car.aiShape) { car.desiredShape = preset(shape); car.aiShape = shape; }
           car.aiTimer = .45 + car.id * .12;
         }
@@ -212,21 +217,40 @@ export class Simulation {
         const v = car.body.linvel();
         car.body.addForce({ x: -v.x * Math.abs(v.x) * .7, y: 0 }, true);
       }
-      // A real throttle intervention, not an artificial upright torque: unload
-      // the motor when nose-up pitch and pitch rate predict an imminent wheelie.
-      // Full stall torque remains available against a step with a stable chassis.
+      // Each axle has its own speed regulator and full stall torque. An airborne
+      // front axle reaching its speed limit cannot starve the loaded rear axle.
+      // Stable climbing pitch must NOT close the throttle (the old controller
+      // did this at just 40 degrees). Intervene when the nose lifts too far.
       const pitch = Math.atan2(Math.sin(car.body.rotation()), Math.cos(car.body.rotation()));
-      const wheelieControl = clamp((1.05 - pitch - Math.max(0, car.body.angvel()) * .3) / .35, 0, 1);
+      const afloat = clamp(car.water * 3, 0, 1);
+      const pitchRate = car.body.angvel();
+      // Hysteresis lets gravity lower the nose after an overshoot. A continuous
+      // partial throttle instead held it balanced on the rear wheel forever.
+      if (pitch + Math.max(0, pitchRate) * .3 > 1.08) car.motorCut = true;
+      else if (pitch < .82 || pitch < 1 && pitchRate < -.25) car.motorCut = false;
+      const marineControl = clamp((1.05 - pitch - Math.max(0, pitchRate) * .3) / .35, 0, 1);
+      const wheelieControl = (car.motorCut ? 0 : 1) * (1 - afloat) + marineControl * afloat;
       const throttle = car.finished ? 0 : car.drive * wheelieControl;
-      const speed = 6.5 - car.id * .18;
+      const cruiseSpeed = 6.5 - car.id * .18;
+      // Crawl gearing trades wheel speed for control during an actual climb,
+      // while retaining the full stall torque. This prevents launching over a
+      // crest after a loaded rear wheel finally gets past its edge.
+      const gearing = 1 + Math.max(0, pitch - .25) * 2.8 * (1 - afloat);
+      const speed = cruiseSpeed / gearing;
       for (const [index, w] of car.wheels.entries()) {
         const rel = w.angvel() - car.body.angvel();
-        // High starting torque lifts an irregular wheel onto its next contact.
-        // The unchanged target speed still limits the smooth wheel's top speed.
-        const target = clamp((-speed - rel) * 18, -DRIVE_TORQUE, 36) * throttle;
+        // A marine throttle map keeps the already balanced paddle thrust gentle;
+        // on land the low gear supplies substantially more peak axle torque.
+        const torqueLimit = DRIVE_TORQUE + (96 - DRIVE_TORQUE) * afloat;
+        const gain = (28 - afloat * 10) * gearing;
+        const target = clamp((-speed - rel) * gain, -torqueLimit, 36) * throttle;
         // Finite torque rise prevents a newly mounted/immersed paddle from
         // delivering a one-frame hammer blow. Reaction torque is conserved.
-        const torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], -360 * FIXED_DT, 360 * FIXED_DT);
+        const rise = (600 - afloat * 240) * FIXED_DT;
+        // Release torque promptly when a tooth clears the edge. Smoothing both
+        // directions left stored throttle pushing the chassis into a backflip.
+        const release = (2400 - afloat * 2040) * FIXED_DT;
+        const torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], -rise, release);
         w.addTorque(torque, true);
         car.body.addTorque(-torque, true);
       }
