@@ -3,6 +3,7 @@ import type { Course, Obstacle, Water } from './courses';
 import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
 import { clamp, preset, radiusOf, sanitizeShape, shapeLength, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
 import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
+import { roofOutline } from './structures';
 
 export const FIXED_DT = 1 / 120;
 export const AXLES = [-1.28, 1.28];
@@ -13,7 +14,7 @@ export interface Vehicle {
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
   water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
-  changeCooldown: number; buoyancy: number; drive: number; aiShape: ShapeName;
+  changeCooldown: number; buoyancy: number; drive: number; brake: number; motorDirection: number; shapeChanges: number; aiShape: ShapeName;
   hydro: HydroShape[]; motorTorques: number[]; motorIntegrals: number[]; radialTravel: number; motorCut: boolean; displacedVolume: number; waterThrust: number; waterDragPower: number;
 }
 export interface Beam { body: RAPIER.RigidBody; obstacle: Obstacle; lane: number }
@@ -27,6 +28,7 @@ export class Simulation {
   elapsed = 0;
   started = false;
   ai = true;
+  collected = new Set<number>();
   constructor(public course: Course, carCount = 4) {
     this.world = new RAPIER.World({ x: 0, y: -9.81 });
     this.world.timestep = FIXED_DT;
@@ -58,7 +60,7 @@ export class Simulation {
           this.beams.push({ body, obstacle: o, lane: i });
         }
       } else {
-        const desc = o.kind === 'log' ? RAPIER.ColliderDesc.ball(o.width / 2) : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
+        const desc = o.kind === 'log' ? RAPIER.ColliderDesc.ball(o.width / 2) : o.structure ? RAPIER.ColliderDesc.convexHull(new Float32Array(roofOutline(o).flatMap(p => [p.x, p.y])))! : RAPIER.ColliderDesc.cuboid(o.width / 2, o.height / 2);
         this.world.createCollider(desc.setTranslation(o.x, o.y).setFriction(.9).setCollisionGroups(0x0001ffff));
       }
     }
@@ -90,7 +92,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: 1, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shape: preset('round'), revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -176,6 +178,7 @@ export class Simulation {
     }
     car.shape = car.desiredShape; car.desiredShape = null;
     this.replaceColliders(car);
+    if (this.started) car.shapeChanges++;
     if (lift > 0) {
       for (const b of [car.body, ...car.wheels, ...car.carriers]) {
         const p = b.translation(); b.setTranslation({ x: p.x, y: p.y + lift }, true);
@@ -197,6 +200,7 @@ export class Simulation {
       const carrier = car.carriers[i]; carrier.setTranslation({ x: x + AXLES[i], y: y + AXLE_Y }, true); carrier.setRotation(0, true); carrier.setLinvel({ x: 0, y: 0 }, true); carrier.setAngvel(0, true);
     });
     car.stuck = 0;
+    car.lastX = x;
     car.motorTorques.fill(0);
     car.motorIntegrals.fill(0);
     car.motorCut = false;
@@ -213,6 +217,7 @@ export class Simulation {
       car.body.resetForces(true); car.body.resetTorques(true);
       for (const w of car.wheels) { w.resetForces(true); w.resetTorques(true); }
       if (p.y < -7 || !Number.isFinite(p.x) || !Number.isFinite(p.y)) { this.resetCar(car.id); continue; }
+      if (car.id === 0) this.collectCaches(car);
       if (!car.finished && p.x >= this.course.length) { car.finished = true; car.finishTime = this.elapsed; }
       for (const cp of this.course.checkpoints) if (p.x > cp + 3 && cp > car.checkpoint) car.checkpoint = cp;
       const zone = zoneAt(this.course, p.x);
@@ -239,9 +244,11 @@ export class Simulation {
       // front axle reaching its speed limit cannot starve the loaded rear axle.
       // Stable climbing pitch must NOT close the throttle (the old controller
       // did this at just 40 degrees). Intervene when the nose lifts too far.
-      const pitch = Math.atan2(Math.sin(car.body.rotation()), Math.cos(car.body.rotation()));
+      const direction = car.drive < 0 ? -1 : 1;
+      if (direction !== car.motorDirection) { car.motorIntegrals.fill(0); car.motorTorques.fill(0); car.motorCut = false; car.motorDirection = direction; }
+      const pitch = Math.atan2(Math.sin(car.body.rotation()), Math.cos(car.body.rotation())) * direction;
       const afloat = clamp(car.water * 3, 0, 1);
-      const pitchRate = car.body.angvel();
+      const pitchRate = car.body.angvel() * direction;
       // Hysteresis lets gravity lower the nose after an overshoot. A continuous
       // partial throttle instead held it balanced on the rear wheel forever.
       const liftTravel = clamp(car.radialTravel, 0, 1);
@@ -249,7 +256,8 @@ export class Simulation {
       else if (pitch < .82 - liftTravel * .17) car.motorCut = false;
       const marineControl = clamp((1.05 - pitch - Math.max(0, pitchRate) * .3) / .35, 0, 1);
       const wheelieControl = (car.motorCut ? 0 : 1) * (1 - afloat) + marineControl * afloat;
-      const throttle = car.finished ? 0 : car.drive * wheelieControl;
+      const demand = car.finished || car.brake > 0 ? 0 : clamp(Math.abs(car.drive), 0, 1);
+      const throttle = demand > .01 ? wheelieControl : 0;
       const cruiseSpeed = (6.5 - car.id * .18) / (1 + car.radialTravel * 1.6 * (1 - afloat));
       // Crawl gearing trades wheel speed for control during an actual climb,
       // while retaining the full stall torque. This prevents launching over a
@@ -261,28 +269,37 @@ export class Simulation {
         // A marine throttle map keeps the already balanced paddle thrust gentle;
         // on land the low gear supplies substantially more peak axle torque.
         const torqueLimit = DRIVE_TORQUE + (96 - DRIVE_TORQUE) * afloat;
-        const error = -speed - rel;
+        // The pedal sets wheel speed, not stall torque: delicate crawling still
+        // has the full low-gear torque available. Reverse mirrors the drivetrain.
+        const error = -speed * demand - rel * direction;
         // A bounded load integrator supplies full torque even in crawling gear.
         // Low proportional gain avoids exciting the tiny inertia of a thin line.
         // Discard stored demand as soon as the axle is released or power is cut.
         if (error > -.3 || throttle < .05) car.motorIntegrals[index] = 0;
         else car.motorIntegrals[index] = clamp(car.motorIntegrals[index] + error * 600 * FIXED_DT, -torqueLimit, 0);
         const gain = (28 - afloat * 10) * Math.min(gearing, 1.6);
-        const target = clamp(error * gain + car.motorIntegrals[index] * (1 - afloat), -torqueLimit, 36) * throttle;
+        const target = clamp(error * gain + car.motorIntegrals[index] * (1 - afloat), -torqueLimit, 36) * throttle * direction;
         // Finite torque rise prevents a newly mounted/immersed paddle from
         // delivering a one-frame hammer blow. Reaction torque is conserved.
         const rise = (12000 - afloat * 11640) * FIXED_DT;
         // Release torque promptly when a tooth clears the edge. Smoothing both
         // directions left stored throttle pushing the chassis into a backflip.
         const release = (7200 - afloat * 6840) * FIXED_DT;
-        const torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], -rise, release);
+        let torque = car.motorTorques[index] += clamp(target - car.motorTorques[index], direction > 0 ? -rise : -release, direction > 0 ? release : rise);
+        if (car.brake > 0) {
+          // A brake removes relative angular momentum through equal/opposite
+          // axle torques. No velocity clamping or artificial grip on ice.
+          const effectiveInertia = 1 / Math.max(.001, w.invPrincipalInertia() + car.body.invPrincipalInertia());
+          torque = clamp(-rel * effectiveInertia / FIXED_DT * .7, -120, 120) * clamp(car.brake, 0, 1);
+          car.motorTorques[index] = 0; car.motorIntegrals[index] = 0;
+        }
         w.addTorque(torque, true);
         car.body.addTorque(-torque, true);
       }
       // Rolling resistance dissipates motion, without prescribing forward velocity.
       if (!water && Math.abs(car.body.linvel().x) > .02) car.body.addForce({ x: -car.body.linvel().x * .22, y: 0 }, true);
       const delta = Math.abs(p.x - car.lastX);
-      car.stuck = delta < .0005 && !car.finished ? car.stuck + FIXED_DT : Math.max(0, car.stuck - FIXED_DT * .3);
+      car.stuck = delta < .0005 && !car.finished && demand > .1 ? car.stuck + FIXED_DT : Math.max(0, car.stuck - FIXED_DT * .3);
       car.lastX = p.x;
       if (car.id && car.stuck > 7) this.resetCar(car.id);
     }
@@ -301,6 +318,29 @@ export class Simulation {
     }
   }
 
+  collectCaches(car: Vehicle) {
+    for (const [id, cache] of (this.course.caches ?? []).entries()) {
+      if (this.collected.has(id)) continue;
+      const p = car.body.translation(), a = car.body.rotation(), dx = cache.x - p.x, dy = cache.y - p.y;
+      const x = dx * Math.cos(a) + dy * Math.sin(a), y = -dx * Math.sin(a) + dy * Math.cos(a);
+      let contact = (Math.abs(x) <= 1.4 && Math.abs(y) <= .52) || (Math.abs(x + .05) <= .925 && Math.abs(y - .6) <= .665);
+      for (const w of car.wheels) {
+        const wp = w.translation(), wx = cache.x - wp.x, wy = cache.y - wp.y;
+        if (contact || Math.hypot(wx, wy) > 1.65) continue;
+        const angle = w.rotation(), q = { x: wx * Math.cos(angle) + wy * Math.sin(angle), y: -wx * Math.sin(angle) + wy * Math.cos(angle) };
+        contact = Math.hypot(q.x, q.y) <= .4;
+        for (let i = 1; i < car.shape.length && !contact; i++) {
+          const u = car.shape[i - 1], v = car.shape[i], sx = v.x - u.x, sy = v.y - u.y;
+          const t = clamp(((q.x - u.x) * sx + (q.y - u.y) * sy) / Math.max(.000001, sx * sx + sy * sy), 0, 1);
+          contact = Math.hypot(q.x - u.x - t * sx, q.y - u.y - t * sy) <= STROKE_RADIUS + .25;
+        }
+      }
+      if (contact) this.collected.add(id);
+    }
+  }
+
   get ranking() { return [...this.cars].sort((a, b) => a.finished && b.finished ? a.finishTime - b.finishTime : a.finished ? -1 : b.finished ? 1 : b.body.translation().x - a.body.translation().x); }
   dispose() { this.world.free(); }
 }
+
+const courseDrive = (course: Course) => course.expedition ? 0 : 1;

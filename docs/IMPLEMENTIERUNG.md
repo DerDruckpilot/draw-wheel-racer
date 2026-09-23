@@ -1,16 +1,16 @@
-# FORMDRIVE 1.4 – Implementierung
+# FORMDRIVE 1.5 – Implementierung
 
 Stand: 23. September 2026. Dieses Dokument beschreibt die tatsächliche Implementierung; ältere Konzept- und Roadmap-Dokumente sind die Recherchehistorie.
 
 ## Inhalt
 
-- Zwölf Rennen in Canyon, Alpen und Steinbruch; ein separates Testgelände mit optionaler Zeitlupe.
-- Automatischer Antrieb, drei Computergegner auf unabhängigen Fahrspuren.
+- Zwölf Solo-Expeditionen in Canyon, Alpen und Steinbruch; ein separates Testgelände mit optionaler Zeitlupe.
+- Gas mit dosierbarer Raddrehzahl, Bremse, Rückwärtsgang und optionaler Tempomat. Ein Fahrzeug, kein Zeitlimit.
 - Freihandzeichnen mit Finger oder Maus. Ein durchgehender, auch offener oder selbstkreuzender Strich bestimmt alle Räder; Übernahme beim Loslassen.
 - Größenlimit, sichtbare Achsmarkierung, sechs Formvorlagen, Rückgängig und lokal gespeicherte Lieblingsform.
 - Straße, Fels, Eis, Schlamm, Stufen, Steigungen, Sprunglücken, Baumstämme, Wippen und niedrige Durchfahrten.
 - Flache Furten und tiefe Schwimmabschnitte mit Auftrieb und formabhängiger Paddelwirkung.
-- Pause, Checkpoint-Bergung, lokale Bestzeiten und Sterne, Auswahl aller Strecken für Tests.
+- Pause, Checkpoint-Bergung, drei optionale Fundstücke pro Expedition und dauerhafte Sterne für Zielankunft, bergungsfreie Fahrt und alle Fundstücke. Alle Strecken sind frei wählbar.
 - Abschaltbarer synthetischer Motorsound; automatische, hohe und sparsame Grafikqualität.
 - Installierbare PWA mit vollständigem lokalem Asset-Cache und bewusst bestätigten App-Updates.
 
@@ -25,8 +25,12 @@ TypeScript, Vite, Three.js, Rapier 2D, vite-plugin-pwa/Workbox. Exakte Versionen
 - `src/renderer.ts`: 3D-Fahrzeuge, Terrain, Materialien, Felsmodelle, Beleuchtung und Wasseroberfläche.
 - `src/water-visuals.ts`: türkisfarbener Wassershader mit HDR-Reflexionen, Uferschaum, Kielwasser und begrenztem Spritzer-Pool.
 - `src/splash-activity.ts`: Aktivität benetzter Konturabschnitte in einer dünnen Schicht um den Wasserspiegel, unabhängig vom Namen der Radvorlage.
+- `src/drive-controls.ts`: unabhängige Pointer für Pedale und Zeichnen, Tastatur, Tempomat und Freigabe bei Pause/Abbruch.
+- `src/expedition.ts`: Abschlusswertung und validierte Wiederherstellung der neuen Fortschrittsdaten.
 - `src/drawing.ts`: Pointer-Eingabe und Zeichenvorschau.
 - `src/shape-preparation.ts` und `src/shape-worker.ts`: Hintergrundberechnung aufwendiger Radkonturen.
+- `src/route-layout.ts`: gemeinsame räumliche Abbildung der festen Fahrspur auf geschwungene Verläufe, mit Bogenlänge und seitlichem Abstand. Gelände, bewegliche Teile und Spritzer verwenden dieselbe Abbildung. Die Fahrphysik bleibt ein Längsprofil, ohne seitliches Lenken oder Querkräfte.
+- `src/structures.ts`: Steinbrücke, natürlicher Bogen und Höhle mit bodenverbundenen Schultern und passendem physischem Dachprofil.
 - `src/landscape.ts`: anschließende Landschaft vor und hinter den Fahrspuren.
 - `src/main.ts`: Zustände, Oberfläche, Spielstand und PWA-Integration.
 - `src/audio.ts`: lokal erzeugter Ton ohne zusätzliche Audiodateien.
@@ -45,13 +49,23 @@ Konturen einschließlich Aussparungen werden am Wasserspiegel und an den Ufergre
 
 Ein Radwechsel ist eine nichtphysikalische Spielregel. Beim Vergrößern wird die nötige vertikale Lagekorrektur vollständig ausgeführt, damit die neue Kontur nicht in einer Geländekante verbleibt. Unter einer zu niedrigen Decke kann ein wachsendes Rad bis zum nächsten passenden Physikschritt warten. Die Winkelgeschwindigkeit wird so begrenzt, dass der Wechsel allein keine zusätzliche Rotationsenergie erzeugt. Checkpoint-Bergungen sind explizite Rücksetzungen.
 
-Felsprofile, Stufen, Rillen, Mulden und Inseln verwenden reproduzierbare unregelmäßige Abstände und Höhen. Einzelne Felsblöcke besitzen je Spur einen konvexen Kollisionsumriss. An beiden sichtbaren Radspuren entspricht der 3D-Querschnitt diesem Umriss; die äußeren Seiten laufen in abgeschrägte Facetten aus. Gegner paddeln bis zum Ufer, bevor sie auf eine Landform wechseln.
+Felsprofile, Stufen, Rillen, Mulden und Inseln verwenden reproduzierbare unregelmäßige Abstände und Höhen. Einzelne Felsblöcke besitzen je Spur einen konvexen Kollisionsumriss. An beiden sichtbaren Radspuren entspricht der 3D-Querschnitt diesem Umriss; die äußeren Seiten laufen in abgeschrägte Facetten aus. Die frühere Rennsimulation bleibt ausschließlich für Regressionstests verfügbar; die Spieloberfläche verwendet Einzelspieler-Expeditionen.
+
+## Expeditionen und Fahrsteuerung
+
+Gas setzt die gewünschte Raddrehzahl; auch wenig Gas kann das maximale Anfahrmoment aufbauen. Rückwärtsfahrt spiegelt Antrieb und Kippschutz. Die Bremse wirkt durch begrenzte, gleich große Gegenmomente auf Rad und Chassis; die effektive Rotationsträgheit begrenzt ihren Impuls. Geschwindigkeit und Reibung werden nicht künstlich überschrieben. Neutral lässt das Fahrzeug rollen. Pause, Sichtbarkeitsverlust, Fokusverlust und Pointerabbruch lösen gehaltene Eingaben; nach einer Pause ist der Tempomat aus.
+
+Neue Kombinationen: langer Felsgrat mit Abfahrt, erhöhter Felsgang nach einem Aufstieg, tiefe Flutpassage mit vier unregelmäßigen Inseln und Schlucht mit Abfahrt, Lücke und Gegenanstieg. Sie verwenden dieselben Kontakte und Wasserkräfte wie die bisherigen Hindernisse. Ein Checkpoint liegt vor der jeweiligen Kombination. Die zwölf Expeditionen erhalten eigene Abfolgen. Das Testgelände enthält alle 25 Typen.
+
+Orange Fundstücke sind optionale Sammelobjekte. Kontakte werden gegen Rumpf/Käfig und die tatsächlichen Strichabschnitte der Räder geprüft (mit der Größe des Fundstücks als Toleranz). Eine höhere Kiste pro Strecke fordert zusätzliche Reichweite oder einen passend abgepassten Sprung. Fundstücke bleiben bei einer Bergung innerhalb derselben Fahrt erhalten; Neustart setzt sie zurück. Der Erstabschluss ist unabhängig von Zeit oder Fundstücken möglich. Sterne für Abschluss, null Bergungen und alle Fundstücke werden getrennt über abgeschlossene Fahrten zusammengeführt.
+
+Der bestehende lokale Speicher bekommt ein eigenes Feld `expeditions`. Alte `best`-Rennergebnisse, Lieblingsform, gewählte Strecke und Einstellungen bleiben erhalten. Es gibt keinen laufenden Checkpoint-Spielstand über einen Neustart der App hinweg.
 
 ## Grafik und Assets
 
 Eigenes detailliertes Buggy-Modell mit Rahmen, Sitzen, Fahrer, Stoßdämpfern, Lichtkörpern und Schwimmkörpern. Photogrammetrie-Fels von Poly Haven, für wiederholte Hintergrunddarstellung auf rund 8.000 Dreiecke reduziert. Farb-, Normalen- und Rauheitstexturen in 1K; draußen aufgenommenes HDRI für Himmel und Umgebungslicht. Materialdetail und mobile Renderauflösung werden getrennt behandelt.
 
-Die Spielwelt füllt die gesamte Bildschirmhöhe. Das Zeichenfeld liegt mit transparenter Füllung und heller Umrandung darüber; Rückgängig, Favorit und Formvorlagen bleiben erreichbar. Die Kamera hält das Fahrzeug oberhalb des Zeichenfelds. Der Wassershader kombiniert Tiefenfarbe, gefilterte HDR-Himmelsreflexion, kleine Wellen, Ufer- und Kielwasserschaum. Maximal 1.100 Partikel bilden feine Tropfen, Gischt und auslaufenden Schaum. Emissionen hängen von Kontur und Geschwindigkeit ab und sind zeitbasiert. Bei Pause bleiben die Effekte stehen; Streckenwechsel leeren den Partikelpool. Es gibt keine zusätzlichen Asset-Downloads und keine planaren Echtzeit- oder Bildschirmreflexionen.
+Die Spielwelt füllt die gesamte Bildschirmhöhe. Das Zeichenfeld liegt mit transparenter Füllung und heller Umrandung darüber; Rückgängig, Favorit und Formvorlagen bleiben erreichbar. Die Kamera hält das Fahrzeug oberhalb des Zeichenfelds. Die kompakte Pedalreihe liegt unter den Vorlagen. Ziellager, Checkpointfahnen und orange Sammelkisten ersetzen die Rennmarkierungen. Dächer werden in Fahrzeugnähe transparent, damit der Buggy im Felsgang sichtbar bleibt. Der Wassershader kombiniert Tiefenfarbe, gefilterte HDR-Himmelsreflexion, kleine Wellen, Ufer- und Kielwasserschaum. Maximal 1.100 Partikel bilden feine Tropfen, Gischt und auslaufenden Schaum. Emissionen hängen von Kontur und Geschwindigkeit ab und sind zeitbasiert. Bei Pause bleiben die Effekte stehen; Streckenwechsel leeren den Partikelpool. Es gibt keine zusätzlichen Asset-Downloads und keine planaren Echtzeit- oder Bildschirmreflexionen.
 
 Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet mit maximal 1,6-facher Auflösung und kann bei langsamen Bildern reduzieren. Sparsam: einfache Pixelauflösung ohne Schatten. Das ist keine garantierte Bildrate auf dem Ziel-iPhone; Messungen am tatsächlichen Gerät sind noch erforderlich.
 
@@ -59,10 +73,11 @@ Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet 
 
 - `npm test`: Eingabegrenzen, Vortrieb über Kontakt, Eis-Traktion, Energieverhalten ohne Antrieb, offene Formen, wiederholte Radwechsel, Auftrieb/Paddelantrieb und Instanziierung aller Strecken. Dazu Regressionstests für Anfahren mit Dreiecksrädern, den Vergleich Paddel/Rundrad in tiefem Wasser, die Durchquerungszeit einer Furt und gegensätzliche Formanforderungen an Stufen/Durchfahrten einschließlich Befreiung durch Zeichnen. Ein weiterer Test prüft das zurückgestellte Vergrößern unter einem niedrigen Dach bis zur sicheren Ausfahrt.
 - `npm run test:courses`: vollständige Fahrten aller zwölf Rennen und des Testgeländes mit einer Wechselstrategie zwischen Rundrad, flachen Zacken, kleinen Rädern und Paddeln. Erwartet Zielankunft ohne Bergung; protokolliert Zeit, Lage und Bergungen.
+- `npm run test:expeditions`: sämtliche zwölf Expeditionen und das Testgelände mit echten Physikschritten, einer Formwechselstrategie und langsamerer Abfahrt. Keine Teleportation oder Bergung zur Ziellösung.
 - `npm run test:browser`: produktiver Build in Chromium und WebKit mit 440 × 956 CSS-Pixeln; Zeichnen, Favoriten, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Separate Chromium-Tests prüfen den vollständigen Neustart ohne Netzwerk und das bestätigte Update nach einer Installation während desselben Seitenbesuchs, einschließlich Erhalt der Lieblingsform.
 - `npm run build`: strenge TypeScript-Prüfung, Produktionsbuild und PWA-Precache-Erzeugung.
 
-Die vollständigen Streckenfahrten prüfen alle zwölf Rennen und das Testgelände mit 21 Hindernistypen. Die 34 Physik- und Geometrietests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
+Die vollständigen Fahrprüfungen umfassen die zwölf neuen Expeditionen und das Testgelände mit 25 Hindernistypen; zusätzlich bleiben die historischen Rennstrecken als Regression erhalten. Die 42 Physik-, Geometrie- und Fortschrittstests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Neue Steuerungs- und Expeditionsprüfungen: [UPDATE-1.5.md](UPDATE-1.5.md). Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
 
 Der Countdown verwendet tatsächlich verstrichene Zeit unabhängig vom begrenzten Physik-Zeitschritt. Ein Browserregressionstest erzwingt eine niedrige Bildrate und prüft, dass die Startphase nicht künstlich länger wird.
 
@@ -76,4 +91,4 @@ Ein emulierter Mobilbrowser ist kein Test auf einem echten iPhone 16 Pro Max mit
 
 Die GitHub-Actions-Pipeline installiert mit `npm ci`, führt Physik- und vollständige Streckentests aus, baut und veröffentlicht `dist` über GitHub Pages. Es werden keine kostenpflichtigen Dienste genutzt. Alle Laufzeitassets liegen im Repository; externe Quellen sind nur für die optionale erneute Assetbeschaffung nötig.
 
-Der Service Worker speichert die Anwendung einschließlich Physik, Bildern, Modell und HDRI. Der erstmalige Download benötigt Internet. Erst bei „Offline bereit“ ist der vollständige Offlinecache installiert. Ein Update wird über die Einstellungen bestätigt; ein laufendes Rennen wird nicht automatisch neu geladen. Fortschritt und Einstellungen liegen in `localStorage` und können durch Löschen von Browserdaten verloren gehen.
+Der Service Worker speichert die Anwendung einschließlich Physik, Bildern, Modell und HDRI. Der erstmalige Download benötigt Internet. Erst bei „Offline bereit“ ist der vollständige Offlinecache installiert. Ein Update wird über die Einstellungen bestätigt; eine laufende Expedition wird nicht automatisch neu geladen. Fortschritt und Einstellungen liegen in `localStorage` und können durch Löschen von Browserdaten verloren gehen.

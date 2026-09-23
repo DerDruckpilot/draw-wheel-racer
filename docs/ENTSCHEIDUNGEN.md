@@ -2,7 +2,11 @@
 
 Stand: 22. September 2026, nach der abschließenden Rückmeldung und dem Implementierungsauftrag. Die Spielentwicklung und Veröffentlichung sind beauftragt.
 
-## Aktueller Stand
+## Weiterentwicklung am 23. September 2026
+
+Der Auftraggeber wünscht eine Weiterentwicklung in Richtung Hindernis-Abenteuer, beispielsweise mit Anleihen an Hill Climb Racing, und legt den Schwerpunkt auf das Schaffen der Level. Dies ersetzt die bisherigen Annahmen zum automatischen Rennen gegen drei Gegner. Version 1.5 verwendet Solo-Expeditionen mit Gas, Bremse und Rückwärtsfahrt; ein optionaler Tempomat ermöglicht weiter einhändiges Zeichnen. Zielankunft, bergungsfreie Fahrt und optionale Fundstücke bilden die Wertung. Details stehen in [UPDATE-1.5.md](UPDATE-1.5.md).
+
+## Ursprünglicher Stand
 
 - Ausdrücklich genanntes Zielgerät: iPhone 16 Pro Max mit iOS 27.
 - Wasser wird verbindlicher Streckenbestandteil.

@@ -8,7 +8,7 @@ export default defineConfig({
     includeAssets: ['licenses/*.txt'],
     manifest: {
       id: '/draw-wheel-racer/', name: 'FORMDRIVE — Zeichne deinen Weg', short_name: 'FORMDRIVE',
-      description: 'Ein Physik-Rennspiel. Zeichne deine Räder. Bezwinge Fels, Eis und Wasser.',
+      description: 'Ein Physik-Abenteuer. Zeichne deine Räder. Bezwinge Fels, Eis und Wasser.',
       lang: 'de', theme_color: '#18201e', background_color: '#18201e',
       display: 'standalone', orientation: 'portrait', start_url: '/draw-wheel-racer/', scope: '/draw-wheel-racer/',
       icons: [

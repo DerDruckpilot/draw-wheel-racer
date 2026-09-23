@@ -5,7 +5,7 @@
 
 /* The canvas is now a floating window onto a full-height world. The same
    safe-area-aware dimensions also reserve room for the racing controls. */
-.game{--pad-height:clamp(138px,19dvh,186px);--pad-bottom:calc(12px + env(safe-area-inset-bottom,0px));--controls-bottom:calc(var(--pad-bottom) + var(--pad-height) + 58px)}
+.game{--pad-height:clamp(138px,17dvh,166px);--pad-bottom:calc(12px + env(safe-area-inset-bottom,0px));--controls-bottom:calc(var(--pad-bottom) + var(--pad-height) + 58px)}
 .stage{position:absolute;inset:0;min-height:0;width:100%;height:100%}
 .scene-vignette{background:linear-gradient(180deg,#101c1d85,transparent 24%,transparent 80%,#101c1d45)}
 .draw-panel{position:absolute;bottom:var(--pad-bottom);left:24px;right:24px;width:auto;max-width:360px;margin:0 auto;padding:0;background:transparent;border-radius:0;pointer-events:none}
@@ -36,3 +36,15 @@
 @media(max-height:740px){.game{--pad-height:130px;--pad-bottom:calc(8px + env(safe-area-inset-bottom,0px))}.home-heading{padding-top:calc(env(safe-area-inset-top,0px) + 70px)}.home-tagline{display:none}.home-heading h1{font-size:52px;margin:12px 0}.home-bottom .course-preview{padding:8px 12px}.home-bottom .primary-button{min-height:46px}.race-hud{top:calc(env(safe-area-inset-top,0px) + 72px)}.draw-hint{font-size:6px}.drive-info{left:24px;right:24px}.home-content{padding-bottom:calc(var(--controls-bottom) + 4px)}}
 @media(max-width:380px){.draw-panel{left:12px;right:12px;padding:0}.drive-info{left:16px;right:16px}.presets>button{padding:8px 0}.race-title>strong{font-size:11px}.topbar{left:18px;right:16px}}
 @media(orientation:landscape) and (max-height:600px){.game{--pad-height:calc(100dvh - 106px);max-width:none}.stage{width:100%}.draw-panel{left:auto;right:16px;bottom:16px;width:33%;height:auto;padding:0}.drawing-field{min-height:0}.draw-heading h2{display:none}.presets{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}.presets>button{min-width:0;min-height:40px}.drive-info{bottom:20px;right:38%}.toast,.game[data-state="home"] .toast{bottom:80px;left:32%;max-width:52%}.home-content{width:63%;padding-bottom:26px}.home-bottom{margin-left:44%;padding-bottom:0}.home-heading{padding-top:72px}.home-heading h1{font-size:46px}.countdown{bottom:0;right:35%}.race-hud{right:38%}.topbar{right:38%}}
+
+/* Expedition pedals remain separate pointer surfaces from the drawing canvas. */
+.game[data-state="racing"],.game[data-state="paused"],.game[data-state="countdown"]{--controls-bottom:calc(var(--pad-bottom) + var(--pad-height) + 116px)}
+.drive-controls{display:grid;grid-template-columns:54px 64px 54px 1fr;gap:6px;margin-top:7px;pointer-events:auto;--throttle:0}
+.drive-controls button{position:relative;overflow:hidden;min-height:50px;border:1px solid #ffffff65;border-radius:14px;background:#15252182;color:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;backdrop-filter:blur(8px)}
+.drive-controls button>span{font-size:17px;line-height:18px}.drive-controls button>small{font-size:6px;letter-spacing:.7px;white-space:nowrap;pointer-events:none}
+.drive-controls button.held{background:#d9ee8edb;color:#253b2a;border-color:#d9ee8e}.drive-controls button[data-pedal="gas"]{background:#d9ee8e25;border-color:#d9ee8eaa}.drive-controls button[data-pedal="gas"].held{background:#d9ee8edb}
+.drive-controls button i{position:absolute;bottom:0;left:0;height:3px;width:calc(var(--throttle) * 100%);background:#d9ee8e;pointer-events:none}
+.journey-note{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:7px;letter-spacing:.85px;color:#e4ecd3;text-shadow:0 1px 6px #14221f}
+.position>strong{font-size:32px}.timer>strong{font-size:16px}.race-title{min-width:0}.race-title>strong{font-size:11px;max-width:180px}.race-hud .race-row{gap:8px}
+.mission-results{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:10px;font-size:13px;color:#7a846f}.mission-results li{display:flex;gap:12px;align-items:center}.mission-results .done{color:#253c2c}.mission-results li>span{font-size:17px;width:18px;color:#7d9858}
+@media(orientation:landscape) and (max-height:600px){.game{--pad-height:calc(100dvh - 170px)}.drive-controls{grid-template-columns:44px 54px 44px 1fr;gap:4px}.drive-controls button{min-height:46px}.journey-note{max-width:100%}}

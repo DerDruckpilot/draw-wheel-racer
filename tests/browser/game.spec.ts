@@ -18,7 +18,7 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   await expect(page.locator('[data-shape="compact"]')).toHaveClass(/selected/);
   await page.getByRole('button', { name: 'Runde Räder', exact: true }).click();
   await page.locator('#settings-button').click();
-  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.4.0');
+  await expect(page.locator('.version')).toContainText('FORMDRIVE 1.5.0');
   await page.locator('#close-modal').click();
   await page.screenshot({ path: '.local/test-home.png' });
   const initial = await page.evaluate(() => (window as any).__FORMDRIVE__.snapshot());
@@ -53,7 +53,7 @@ test('portrait drawing, pause, favorites, water and results', async ({ page }) =
   expect(water.spray.strengths[0]).toBeGreaterThan(.2);
   await page.screenshot({ path: '.local/test-water.png' });
   await page.evaluate(() => (window as any).__FORMDRIVE__.finish());
-  await expect(page.locator('#modal-title')).toHaveText(/Starke Form|Im Ziel/);
+  await expect(page.locator('#modal-title')).toHaveText(/Im Lager angekommen/);
   await page.locator('#finish-home').click();
   await expect(page.locator('[data-level]')).toHaveCount(13);
   await page.locator('[data-level="0"]').click();

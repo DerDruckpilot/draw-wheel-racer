@@ -22,7 +22,12 @@ export function landscapeData(course: Course, front: boolean) {
     const land = .45 + Math.sin(x * .081 + z * .06) * .18 + Math.cos(x * .17 - z * .09) * .12;
     return y * (1 - blend) + land * blend;
   };
-  for (const s of segments) for (let j = 1; j < bands.length; j++) {
+  const fine = course.expedition ? segments.flatMap(s => {
+    const count = Math.max(1, Math.ceil((s.b.x - s.a.x) / 2));
+    const at = (t: number) => ({ x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t });
+    return Array.from({ length: count }, (_, i) => ({ a: at(i / count), b: at((i + 1) / count), surface: s.surface }));
+  }) : segments;
+  for (const s of fine) for (let j = 1; j < bands.length; j++) {
     const i = positions.length / 3;
     for (const p of [s.a, s.b]) for (const d of [bands[j - 1], bands[j]]) {
       const z = edge + (front ? d : -d);

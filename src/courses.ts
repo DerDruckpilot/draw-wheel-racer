@@ -1,13 +1,15 @@
 import type { Point, ShapeName } from './shapes';
 export type Surface = 'stone' | 'ice' | 'mud' | 'road' | 'wood';
 export type Feature = 'flat' | 'rocks' | 'steps' | 'ramp' | 'gap' | 'ford' | 'lake' | 'ice' | 'mud' | 'seesaw' | 'logs' | 'tunnel'
-  | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb';
+  | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb'
+  | 'ridge' | 'grotto' | 'floodpass' | 'ravine';
 export type Theme = 'canyon' | 'alpine' | 'quarry';
 export interface Segment { a: Point; b: Point; surface: Surface }
 export interface Zone { start: number; end: number; kind: Feature; label: string }
 export interface Water { start: number; end: number; level: number; deep: boolean }
-export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder'; tilt?: number; lane?: number; outline?: Point[] }
-export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number }
+export type Structure = 'bridge' | 'arch' | 'cave';
+export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure }
+export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[] }
 const specs: [string, string, Feature[]][] = [
   ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'washboard']],
   ['Rote Klippen', 'Kanten brauchen Charakter.', ['domes', 'steps', 'ramp', 'trenches', 'gap', 'lake']],
@@ -22,14 +24,30 @@ const specs: [string, string, Feature[]][] = [
   ['Flutgrube', 'Versunkene Wege und enge Passagen.', ['mud', 'lake', 'causeway', 'crawl', 'logs', 'trenches', 'rocking']],
   ['Die letzte Etappe', 'Alles, was du gelernt hast.', ['sawtooth', 'iceclimb', 'rollers', 'lake', 'trenches', 'rocking', 'crawl', 'ramp']]
 ];
-const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG' };
+const expeditionSpecs: [string, string, Feature[]][] = [
+  ['Zum Basislager', 'Fahren, formen, ankommen.', ['domes', 'steps', 'tunnel', 'ford']],
+  ['Der Höhenweg', 'Erst hinauf. Dann kontrolliert hinunter.', ['ridge', 'crawl', 'trenches', 'gap']],
+  ['Die versunkene Schlucht', 'Vom tiefen Wasser auf die Felsen.', ['ford', 'floodpass', 'lake', 'grotto']],
+  ['Durch den Canyon', 'Abgründe, Felstore und versunkene Wege.', ['ravine', 'grotto', 'floodpass', 'rocking']],
+  ['Frostspur', 'Schwung bewahren, Halt finden.', ['ice', 'iceclimb', 'grotto', 'ford']],
+  ['Zwischen Eis und Wasser', 'Klettern, paddeln, balancieren.', ['iceclimb', 'floodpass', 'rocking', 'crawl']],
+  ['Die Bruchkante', 'Jede Landung bereitet den nächsten Aufstieg vor.', ['ridge', 'ravine', 'iceclimb', 'tunnel']],
+  ['Über den Nordpass', 'Vier Prüfungen bis zum sicheren Lager.', ['iceclimb', 'grotto', 'floodpass', 'ravine']],
+  ['Der alte Werkpfad', 'Bewegliche Auflagen und enge Felsgänge.', ['rollers', 'mud', 'grotto', 'rocking', 'trenches']],
+  ['Am Sägewerk', 'Über Holz, Wasser und den langen Grat.', ['logs', 'rocking', 'ford', 'ridge', 'crawl']],
+  ['Die Flutgrube', 'Die Ausfahrt muss erst verdient werden.', ['mud', 'floodpass', 'rollers', 'grotto', 'ravine']],
+  ['Das letzte Lager', 'Deine längste Expedition.', ['ridge', 'grotto', 'iceclimb', 'floodpass', 'ravine', 'rocking']]
+];
+const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT' };
 export const surfaceFriction: Record<Surface, number> = { stone: 1.15, road: 1.05, ice: .018, mud: .65, wood: .85 };
 
-export function createCourse(id: number): Course {
+export function createCourse(id: number, expedition = false): Course {
   const test = id === 12;
-  const spec = test ? ['Testgelände', 'Alle 21 Untergründe und Hindernisse.', Object.keys(labels) as Feature[]] as [string, string, Feature[]] : specs[Math.max(0, Math.min(11, id))];
+  const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !['ridge', 'grotto', 'floodpass', 'ravine'].includes(f));
+  const spec = test ? ['Testgelände', `Alle ${features.length} Untergründe und Hindernisse.`, features] as [string, string, Feature[]] : (expedition ? expeditionSpecs : specs)[Math.max(0, Math.min(11, id))];
   const theme: Theme = test || id < 4 ? 'canyon' : id < 8 ? 'alpine' : 'quarry';
   const c: Course = { id, name: spec[0], subtitle: spec[1], features: spec[2], theme, difficulty: test ? 1 : id % 4 + 1, segments: [], waters: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
+  if (expedition) { c.expedition = true; c.caches = []; }
   let x = -12;
   const line = (length: number, profile: Point[], surface: Surface = 'stone', gaps: number[] = []) => {
     for (let i = 1; i < profile.length; i++) if (!gaps.includes(i)) c.segments.push({ a: { x: x + profile[i - 1].x, y: profile[i - 1].y }, b: { x: x + profile[i].x, y: profile[i].y }, surface });
@@ -39,10 +57,40 @@ export function createCourse(id: number): Course {
   for (let idx = 0; idx < spec[2].length; idx++) {
     const f = spec[2][idx];
     const start = x;
+    const zoneCount = c.zones.length;
     let seed = 5371 + id * 8191 + idx * 131;
     const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     c.checkpoints.push(start - 2);
-    if (f === 'flat' || f === 'mud') {
+    if (f === 'ridge') {
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }];
+      let top = 0;
+      for (let j = 0; j < 9; j++) {
+        const at = 3 + j * 1.55;
+        profile.push({ x: at + 1.13 + random() * .12, y: top }); top += .53 + random() * .12;
+        profile.push({ x: at + 1.55, y: top });
+      }
+      profile.push({ x: 20, y: top }, { x: 24, y: top - .8 }, { x: 28, y: top - 2.9 }, { x: 31, y: top - 3.1 }, { x: 36, y: .5 }, { x: 40, y: 0 });
+      line(40, profile);
+      c.zones.push({ start, end: start + 21, kind: 'ramp', label: 'AUF DEN FELSGRAT' }, { start: start + 21, end: x, kind: 'ridge', label: 'ABFAHRT AM GRAT' });
+    } else if (f === 'grotto') {
+      // One uninterrupted puzzle: climb to an elevated ledge, fit under its
+      // roof, then descend. Only its entrance has a recovery checkpoint.
+      line(38, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4.12, y: .62 }, { x: 7, y: .62 }, { x: 7.16, y: 1.23 }, { x: 10.6, y: 1.23 }, { x: 10.73, y: 1.85 }, { x: 17, y: 1.85 }, { x: 20, y: 1.92 }, { x: 23, y: 1.85 }, { x: 29.5, y: 1.85 }, { x: 33, y: .8 }, { x: 38, y: 0 }]);
+      c.obstacles.push({ x: start + 22, y: 4.06, width: 10, height: .4, kind: 'ceiling' });
+      c.zones.push({ start, end: start + 15, kind: 'steps', label: 'AUFSTIEG ZUM FELSGANG' }, { start: start + 15, end: start + 31, kind: 'tunnel', label: 'ENGER FELSGANG' }, { start: start + 31, end: x, kind: 'ridge', label: 'AUSSTIEG AM FELS' });
+    } else if (f === 'floodpass') {
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: -.1 }, { x: 10, y: -3.4 }, { x: 16, y: -3.4 }, { x: 20, y: -1.35 }];
+      for (let j = 0; j < 4; j++) {
+        const at = 21 + j * 4.8, top = -.25 - random() * .15;
+        profile.push({ x: at, y: -1.35 }, { x: at + .32, y: top }, { x: at + 1.8 + random() * .5, y: top + .06 }, { x: at + 2.8, y: -1.35 });
+      }
+      profile.push({ x: 42, y: -1.35 }, { x: 47, y: -.1 }, { x: 50, y: 0 }); line(50, profile);
+      c.waters.push({ start: start + 3, end: start + 47, level: -.1, deep: true });
+      c.zones.push({ start, end: start + 21, kind: 'lake', label: 'DIE VERSUNKENE SCHLUCHT' }, { start: start + 21, end: x, kind: 'causeway', label: 'INSELN IM FLUTPASS' });
+    } else if (f === 'ravine') {
+      line(42, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 5, y: .4 }, { x: 5.2, y: .85 }, { x: 7.2, y: 1.15 }, { x: 7.4, y: 1.65 }, { x: 9.8, y: 2.1 }, { x: 10, y: 2.65 }, { x: 13, y: 2.65 }, { x: 17.7, y: .4 }, { x: 19, y: .4 }, { x: 21, y: -.6 }, { x: 24, y: -.6 }, { x: 26, y: -.6 }, { x: 26.25, y: .08 }, { x: 28.2, y: .08 }, { x: 28.45, y: .8 }, { x: 30.4, y: .8 }, { x: 30.65, y: 1.5 }, { x: 34, y: 1.5 }, { x: 42, y: 0 }], 'stone', [11]);
+      c.zones.push({ start, end: start + 14, kind: 'ramp', label: 'ÜBER DIE SCHLUCHTKANTE' }, { start: start + 14, end: start + 24, kind: 'ravine', label: 'HINAB IN DIE SCHLUCHT' }, { start: start + 24, end: x, kind: 'steps', label: 'STUFEN AUS DER SCHLUCHT' });
+    } else if (f === 'flat' || f === 'mud') {
       line(20, [{ x: 0, y: 0 }, { x: 5, y: -.1 }, { x: 11, y: -.1 }, { x: 20, y: 0 }], f === 'mud' ? 'mud' : 'road');
     } else if (f === 'ice') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 7, y: -.8 }, { x: 18, y: -.8 }];
@@ -153,11 +201,32 @@ export function createCourse(id: number): Course {
       line(17, [{ x: 0, y: 0 }, { x: 17, y: 0 }]);
       c.obstacles.push({ x: start + 8.5, y: 2.01, width: 8, height: .4, kind: 'ceiling' });
     }
-    c.zones.push({ start, end: x, kind: f, label: labels[f] });
+    if (c.zones.length === zoneCount) c.zones.push({ start, end: x, kind: f, label: labels[f] });
     line(6, [{ x: 0, y: 0 }, { x: 6, y: 0 }], 'road');
   }
   c.length = x + 8;
   line(28, [{ x: 0, y: 0 }, { x: 28, y: 0 }], 'road');
+  if (expedition) {
+    const styles: Structure[] = ['bridge', 'arch', 'cave'];
+    for (const [i, roof] of c.obstacles.filter(o => o.kind === 'ceiling').entries()) {
+      roof.structure = styles[(id + i) % 3];
+      if (roof.structure === 'bridge') roof.width = Math.min(roof.width, 4.8);
+      if (roof.structure === 'arch') roof.width = Math.min(roof.width, 3.4);
+      // Preserve the exact playable corridor; different structures surround it.
+      const zone = c.zones.find(z => roof.x >= z.start && roof.x < z.end);
+      if (zone) zone.label = roof.structure === 'bridge' ? 'ALTE STEINBRÜCKE' : roof.structure === 'arch' ? 'NATÜRLICHER FELSBOGEN' : 'FELSHÖHLE';
+    }
+  }
+  if (expedition && !test) {
+    // Optional caches use actual hull/wheel contact. One high cache rewards
+    // reaching beyond the standard ring; completion never requires collecting.
+    const land = c.segments.filter(s => s.b.x - s.a.x > 1 && s.a.x > 16 && s.b.x < c.length - 10 && s.a.y >= 0 && s.b.y >= 0 && !c.obstacles.some(o => o.kind === 'ceiling' && s.a.x < o.x + o.width / 2 + 3 && s.b.x > o.x - o.width / 2 - 3));
+    for (const [i, fraction] of [.17, .5, .83].entries()) {
+      const candidates = [...land].sort((a, b) => Math.abs((a.a.x + a.b.x) / 2 - c.length * fraction) - Math.abs((b.a.x + b.b.x) / 2 - c.length * fraction));
+      const s = candidates.find(s => c.caches!.every(p => Math.abs(p.x - (s.a.x + s.b.x) / 2) > 6));
+      if (s) { const at = (s.a.x + s.b.x) / 2; c.caches!.push({ x: at, y: groundAt(c, at) + (i === 1 ? 2.65 : 1.5) }); }
+    }
+  }
   return c;
 }
 
@@ -197,3 +266,5 @@ export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
   return 'round';
 }
 export const courseList = Array.from({ length: 13 }, (_, i) => createCourse(i));
+export const createExpedition = (id: number) => createCourse(id, true);
+export const expeditionList = Array.from({ length: 13 }, (_, i) => createExpedition(i));

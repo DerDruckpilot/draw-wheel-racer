@@ -3,11 +3,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { courseRunout, groundAt, type Course, type Segment, type Surface, type Water } from './courses';
+import { courseRunout, groundAt, type Course, type Obstacle, type Segment, type Surface, type Water } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
 import { spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
 import { landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
 import { waterMaterial, WaterSpray } from './water-visuals';
+import { RouteLayout } from './route-layout';
+import { archBands, archSection } from './structures';
 
 const BASE = import.meta.env.BASE_URL;
 const LANES = [1, -2.25, -5.5, -8.75];
@@ -48,7 +50,12 @@ function mergeRigidGroup(group: THREE.Group) {
 }
 function terrainGeometry(segments: Segment[], z0: number, z1: number, sides = false) {
   const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
-  for (const s of segments) {
+  const fine = segments.flatMap(s => {
+    const count = Math.max(1, Math.ceil((s.b.x - s.a.x) / 2));
+    const at = (t: number) => ({ x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t });
+    return Array.from({ length: count }, (_, i) => ({ a: at(i / count), b: at((i + 1) / count) }));
+  });
+  for (const s of fine) {
     const i = positions.length / 3;
     if (sides) {
       positions.push(s.a.x, s.a.y, z1, s.b.x, s.b.y, z1, s.a.x, -10, z1, s.b.x, -10, z1);
@@ -93,6 +100,12 @@ export class GameRenderer {
   rocks: THREE.Object3D[] = [];
   waters: THREE.ShaderMaterial[] = [];
   beamMeshes: THREE.Group[] = [];
+  cacheMeshes: THREE.Group[] = [];
+  checkpointFlags: { x: number; mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial> }[] = [];
+  roofs: { x: number; width: number; mesh: THREE.Mesh }[] = [];
+  layout!: RouteLayout;
+  snapNextFrame = true;
+  private lastResets = 0;
   sun = new THREE.DirectionalLight(0xffe3b0, 3.2);
   ambient = new THREE.HemisphereLight(0xd4e8ff, 0x6b5540, 2.1);
   mats!: TerrainMaterials;
@@ -185,10 +198,10 @@ export class GameRenderer {
     const disposable = new Set<THREE.Material>();
     this.terrain.traverse(o => {
       if (o instanceof THREE.Mesh && !o.userData.shared) o.geometry.dispose();
-      if (o instanceof THREE.Mesh && !o.userData.shared) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (!retained.has(m)) disposable.add(m);
+      if (o instanceof THREE.Mesh && (!o.userData.shared || o.userData.ownedMaterial)) for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (!retained.has(m)) disposable.add(m);
     });
     for (const m of disposable) { const map = (m as THREE.MeshStandardMaterial).map; if (map && (map as THREE.CanvasTexture).isCanvasTexture) map.dispose(); m.dispose(); }
-    this.terrain.clear(); this.rocks = []; this.waters = []; this.beamMeshes = [];
+    this.terrain.clear(); this.rocks = []; this.waters = []; this.beamMeshes = []; this.cacheMeshes = []; this.checkpointFlags = []; this.roofs = [];
     this.spray.clear();
     for (const car of this.cars) {
       for (const root of [car.root, ...car.wheels]) { this.disposeObject(root); this.scene.remove(root); }
@@ -196,6 +209,8 @@ export class GameRenderer {
     }
     this.cars = [];
     const course = sim.course, alpine = course.theme === 'alpine', quarry = course.theme === 'quarry';
+    this.layout = new RouteLayout(course);
+    this.snapNextFrame = true; this.lastResets = 0;
     this.scene.background = this.skyTexture ?? new THREE.Color(0xbacbca);
     this.scene.backgroundIntensity = .9;
     this.scene.fog = new THREE.FogExp2(alpine ? 0xafc7d6 : quarry ? 0xb6b7ac : 0xcfcbc0, .015);
@@ -237,7 +252,7 @@ export class GameRenderer {
         const mesh = new THREE.Mesh(faceted, this.cliffMat); mesh.position.set(o.x, o.y, LANES[o.lane!]); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       } else if (o.kind === 'beam' || o.kind === 'roller') {
         for (let i = 0; i < sim.cars.length; i++) {
-          const group = new THREE.Group();
+          const group = new THREE.Group(); group.userData.moving = true;
           if (o.kind === 'roller') {
             const drum = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, 2.6, 24), metal); drum.rotation.x = Math.PI / 2; group.add(drum);
             for (let j = 0; j < 8; j++) {
@@ -257,16 +272,22 @@ export class GameRenderer {
         const mesh = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, 14.2, 16), this.cliffMat);
         mesh.rotation.x = Math.PI / 2; mesh.position.set(o.x, o.y, -3.9); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       } else {
-        const ceiling = box(o.width, o.height, 14.2, this.cliffMat, o.x, o.y, -3.9); ceiling.castShadow = true; ceiling.receiveShadow = true; this.terrain.add(ceiling);
+        if (o.structure) { this.addRockStructure(course, o); continue; }
+        const depth = course.expedition ? 4.4 : 14.2, center = course.expedition ? 1 : -3.9;
+        const roofMaterial = this.cliffMat.clone();
+        const ceiling = box(o.width, o.height, depth, roofMaterial, o.x, o.y, center); ceiling.castShadow = true; ceiling.receiveShadow = true; this.terrain.add(ceiling);
+        this.roofs.push({ x: o.x, width: o.width, mesh: ceiling });
         const clearance = o.y - o.height / 2;
-        for (const z of [-10.8, 3]) { const pillar = box(.4, clearance, .4, metal, o.x + o.width / 2 - .2, clearance / 2, z); pillar.castShadow = true; this.terrain.add(pillar); }
+        for (const z of course.expedition ? [-1.2, 3.2] : [-10.8, 3]) { const pillar = box(.4, clearance, .4, course.expedition ? this.cliffMat : metal, o.x + o.width / 2 - .2, clearance / 2, z); pillar.castShadow = true; this.terrain.add(pillar); }
         const warning = new THREE.MeshStandardMaterial({ color: 0xe6af45, roughness: .7 });
         // Mark the entrance and the clearance, visible before the roof hides it.
-        this.terrain.add(box(.12, .14, 14.3, warning, o.x - o.width / 2 - .04, clearance + .08, -3.9));
+        this.terrain.add(box(.12, .14, depth + .1, warning, o.x - o.width / 2 - .04, clearance + .08, center));
       }
     }
     for (const car of sim.cars) this.cars.push(this.makeCar(car));
-    this.addGate(course.length, 'ZIEL', true);
+    this.addGate(course.length, course.expedition ? 'ZIELLAGER' : 'ZIEL', !course.expedition);
+    if (course.expedition) this.addExpeditionMarkers(course);
+    this.bendLandscape();
     this.viewX = 2; this.camera.position.set(-8, 11, 18); this.target.set(4, 0, -.5); this.camera.lookAt(this.target);
   }
 
@@ -313,6 +334,7 @@ export class GameRenderer {
       }
     }
     mergeRigidGroup(posts); this.terrain.add(posts);
+    if (course.expedition) return;
     const lines = new THREE.Group(); const paint = new THREE.MeshStandardMaterial({ color: 0xd5cdb3, roughness: 1, transparent: true, opacity: .36, depthWrite: false });
     for (const s of course.segments) {
       const dx = s.b.x - s.a.x;
@@ -323,6 +345,135 @@ export class GameRenderer {
       }
     }
     mergeRigidGroup(lines); this.terrain.add(lines);
+  }
+
+  addExpeditionMarkers(course: Course) {
+    const metal = new THREE.MeshStandardMaterial({ color: 0x394640, roughness: .5, metalness: .65 });
+    const orange = new THREE.MeshStandardMaterial({ color: 0xf4b863, roughness: .5, emissive: 0xad601b, emissiveIntensity: .3 });
+    for (const p of course.caches ?? []) {
+      const group = new THREE.Group(); group.userData.moving = true;
+      group.add(box(.56, .42, .48, orange));
+      for (const x of [-.2, .2]) group.add(box(.055, .45, .51, metal, x));
+      group.add(box(.18, .08, .025, metal, 0, .03, .25));
+      const hoop = new THREE.Mesh(new THREE.TorusGeometry(.44, .025, 6, 24), orange); group.add(hoop);
+      mergeRigidGroup(group); group.position.set(p.x, p.y, LANES[0]);
+      this.terrain.add(group); this.cacheMeshes.push(group);
+    }
+    for (const cp of course.checkpoints.slice(1)) {
+      const x = cp + 3, y = groundAt(course, x);
+      this.terrain.add(box(.055, 2.6, .055, metal, x, y + 1.3, -1.1));
+      const material = new THREE.MeshStandardMaterial({ color: 0xe2a252, roughness: .8, side: THREE.DoubleSide });
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(.85, .46), material);
+      flag.position.set(x + .42, y + 2.25, -1.1); this.terrain.add(flag); this.checkpointFlags.push({ x: cp, mesh: flag });
+    }
+    // Shelter sits outside the driving line; reaching it ends the expedition.
+    const canvas = new THREE.MeshStandardMaterial({ color: 0x687752, roughness: 1 });
+    const tent = new THREE.Mesh(new THREE.ConeGeometry(2.2, 2.2, 4, 1, true), canvas);
+    tent.rotation.y = Math.PI / 4; tent.scale.z = 1.4; tent.position.set(course.length + 4, 1.1, -4); tent.castShadow = true; this.terrain.add(tent);
+  }
+
+  addRockStructure(course: Course, o: Obstacle) {
+    const style = o.structure!, bands = archBands(style), base = groundAt(course, o.x);
+    const material = this.cliffMat.clone(); material.side = THREE.DoubleSide;
+    if (style === 'bridge') material.color.set(0xd2c4a5);
+    else material.color.multiplyScalar(1.18);
+    material.normalScale.set(.7, .7);
+    for (const near of [false, true]) {
+      const positions: number[] = [], uvs: number[] = [];
+      const quad = (a: number[], b: number[], c: number[], d: number[]) => {
+        const normal = new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).cross(new THREE.Vector3(d[0] - a[0], d[1] - a[1], d[2] - a[2]));
+        const face = Math.abs(normal.y) > Math.max(Math.abs(normal.x), Math.abs(normal.z)) ? 'top' : Math.abs(normal.x) > Math.abs(normal.z) ? 'end' : 'side';
+        for (const p of [a, b, c, a, c, d]) { positions.push(...p); uvs.push((face === 'end' ? p[2] : p[0]) / 2.3, (face === 'top' ? p[2] : p[1]) / 2.3); }
+      };
+      for (let j = 1; j < bands.length; j++) {
+        if ((bands[j - 1] >= 0) !== near) continue;
+        const gap = style === 'bridge' ? .025 : 0, za = bands[j - 1] + gap, zb = bands[j] - gap;
+        for (let k = 0; k < 4; k++) {
+          const t0 = k / 4, t1 = (k + 1) / 4;
+          const vertex = (t: number, z: number, top: boolean) => {
+            const shape = archSection(o, z, base);
+            const shoulder = Math.max(0, Math.abs(z) - 1.35);
+            const jagged = style === 'bridge' ? 0 : Math.sin(z * 2.1 + t * 9 + o.x) * .15 * shoulder;
+            const s = o.x + (t - .5) * o.width + jagged;
+            const crest = style === 'bridge' ? 0 : Math.sin(t * Math.PI) * (style === 'cave' ? 1.8 : .4);
+            return [s, top ? shape.top + crest : shape.bottom, 1 + z];
+          };
+          const a = vertex(t0, za, false), b = vertex(t1, za, false), c = vertex(t1, zb, false), d = vertex(t0, zb, false);
+          const e = vertex(t0, za, true), f = vertex(t1, za, true), g = vertex(t1, zb, true), h = vertex(t0, zb, true);
+          quad(a, d, c, b); quad(e, f, g, h);
+          if (k === 0) quad(a, e, h, d); if (k === 3) quad(b, c, g, f);
+          if (style === 'bridge' || j === 1) quad(a, b, f, e);
+          if (style === 'bridge' || j === bands.length - 1) quad(d, h, g, c);
+        }
+      }
+      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); geometry.computeVertexNormals();
+      const mesh = new THREE.Mesh(geometry, near ? material.clone() : material); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
+      if (near) this.roofs.push({ x: o.x, width: o.width, mesh });
+    }
+    const edge = bands.at(-1)!;
+    if (style === 'bridge') {
+      // Stone parapets and abutments connect the cross-route bridge to its banks.
+      const masonry = new THREE.Group();
+      for (const x of [o.x - o.width / 2 + .18, o.x + o.width / 2 - .18]) for (let z = -edge; z < edge; z += .9) {
+        const h = .45 + .1 * Math.sin(z * 2.7 + x);
+        masonry.add(box(.36, h, .84, material, x, o.y - o.height / 2 + .85 + h / 2, z + 1));
+      }
+      mergeRigidGroup(masonry); this.terrain.add(masonry);
+    }
+    // Irregular shoulders sink into the banks instead of stopping at a plate edge.
+    for (const side of [-1, 1]) for (let j = 0; j < 3; j++) {
+      if (!this.rockTemplate) continue;
+      const rock = new THREE.Group(), scan = this.rockTemplate.clone(true);
+      const bounds = new THREE.Box3().setFromObject(scan), size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+      scan.position.sub(center);
+      scan.traverse(object => { if (object instanceof THREE.Mesh) { object.userData.shared = true; object.castShadow = true; object.receiveShadow = true; } });
+      rock.add(scan);
+      const height = side > 0 ? 1.4 : style === 'cave' ? 4.2 : 2.6;
+      rock.position.set(o.x + (j - 1) * o.width * .32, base + height * .18, 1 + side * edge);
+      rock.scale.set(Math.max(2.5, o.width * .42) / size.x, height / size.y, 3.4 / size.z); rock.rotation.y = j * .71 + o.x;
+      this.terrain.add(rock); this.rocks.push(rock);
+    }
+    if (style !== 'bridge' && this.rockTemplate) {
+      // Scanned, fractured stones break up the portal silhouette. Their lower
+      // edges remain above the exact clearance inside the wheel corridor.
+      for (const end of [-1, 1]) for (const z of [-3.7, -1.2, 0, 1.2, 3.7]) {
+        const scan = this.rockTemplate.clone(true), rock = new THREE.Group();
+        const bounds = new THREE.Box3().setFromObject(scan), size = bounds.getSize(new THREE.Vector3());
+        scan.position.sub(bounds.getCenter(new THREE.Vector3()));
+        scan.traverse(object => {
+          if (!(object instanceof THREE.Mesh)) return;
+          object.userData.shared = true; object.userData.ownedMaterial = true;
+          object.material = (object.material as THREE.MeshStandardMaterial).clone(); object.castShadow = true; object.receiveShadow = true;
+          if (z >= 0) this.roofs.push({ x: o.x, width: o.width + 1.4, mesh: object });
+        });
+        rock.add(scan);
+        const crown = Math.abs(z) < 2, height = crown ? 1.05 : 2.1;
+        rock.position.set(o.x + end * o.width / 2, crown ? o.y - o.height / 2 + .64 : base + .75, 1 + z);
+        rock.scale.set(1.35 / size.x, height / size.y, (crown ? 1.45 : 1.8) / size.z);
+        rock.rotation.y = Math.sin(z + o.x) * .12;
+        this.terrain.add(rock); this.rocks.push(rock);
+      }
+    }
+  }
+
+  bendLandscape() {
+    this.terrain.updateMatrixWorld(true);
+    const position = new THREE.Vector3();
+    this.terrain.traverse(object => {
+      if (!(object instanceof THREE.Mesh) || object.userData.shared) return;
+      for (let parent: THREE.Object3D | null = object; parent; parent = parent.parent) if (parent.userData.moving) return;
+      const inverse = object.matrixWorld.clone().invert(), attribute = object.geometry.attributes.position;
+      for (let i = 0; i < attribute.count; i++) {
+        position.fromBufferAttribute(attribute, i).applyMatrix4(object.matrixWorld);
+        const p = this.layout.point(position.x, position.z); position.x = p.x; position.z = p.z;
+        position.applyMatrix4(inverse); attribute.setXYZ(i, position.x, position.y, position.z);
+      }
+      attribute.needsUpdate = true; object.geometry.computeVertexNormals(); object.geometry.computeBoundingBox(); object.geometry.computeBoundingSphere();
+    });
+    for (const rock of this.rocks) {
+      rock.userData.trackX = rock.position.x;
+      const p = this.layout.point(rock.position.x, rock.position.z); rock.position.x = p.x; rock.position.z = p.z; rock.rotation.y += p.yaw;
+    }
   }
 
   addWater(course: Course, water: Water) {
@@ -425,24 +576,35 @@ export class GameRenderer {
     if (this.quality === 'auto' && this.frames % 180 === 0 && this.average > 25 && this.pixelRatio > 1) { this.pixelRatio = Math.max(1, this.pixelRatio - .15); this.resize(); }
     for (const car of sim.cars) {
       const visual = this.cars[car.id]; if (!visual) continue;
-      const p = car.body.translation(); visual.root.position.set(p.x, p.y, LANES[car.id]); visual.root.rotation.z = car.body.rotation();
+      const p = car.body.translation(), spatial = this.layout.point(p.x, LANES[car.id]); visual.root.position.set(spatial.x, p.y, spatial.z); visual.root.rotation.set(0, spatial.yaw, car.body.rotation(), 'YXZ');
       if (visual.revision !== car.revision) {
         visual.wheels.forEach(w => this.wheelGeometry(w, car.shape)); visual.revision = car.revision;
       }
-      visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(); w.position.set(wp.x, wp.y, LANES[car.id] + (i < 2 ? .97 : -.97)); w.rotation.z = body.rotation(); });
-      if (visual.tag) visual.tag.position.set(p.x, p.y + 1.72, LANES[car.id]);
+      visual.wheels.forEach((w, i) => { const body = car.wheels[i % 2], wp = body.translation(), point = this.layout.point(wp.x, LANES[car.id] + (i < 2 ? .97 : -.97)); w.position.set(point.x, wp.y, point.z); w.rotation.set(0, point.yaw, body.rotation(), 'YXZ'); });
+      if (visual.tag) { visual.tag.visible = sim.cars.length > 1; visual.tag.position.set(spatial.x, p.y + 1.72, spatial.z); }
     }
     this.advanceEffects(sim, dt);
-    sim.beams.forEach((b, i) => { const mesh = this.beamMeshes[i]; if (mesh) { mesh.position.y = b.body.translation().y; mesh.rotation.z = b.body.rotation(); } });
+    this.cacheMeshes.forEach((mesh, id) => { const cache = sim.course.caches![id], p = this.layout.point(cache.x, LANES[0]); mesh.position.set(p.x, cache.y, p.z); mesh.visible = !sim.collected.has(id); mesh.rotation.y = this.clock * .45; });
+    this.checkpointFlags.forEach(flag => flag.mesh.material.color.set(flag.x <= sim.cars[0].checkpoint ? 0xd9ee8e : 0xe2a252));
+    sim.beams.forEach((b, i) => { const mesh = this.beamMeshes[i]; if (mesh) { const bp = b.body.translation(), p = this.layout.point(bp.x, LANES[b.lane]); mesh.position.set(p.x, bp.y, p.z); mesh.rotation.set(0, p.yaw, b.body.rotation(), 'YXZ'); } });
     const player = sim.cars[0].body.translation();
-    const factor = 1 - Math.exp(-dt * 4);
+    for (const roof of this.roofs) {
+      const material = roof.mesh.material as THREE.MeshStandardMaterial;
+      const cutaway = sim.course.expedition && Math.abs(player.x - roof.x) < roof.width / 2 + 3;
+      if (material.transparent !== !!cutaway) { material.transparent = !!cutaway; material.needsUpdate = true; }
+      material.opacity = cutaway ? .10 : 1; material.depthWrite = !cutaway; roof.mesh.castShadow = !cutaway;
+    }
+    if (sim.cars[0].resets !== this.lastResets) { this.snapNextFrame = true; this.lastResets = sim.cars[0].resets; }
+    const factor = this.snapNextFrame ? 1 : 1 - Math.exp(-dt * 4); this.snapNextFrame = false;
     this.viewX += (player.x - this.viewX) * factor;
     const y = Math.max(.2, player.y - .6);
-    temp.set(this.viewX - (menu ? 10 : 9.5), y + (menu ? 10.5 : 10), menu ? 18 : 18.5);
+    const cameraPoint = this.layout.point(this.viewX - (menu ? 10 : 9.5), menu ? 18 : 18.5), targetPoint = this.layout.point(this.viewX + 1.5, -.5);
+    temp.set(cameraPoint.x, y + (menu ? 10.5 : 10), cameraPoint.z);
     this.camera.position.lerp(temp, factor);
-    temp.set(this.viewX + (menu ? 1.5 : 1.8), y - .2, -.5); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
-    this.sun.position.set(this.viewX - 16, 25, 15); this.sun.target.position.set(this.viewX + 4, 0, -3);
-    for (const rock of this.rocks) rock.visible = Math.abs(rock.position.x - this.viewX) < 78;
+    temp.set(targetPoint.x, y - .2, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
+    const sun = this.layout.point(this.viewX - 16, 15), sunTarget = this.layout.point(this.viewX + 4, -3);
+    this.sun.position.set(sun.x, 25, sun.z); this.sun.target.position.set(sunTarget.x, 0, sunTarget.z);
+    for (const rock of this.rocks) rock.visible = Math.abs(rock.userData.trackX - this.viewX) < 78;
     for (const water of this.waters) {
       water.uniforms.time.value = this.clock;
       for (const car of sim.cars) {
@@ -455,7 +617,21 @@ export class GameRenderer {
   }
 
   advanceEffects(sim: Simulation, dt: number) {
-    this.spray.update(sim, dt, LANES, sim.cars[0].body.translation().x);
+    this.spray.update(sim, dt, LANES, sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
+  }
+
+  playerFraming() {
+    const p = new THREE.Vector3(); let left = Infinity, right = -Infinity, top = Infinity, bottom = -Infinity;
+    for (const root of [this.cars[0].root, ...this.cars[0].wheels]) root.traverse(object => {
+      if (!(object instanceof THREE.Mesh)) return;
+      const positions = object.geometry.attributes.position;
+      for (let i = 0; i < positions.count; i++) {
+        p.fromBufferAttribute(positions, i).applyMatrix4(object.matrixWorld).project(this.camera);
+        const x = (p.x + 1) / 2, y = (1 - p.y) / 2;
+        left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+      }
+    });
+    return { left, right, top, bottom };
   }
 
   disposeObject(root: THREE.Object3D) {

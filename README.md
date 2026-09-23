@@ -1,8 +1,8 @@
 # FORMDRIVE
 
-Ein eigenständiges Physik-Rennspiel für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
+Ein eigenständiges Physik-Abenteuer für das iPhone im Hochformat: Während der Fahrt zeichnest du unten auf dem Bildschirm neue Radformen. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.4.0 – transparente Zeichenfläche, türkisfarbenes Wasser mit Gischt, unregelmäßige Felsen und 2,6-faches maximales Antriebsmoment.**
+**Version 1.5.0 – Solo-Expeditionen: Gas dosieren, bremsen, zurückfahren und das Ziellager erreichen. Ohne Gegner oder Zeitlimit.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -11,17 +11,20 @@ Ein eigenständiges Physik-Rennspiel für das iPhone im Hochformat: Während der
 1. Öffne die Spieladresse in Safari.
 2. Tippe auf **Teilen → Zum Home-Bildschirm** und lasse **Als Web-App öffnen** eingeschaltet.
 3. Starte das neue Icon und warte beim ersten Start auf **Offline bereit**.
-4. Zeichne unten eine Form. Beim Loslassen wird sie zu den Rädern. Das Fahrzeug fährt automatisch.
+4. Zeichne unten eine Form. Beim Loslassen wird sie zu den Rädern. Halte GAS zum Fahren; ziehe nach oben für mehr Gas oder nach unten zum Kriechen. AUTO hält das Gas beim Zeichnen. Bremse und Zurück helfen an schwierigen Stellen.
 
 Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
 
 ## Enthalten
 
-- Zwölf Rennen in drei Landschaften und ein freies Testgelände.
-- Drei Computergegner auf eigenen Spuren, Checkpoints, Bestzeiten und Sterne.
+- Zwölf Solo-Expeditionen in drei Landschaften und ein freies Testgelände.
+- Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
+- Sterne für das Erreichen des Ziellagers, eine Fahrt ohne Bergung und drei optionale Fundstücke.
+- Checkpoints vor den Hindernisgruppen; gesammelte Fundstücke bleiben beim Bergen erhalten.
 - Freihandräder, sechs Vorlagen einschließlich kleiner Räder und flacher Zacken, Rückgängig und gespeicherte Lieblingsform.
-- 21 Gelände- und Hindernistypen, darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
+- 25 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
 - Flache Furten und tiefe Seen: Der Buggy schwimmt, die gezeichneten Räder paddeln.
+- Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
 - Vollflächige Spielwelt hinter einem schwebenden Zeichenfeld; kompakte Bedienelemente im Hochformat.
 - Wasser mit HDR-Reflexionen, Ufer- und Kielwasserschaum sowie Spritzern aus der tatsächlichen Bewegung der Radkontur.
 - Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
@@ -33,7 +36,9 @@ Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Ei
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.4.0**. Spielstand und gespeicherte Radform bleiben erhalten.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.5.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+
+Die Fahrsteuerung verändert die gewünschte Raddrehzahl; auch beim Kriechen bleibt das hohe Anfahrmoment verfügbar. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
 
 ## Lokal entwickeln
 
@@ -49,6 +54,7 @@ Lokale Adresse: `http://127.0.0.1:5173/draw-wheel-racer/`.
 ```sh
 npm test
 npm run test:courses
+npm run test:expeditions
 npm run test:races
 npm run build
 npm run preview -- --port 4173
