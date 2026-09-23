@@ -13,11 +13,12 @@ test('landscape drafts require explicit mounting on each axle, with multi-stroke
   await page.locator('#mount-rear').click();let s=await snapshot(page);
   expect(s.player.axleRevisions[0]).toBeGreaterThan(before[0]);expect(s.player.axleRevisions[1]).toBe(before[1]);expect(s.player.shapes[0].filter((p:any)=>p.move).length).toBe(1);
   await drawStroke(page,'front',[[-.9,-.2],[0,.8],[.9,-.2]]);await page.locator('#mount-front').click();
-  const installed=(await snapshot(page)).player.shapes;
+  const installed=(await snapshot(page)).player.shapes;expect((await snapshot(page)).drafts).toEqual([[],[]]);
+  await drawStroke(page,'rear',[[-.8,0],[.8,0]]);expect((await snapshot(page)).drafts[0].some((p:any)=>p.move)).toBe(false);await page.locator('#clear-rear').click();
   await drawStroke(page,'rear',[[0,-.9],[0,.9]]);await page.locator('#undo-rear').click();
   await expect(page.locator('#mount-rear')).toBeDisabled();
   await page.locator('#clear-front').click();expect((await snapshot(page)).player.shapes).toEqual(installed);await expect(page.locator('#mount-front')).toBeDisabled();
-  await page.locator('#settings-button').click();await expect(page.locator('.version')).toContainText('1.6.0');await page.locator('#close-modal').click();
+  await page.locator('#settings-button').click();await expect(page.locator('.version')).toContainText('1.7.0');await page.locator('#close-modal').click();
   await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
   await page.locator('#pause-button').click();const time=(await snapshot(page)).time;await page.waitForTimeout(150);expect((await snapshot(page)).time).toBe(time);await page.locator('#resume-game').click();
   await page.locator('#rescue-button').click();expect((await snapshot(page)).player.resets).toBe(1);
@@ -25,7 +26,7 @@ test('landscape drafts require explicit mounting on each axle, with multi-stroke
   s=await snapshot(page);expect(s.player.water).toBeGreaterThan(.1);expect(s.spray.count).toBeGreaterThan(100);
   await page.screenshot({path:'.local/v16-water-tested.png'});
   await page.evaluate(()=>(window as any).__FORMDRIVE__.finish());await expect(page.locator('#modal-title')).toHaveText('Im Lager angekommen.');
-  await page.locator('#finish-home').click();await expect(page.locator('[data-level]')).toHaveCount(13);expect(errors).toEqual([]);
+  await page.locator('#finish-home').click();await expect(page.locator('[data-level]')).toHaveCount(16);expect(errors).toEqual([]);
 });
 
 test('countdown uses elapsed time with a slow renderer',async({page,browserName})=>{

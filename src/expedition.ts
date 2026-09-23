@@ -1,3 +1,4 @@
+import { EXPEDITION_COUNT } from './courses';
 export interface ExpeditionRecord { completed: boolean; noRescue: boolean; allCaches: boolean; fewestRescues: number }
 export const expeditionStars = (record: ExpeditionRecord) => Number(record.completed) + Number(record.noRescue) + Number(record.allCaches);
 export function recordExpedition(previous: ExpeditionRecord | undefined, rescues: number, found: number, total: number): ExpeditionRecord {
@@ -7,7 +8,7 @@ export function restoreExpeditions(raw: unknown): Record<number, ExpeditionRecor
   const result: Record<number, ExpeditionRecord> = {};
   if (!raw || typeof raw !== 'object') return result;
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^\d+$/.test(key) || +key > 12 || !value || typeof value !== 'object' || value.completed !== true) continue;
+    if (!/^\d+$/.test(key) || +key >= EXPEDITION_COUNT || !value || typeof value !== 'object' || value.completed !== true) continue;
     result[+key] = { completed: true, noRescue: value.noRescue === true, allCaches: value.allCaches === true, fewestRescues: Number.isInteger(value.fewestRescues) && value.fewestRescues >= 0 ? value.fewestRescues : 0 };
   }
   return result;

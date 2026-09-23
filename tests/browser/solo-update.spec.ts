@@ -1,0 +1,30 @@
+import {test,expect} from '@playwright/test';
+import {drawStroke,fitDrawnWheels,snapshot} from './helpers';
+test('minimal solo cockpit clears mounted drafts, presses real pedal faces and keeps messages below the logo',async({page,browserName})=>{
+ test.skip(browserName!=='webkit','Visual and pointer behavior in WebKit.');
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+ await page.addInitScript(()=>localStorage.setItem('formdrive.v1',JSON.stringify({quality:'eco'})));
+ await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:60000});await fitDrawnWheels(page);
+ expect((await snapshot(page)).drafts).toEqual([[],[]]);await expect(page.locator('#mount-rear')).toBeDisabled();
+ for(const el of await page.locator('.axle-toolbar').all())await expect(el).not.toContainText(/HINTEN|VORNE|Montieren/);for(const el of await page.locator('[data-pedal]').all())await expect(el).not.toContainText(/GAS|BREMSE|HALTEN/);
+ await drawStroke(page,'rear',[[0,-.8],[0,.8]]);const before=(await snapshot(page)).player.shapes;
+ expect((await snapshot(page)).drafts[0].some((p:any)=>p.move)).toBe(false);expect((await snapshot(page)).player.shapes).toEqual(before);
+ await page.locator('#mount-rear').click();expect((await snapshot(page)).drafts).toEqual([[],[]]);expect((await snapshot(page)).player.shapes[1]).toEqual(before[1]);
+ await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
+ const pedal=page.locator('[data-pedal="gas"]'), face=pedal.locator('.pedal-face');
+ const released=await face.evaluate(el=>getComputedStyle(el).transform),rect=(await pedal.boundingBox())!;
+ await page.mouse.move(rect.x+rect.width*.5,rect.y+rect.height*.55);await page.mouse.down();
+ await expect(pedal).toHaveClass(/held/);await expect.poll(()=>face.evaluate(el=>getComputedStyle(el).transform)).not.toBe(released);
+ const ribs=await face.locator('i').first().boundingBox();expect(ribs!.width).toBeGreaterThan(20);expect(ribs!.height).toBeGreaterThan(3);
+ await page.mouse.up();await expect(pedal).not.toHaveClass(/held/);
+ // A deterministic drive crosses a real checkpoint; no obstacle-solution toast follows.
+ await page.evaluate(()=>{const a=(window as any).__FORMDRIVE__;a.preset('round');a.drive(.8);a.step(1200);});
+ await expect(page.locator('#toast')).toContainText(/Checkpoint|Fundstück/);
+ const message=await page.locator('#toast').boundingBox(),logo=await page.locator('.wordmark').boundingBox();
+ expect(message!.x).toBeLessThan(35);expect(message!.y).toBeGreaterThan(logo!.y+logo!.height);expect(message!.x+message!.width).toBeLessThan(235);
+ await page.locator('#pause-button').click();await page.locator('#back-home').click();
+ await expect(page.locator('[data-level]')).toHaveCount(16);await expect(page.locator('[data-level="13"]')).toContainText('Die Lehmklamm');expect(await page.locator('[data-level]').last().getAttribute('data-level')).toBe('12');
+ await page.locator('[data-level="13"]').click();await page.evaluate(()=>{(window as any).__FORMDRIVE__.obstacle('mudpit',750,'paddle');});
+ const mud=await snapshot(page);expect(mud.mudSpray.count).toBeGreaterThan(20);expect(mud.player.resets).toBe(0);
+ await page.screenshot({path:'.local/v17-mud-tested.png'});expect(errors).toEqual([]);
+});

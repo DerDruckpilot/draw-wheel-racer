@@ -50,9 +50,8 @@ export class DriveControls {
     });
     const gasButton = this.root.querySelector<HTMLButtonElement>('[data-pedal="gas"]')!;
     gasButton.classList.toggle('cruising', this.cruise);
-    gasButton.querySelector('span')!.textContent = this.cruise ? 'AUTO' : 'GAS';
-    gasButton.querySelector('small')!.textContent = this.cruise ? 'TIPPEN ZUM LÖSEN' : '↑ WISCHEN: TEMPOMAT';
-    this.root.querySelector('[data-pedal="brake"] span')!.textContent = reverse ? 'ZURÜCK' : 'BREMSE';
+    gasButton.setAttribute('aria-label', this.cruise ? 'Tempomat aktiv, antippen zum Lösen' : 'Gas, nach oben wischen aktiviert den Tempomat');
+    this.root.querySelector('[data-pedal="brake"]')!.setAttribute('aria-label', reverse ? 'Rückwärts fahren' : 'Bremse und Rückwärtsgang');
     this.root.style.setProperty('--throttle', String(Math.abs(drive)));
     this.change(this.enabled ? clamp(drive, -1, 1) : 0, this.enabled ? brake : 0);
   }

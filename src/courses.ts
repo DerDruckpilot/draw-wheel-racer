@@ -2,14 +2,14 @@ import type { Point, ShapeName } from './shapes';
 export type Surface = 'stone' | 'ice' | 'mud' | 'road' | 'wood';
 export type Feature = 'flat' | 'rocks' | 'steps' | 'ramp' | 'gap' | 'ford' | 'lake' | 'ice' | 'mud' | 'seesaw' | 'logs' | 'tunnel'
   | 'washboard' | 'trenches' | 'rollers' | 'domes' | 'sawtooth' | 'rocking' | 'crawl' | 'causeway' | 'iceclimb'
-  | 'ridge' | 'grotto' | 'floodpass' | 'ravine';
+  | 'ridge' | 'grotto' | 'floodpass' | 'ravine' | 'talus' | 'mudpit' | 'squeeze' | 'stairfall' | 'icegully' | 'logjam';
 export type Theme = 'canyon' | 'alpine' | 'quarry';
 export interface Segment { a: Point; b: Point; surface: Surface }
 export interface Zone { start: number; end: number; kind: Feature; label: string }
 export interface Water { start: number; end: number; level: number; deep: boolean }
 export type Structure = 'bridge' | 'arch' | 'cave';
 export interface Obstacle { x: number; y: number; width: number; height: number; kind: 'beam' | 'log' | 'ceiling' | 'roller' | 'boulder'; tilt?: number; lane?: number; outline?: Point[]; structure?: Structure }
-export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[] }
+export interface Course { id: number; name: string; subtitle: string; theme: Theme; difficulty: number; features: Feature[]; segments: Segment[]; waters: Water[]; muds?: Water[]; zones: Zone[]; obstacles: Obstacle[]; checkpoints: number[]; length: number; expedition?: boolean; caches?: Point[] }
 const specs: [string, string, Feature[]][] = [
   ['Erste Spuren', 'Groß, klein, paddeln: Wechsle deine Form.', ['flat', 'steps', 'tunnel', 'ford', 'lake', 'washboard']],
   ['Rote Klippen', 'Kanten brauchen Charakter.', ['domes', 'steps', 'ramp', 'trenches', 'gap', 'lake']],
@@ -38,15 +38,21 @@ const expeditionSpecs: [string, string, Feature[]][] = [
   ['Die Flutgrube', 'Die Ausfahrt muss erst verdient werden.', ['mud', 'floodpass', 'rollers', 'grotto', 'ravine']],
   ['Das letzte Lager', 'Deine längste Expedition.', ['ridge', 'grotto', 'iceclimb', 'floodpass', 'ravine', 'rocking']]
 ];
-const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT' };
-export const surfaceFriction: Record<Surface, number> = { stone: 1.15, road: 1.05, ice: .018, mud: .65, wood: .85 };
+const expertSpecs: [string, string, Feature[]][] = [
+  ['Die Lehmklamm', 'EXPERTE · Ein schmaler Weg durch schweren Boden.', ['talus', 'mudpit', 'squeeze', 'stairfall']],
+  ['Am Eisbruch', 'EXPERTE · Zwischen gefrorenem Fels und altem Holz.', ['icegully', 'squeeze', 'ravine', 'logjam']],
+  ['Kein leichter Weg', 'MEISTER · Sieben Prüfungen, ein Ziellager.', ['stairfall', 'mudpit', 'talus', 'squeeze', 'floodpass', 'icegully', 'logjam']]
+];
+export const EXPEDITION_COUNT = 16; // IDs 0–11 stay stable; 12 is the sandbox.
+const labels: Record<Feature, string> = { flat: 'FESTER BODEN', rocks: 'FELSPASSAGE', steps: 'STUFEN', ramp: 'STEIGUNG', gap: 'SPRUNG', ford: 'FURT', lake: 'TIEFES WASSER', ice: 'GLATTEIS', mud: 'SCHLAMM', seesaw: 'WIPPE', logs: 'BAUMSTÄMME', tunnel: 'DURCHFAHRT', washboard: 'WASCHBRETT', trenches: 'QUERGRÄBEN', rollers: 'FREILAUFWALZEN', domes: 'WELLENHÜGEL', sawtooth: 'SÄGEZAHNFELSEN', rocking: 'KIPPPLATTEN', crawl: 'FELSTOR', causeway: 'VERSUNKENER STEG', iceclimb: 'EISANSTIEG', ridge: 'FELSGRAT', grotto: 'FELSGANG', floodpass: 'FLUTPASSAGE', ravine: 'SCHLUCHT', talus: 'BLOCKHALDE', mudpit: 'LEHMGRUBE', squeeze: 'NADELÖHR', stairfall: 'BRUCHSTUFEN', icegully: 'EISRINNE', logjam: 'TREIBHOLZ' };
+export const surfaceFriction: Record<Surface, number> = { stone: 1.15, road: 1.05, ice: .018, mud: .20, wood: .85 };
 
 export function createCourse(id: number, expedition = false): Course {
   const test = id === 12;
-  const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !['ridge', 'grotto', 'floodpass', 'ravine'].includes(f));
-  const spec = test ? ['Testgelände', `Alle ${features.length} Untergründe und Hindernisse.`, features] as [string, string, Feature[]] : (expedition ? expeditionSpecs : specs)[Math.max(0, Math.min(11, id))];
-  const theme: Theme = test || id < 4 ? 'canyon' : id < 8 ? 'alpine' : 'quarry';
-  const c: Course = { id, name: spec[0], subtitle: spec[1], features: spec[2], theme, difficulty: test ? 1 : id % 4 + 1, segments: [], waters: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
+  const features = (Object.keys(labels) as Feature[]).filter(f => expedition || !['ridge', 'grotto', 'floodpass', 'ravine', 'talus', 'mudpit', 'squeeze', 'stairfall', 'icegully', 'logjam'].includes(f));
+  const spec = test ? ['Testgelände', `Alle ${features.length} Untergründe und Hindernisse.`, features] as [string, string, Feature[]] : expedition && id >= 13 ? expertSpecs[Math.min(2, id - 13)] : (expedition ? expeditionSpecs : specs)[Math.max(0, Math.min(11, id))];
+  const theme: Theme = id === 14 ? 'alpine' : test || id < 4 ? 'canyon' : id < 8 ? 'alpine' : 'quarry';
+  const c: Course = { id, name: spec[0], subtitle: spec[1], features: spec[2], theme, difficulty: id > 12 ? (id === 15 ? 6 : 5) : test ? 1 : id % 4 + 1, segments: [], waters: [], muds: [], zones: [], obstacles: [], checkpoints: [2], length: 0 };
   if (expedition) { c.expedition = true; c.caches = []; }
   let x = -12;
   const line = (length: number, profile: Point[], surface: Surface = 'stone', gaps: number[] = []) => {
@@ -70,7 +76,39 @@ export function createCourse(id: number, expedition = false): Course {
     let seed = 5371 + id * 8191 + idx * 131;
     const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
     c.checkpoints.push(start - 2);
-    if (f === 'ridge') {
+    if (f === 'talus') {
+      line(29, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 13, y: .4 }, { x: 21, y: .15 }, { x: 29, y: 0 }]);
+      for (let j = 0; j < 7; j++) {
+        const at = start + 5 + j * 2.65 + random() * .5, width = 1.25 + random() * .65, height = .72 + random() * .52;
+        const outline = [{ x: -.56 * width, y: -.10 }, { x: -.47 * width, y: height * .45 }, { x: -.12 * width, y: height }, { x: .28 * width, y: height * .85 }, { x: .54 * width, y: .08 }, { x: .3 * width, y: -.12 }];
+        c.obstacles.push({ x: at, y: groundAt(c, at), width, height, kind: 'boulder', lane: 0, outline });
+      }
+    } else if (f === 'squeeze') {
+      line(37, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 3.22, y: .57 }, { x: 6, y: .57 }, { x: 6.25, y: 1.14 }, { x: 11, y: 1.14 }, { x: 17, y: 1.14 }, { x: 20, y: 1.14 }, { x: 22.4, y: 1.14 }, { x: 22.6, y: 2.06 }, { x: 25.3, y: 2.06 }, { x: 25.48, y: 2.99 }, { x: 29, y: 2.99 }, { x: 33, y: .75 }, { x: 37, y: 0 }]);
+      c.obstacles.push({ x: start + 14, y: 3.29, width: 7, height: .4, kind: 'ceiling' });
+      c.zones.push({ start, end: start + 11.6, kind: 'steps', label: 'FELSZUGANG' }, { start: start + 11.6, end: start + 20, kind: 'tunnel', label: 'NADELÖHR' }, { start: start + 20, end: x, kind: 'steps', label: 'BRUCHKANTE' });
+    } else if (f === 'stairfall') {
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }]; let at = 3, top = 0;
+      for (let j = 0; j < 5; j++) {
+        top += .90 + random() * .11;
+        profile.push({ x: at + .14, y: top }, { x: at + 1.35, y: top }, { x: at + 1.55, y: top - .43 }, { x: at + 2.8, y: top - .43 });
+        at += 3.05 + random() * .55; profile.push({ x: at, y: top - .43 }); top -= .43;
+      }
+      profile.push({ x: 23, y: top }, { x: 25, y: top - 1.1 }, { x: 28, y: top - 1.1 }, { x: 32, y: 0 }); line(32, profile);
+    } else if (f === 'icegully') {
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 8, y: -1.55 }, { x: 11, y: -1.55 }];
+      for (let j = 0; j < 8; j++) profile.push({ x: 11 + j * 1.8 + 1.54, y: -1.55 + j * .52 }, { x: 11 + (j + 1) * 1.8, y: -1.55 + (j + 1) * .52 });
+      profile.push({ x: 28, y: 2.61 }, { x: 31, y: 2.2 }, { x: 35, y: 0 }); line(35, profile, 'ice');
+    } else if (f === 'logjam') {
+      line(28, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 5, y: -.65 }, { x: 22, y: -.65 }, { x: 25, y: 0 }, { x: 28, y: 0 }]);
+      for (let j = 0; j < 6; j++) { const diameter = .9 + random() * .55; c.obstacles.push({ x: start + 5.5 + j * 3 + random() * .3, y: -.65 + diameter * .5, width: diameter, height: diameter, kind: 'log' }); }
+    } else if (f === 'mudpit' || f === 'mud') {
+      const deep = f === 'mudpit', len = deep ? 35 : 24, depth = deep ? .88 : .62;
+      const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 7, y: -depth }];
+      for (let j = 0; j < (deep ? 5 : 3); j++) profile.push({ x: 9 + j * 3.3, y: -depth + .04 }, { x: 10 + j * 3.3, y: -depth + (deep ? .25 : .12) });
+      profile.push({ x: len - 7, y: -depth }, { x: len - 3, y: 0 }, { x: len, y: 0 }); line(len, profile, 'mud');
+      c.muds!.push({ start: start + 3, end: start + len - 3, level: -.02, deep: false });
+    } else if (f === 'ridge') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 3, y: 0 }];
       let top = 0;
       for (let j = 0; j < 9; j++) {
@@ -99,8 +137,8 @@ export function createCourse(id: number, expedition = false): Course {
     } else if (f === 'ravine') {
       line(42, [{ x: 0, y: 0 }, { x: 3, y: 0 }, { x: 5, y: .4 }, { x: 5.2, y: .85 }, { x: 7.2, y: 1.15 }, { x: 7.4, y: 1.65 }, { x: 9.8, y: 2.1 }, { x: 10, y: 2.65 }, { x: 13, y: 2.65 }, { x: 17.7, y: .4 }, { x: 19, y: .4 }, { x: 21, y: -.6 }, { x: 24, y: -.6 }, { x: 26, y: -.6 }, { x: 26.25, y: .08 }, { x: 28.2, y: .08 }, { x: 28.45, y: .8 }, { x: 30.4, y: .8 }, { x: 30.65, y: 1.5 }, { x: 34, y: 1.5 }, { x: 42, y: 0 }], 'stone', [11]);
       c.zones.push({ start, end: start + 14, kind: 'ramp', label: 'ÜBER DIE SCHLUCHTKANTE' }, { start: start + 14, end: start + 24, kind: 'ravine', label: 'HINAB IN DIE SCHLUCHT' }, { start: start + 24, end: x, kind: 'steps', label: 'STUFEN AUS DER SCHLUCHT' });
-    } else if (f === 'flat' || f === 'mud') {
-      line(20, [{ x: 0, y: 0 }, { x: 5, y: -.1 }, { x: 11, y: -.1 }, { x: 20, y: 0 }], f === 'mud' ? 'mud' : 'road');
+    } else if (f === 'flat') {
+      line(20, [{ x: 0, y: 0 }, { x: 5, y: -.1 }, { x: 11, y: -.1 }, { x: 20, y: 0 }], 'road');
     } else if (f === 'ice') {
       const profile: Point[] = [{ x: 0, y: 0 }, { x: 7, y: -.8 }, { x: 18, y: -.8 }];
       for (let j = 0; j < 5; j++) profile.push({ x: 19.5 + j * 1.7, y: -.8 + j * .16 }, { x: 19.7 + j * 1.7, y: -.8 + (j + 1) * .16 });
@@ -115,7 +153,7 @@ export function createCourse(id: number, expedition = false): Course {
     } else if (f === 'rocks') {
       const profile = Array.from({ length: 19 }, (_, i) => ({ x: i, y: i === 0 || i === 18 ? 0 : (random() - .3) * .2 }));
       line(18, profile);
-      for (let lane = 0; lane < 4; lane++) for (let j = 0; j < 6; j++) {
+      for (let lane = 0; lane < (expedition ? 1 : 4); lane++) for (let j = 0; j < 6; j++) {
         const at = start + 3 + j * 2.25 + random() * .7, width = .9 + random() * 1.2, height = .35 + random() * .47;
         const outline = [
           { x: -.55 * width, y: .12 * height }, { x: -.3 * width, y: (.65 + random() * .2) * height },
@@ -270,10 +308,10 @@ export function zoneAt(c: Course, x: number) { return c.zones.find(z => x >= z.s
 export function suggestedShape(zone: Zone | undefined, x: number): ShapeName {
   if (!zone) return 'round';
   if (zone.kind === 'tunnel' || zone.kind === 'crawl') return 'compact';
-  if (['rocks', 'steps', 'ramp', 'logs', 'trenches', 'rollers', 'sawtooth', 'causeway', 'iceclimb'].includes(zone.kind)) return 'grip';
-  if (zone.kind === 'lake' || zone.kind === 'ford') return 'paddle';
+  if (['rocks', 'steps', 'ramp', 'logs', 'trenches', 'rollers', 'sawtooth', 'causeway', 'iceclimb', 'talus', 'stairfall', 'icegully', 'logjam'].includes(zone.kind)) return 'grip';
+  if (['lake', 'ford', 'mud', 'mudpit'].includes(zone.kind)) return 'paddle';
   return 'round';
 }
 export const courseList = Array.from({ length: 13 }, (_, i) => createCourse(i));
 export const createExpedition = (id: number) => createCourse(id, true);
-export const expeditionList = Array.from({ length: 13 }, (_, i) => createExpedition(i));
+export const expeditionList = Array.from({ length: EXPEDITION_COUNT }, (_, i) => createExpedition(i));

@@ -2,7 +2,7 @@
 
 Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
 
-**Version 1.6.0 – Querformat, zwei Radentwürfe, Wisch-Tempomat und ein importierter Geländetruck.**
+**Version 1.7.0 – reduziertes Cockpit, animierte Pedale, zäher Matsch und drei Expertenexpeditionen.**
 
 [Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
 
@@ -11,33 +11,35 @@ Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der
 1. Öffne die Spieladresse in Safari.
 2. Tippe auf **Teilen → Zum Home-Bildschirm** und lasse **Als Web-App öffnen** eingeschaltet.
 3. Starte das neue Icon und warte beim ersten Start auf **Offline bereit**.
-4. Drehe das Gerät quer. Zeichne links die Hinterräder und rechts die Vorderräder; mehrere abgesetzte Striche sind möglich. Tippe jeweils auf **Montieren**.
-5. Rechts GAS halten; nach oben wischen aktiviert den Tempomaten. Gas antippen oder links bremsen löst ihn. Halte das linke Pedal nach dem Stillstand weiter, um rückwärts zu fahren.
+4. Drehe das Gerät quer. Zeichne links die Hinterräder und rechts die Vorderräder; mehrere abgesetzte Striche sind möglich. Tippe jeweils auf das **Häkchen**; danach ist das Feld für den nächsten Entwurf leer.
+5. Das rechte Pedal halten; nach oben wischen aktiviert den Tempomaten. Gas antippen oder links bremsen löst ihn. Halte das linke Pedal nach dem Stillstand weiter, um rückwärts zu fahren.
 
 Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
 
 ## Enthalten
 
-- Zwölf Solo-Expeditionen in drei Landschaften und ein freies Testgelände.
+- 15 Solo-Expeditionen in drei Landschaften, darunter drei Expertenstrecken, und ein freies Testgelände.
 - Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
 - Sterne für das Erreichen des Ziellagers, eine Fahrt ohne Bergung und drei optionale Fundstücke.
 - Checkpoints vor den Hindernisgruppen; gesammelte Fundstücke bleiben beim Bergen erhalten.
 - Zwei unabhängige Freihand-Entwürfe mit mehreren Strichen, manueller Montage, Strich-Rückgängig und Leeren; keine fertige Radauswahl.
-- 25 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
+- 31 Gelände- und Hindernistypen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
 - Flache Furten und tiefe Seen: Der Geländetruck schwimmt, die gezeichneten Räder paddeln.
 - Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
-- Vollflächige Spielwelt hinter zwei transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
+- Vollflächige Spielwelt hinter zwei quadratischen, transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
 - Wasser mit HDR-Reflexionen, Ufer- und Kielwasserschaum sowie Spritzern aus der tatsächlichen Bewegung der Radkontur.
 - Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
 - Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
 
-Die Physik arbeitet im seitlichen Profil. Wasserkräfte sind angenähert; Schlamm nutzt Widerstand, kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
+Neue Blockhalden, Lehmgruben, Nadelöhre, Bruchstufen, Eisrinnen und Treibholzketten kombinieren unterschiedliche Anforderungen ohne Zwischenlager innerhalb einer Gruppe. Die drei Expertenstrecken heißen **Die Lehmklamm**, **Am Eisbruch** und **Kein leichter Weg**. [Änderungen in Version 1.7](docs/UPDATE-1.7.md).
+
+Die Physik arbeitet im seitlichen Profil. Wasser und Schlamm nutzen die tatsächlich eingetauchten Konturen. Schlamm ergänzt viskosen Widerstand und eine regularisierte Fließgrenze; es gibt kein verformbares Bodenmodell. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
 
 Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Einheiten. Eine Lastregelung baut auch beim langsamen Klettern das volle Moment auf. Die Übersetzung berücksichtigt den Höhenhub der gezeichneten Kontur: Ein gerader Strich hebt den Buggy wiederholt an und bewegt ihn vorwärts. Konturen erhalten keinen pauschalen Vortrieb. Neue Felsblöcke besitzen eigene Kollisionsumrisse; Felskanten, Mulden, Rillen und Inseln variieren in Höhe und Abstand. [Änderungen und Messwerte](docs/UPDATE-1.4.md).
 
 Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.6.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.7.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
 
 Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
 

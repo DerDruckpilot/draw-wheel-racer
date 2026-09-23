@@ -1,12 +1,12 @@
-# FORMDRIVE 1.6 – Implementierung
+# FORMDRIVE 1.7 – Implementierung
 
 Stand: 23. September 2026. Dieses Dokument beschreibt die tatsächliche Implementierung; ältere Konzept- und Roadmap-Dokumente sind die Recherchehistorie.
 
 ## Inhalt
 
-- Zwölf Solo-Expeditionen in Canyon, Alpen und Steinbruch; ein separates Testgelände mit optionaler Zeitlupe.
+- 15 Solo-Expeditionen in Canyon, Alpen und Steinbruch; ein separates Testgelände mit optionaler Zeitlupe.
 - Gas mit dosierbarer Raddrehzahl, Bremse, Rückwärtsgang und optionaler Tempomat. Ein Fahrzeug, kein Zeitlimit.
-- Freihandzeichnen mit Finger oder Maus. Mehrere offene oder selbstkreuzende Striche pro Achse; zwei unabhängige Entwürfe, Übernahme nur per Montieren.
+- Freihandzeichnen mit Finger oder Maus. Mehrere offene oder selbstkreuzende Striche pro Achse; zwei unabhängige Entwürfe, Übernahme nur per Häkchen; der montierte Entwurf wird anschließend geleert.
 - Größenlimit, sichtbare Achsmarkierung, Rückgängig je Strich und Leeren des Entwurfs. Keine Vorlagen oder Favoritenauswahl in der Oberfläche.
 - Straße, Fels, Eis, Schlamm, Stufen, Steigungen, Sprunglücken, Baumstämme, Wippen und niedrige Durchfahrten.
 - Flache Furten und tiefe Schwimmabschnitte mit Auftrieb und formabhängiger Paddelwirkung.
@@ -31,11 +31,17 @@ TypeScript, Vite, Three.js, Rapier 2D, vite-plugin-pwa/Workbox. Exakte Versionen
 - `src/shape-preparation.ts` und `src/shape-worker.ts`: Hintergrundberechnung aufwendiger Radkonturen.
 - `src/route-layout.ts`: gemeinsame räumliche Abbildung der festen Fahrspur auf geschwungene Verläufe, mit Bogenlänge und seitlichem Abstand. Gelände, bewegliche Teile und Spritzer verwenden dieselbe Abbildung. Die Fahrphysik bleibt ein Längsprofil, ohne seitliches Lenken oder Querkräfte.
 - `src/structures.ts`: Steinbrücke, natürlicher Bogen und Höhle mit bodenverbundenen Schultern und passendem physischem Dachprofil.
-- `src/landscape.ts`: anschließende Landschaft vor und hinter den Fahrspuren.
+- `src/landscape.ts`: anschließende Landschaft beiderseits der einzelnen Fahrspur.
 - `src/main.ts`: Zustände, Oberfläche, Spielstand und PWA-Integration.
 - `src/audio.ts`: lokal erzeugter Ton ohne zusätzliche Audiodateien.
 
-Die aktuelle Querformat-Bedienung, die Modellquelle und Änderungen an der Geländegeometrie stehen in [UPDATE-1.6.md](UPDATE-1.6.md).
+Die aktuelle Oberfläche, das Schlammmodell, die integrierten Felsflanken und Expertenstrecken stehen in [UPDATE-1.7.md](UPDATE-1.7.md). Die Modellquelle und getrennten Achsen sind in [UPDATE-1.6.md](UPDATE-1.6.md) dokumentiert.
+
+## Schlamm und Einzelspieler-Ansicht
+
+Schlammbecken besitzen einen festen unregelmäßigen Untergrund unter dem sichtbaren Pegel. Die benetzte Rad- und Rumpfkontur erfährt Druck, viskosen Widerstand, Scherung und eine regularisierte Fließgrenze. Dissipation wird auf ein energiestabiles Impulsmaß begrenzt. Eine runde Kontur bekommt keinen besonderen Bonus; vorspringende Flächen können Material nach hinten bewegen. Die Oberfläche bewegt sich langsam, zeigt Radspuren und schleudert kurze braune Klumpen. Verformbare Erde und dauerhafte Spurrillen sind nicht simuliert.
+
+Die sichtbare Fahrbahn ist 4,4 Einheiten breit und enthält ausschließlich das Spielerfahrzeug. Seitliche Böschungen füllen weiterhin die Umgebung. Bauwerke besitzen bis ins Gelände auslaufende Querprofile und längs anschließende Fels- bzw. Erdböschungen. Nur ein weiches Sichtfenster am Fahrzeug wird bei Durchfahrt transparent. Hindernis-Lösungshinweise entfallen; Statusmeldungen erscheinen unter dem Spielnamen.
 
 ## Physikmodell
 
@@ -45,7 +51,7 @@ Ein Strich wird zunächst mit 0,003 Einheiten Toleranz vereinfacht. Bis zu 512 K
 
 Kapseln bilden die verdickten Abschnitte; dünne Speichen verbinden diese mit der Nabe. Flächenmomente der vereinigten Konturen bestimmen Masse, Schwerpunkt und Trägheitsmoment. Oberfläche und Kollisionsform verwenden dieselben Punkte. Die vier sichtbaren Räder teilen sich zwei physikalische Achsen; seitliche Bewegung und Kollision zwischen Fahrspuren werden nicht simuliert.
 
-Die niedrigere Reibung eines Kontaktpaars bestimmt die Traktion. Radmaterial, Nabe und Speichen verwenden 0,34; Eis begrenzt die Haftung weiter. Greifende Zacken profitieren von geometrischen Kontakten, nicht von einem Formbonus. Schlamm verwendet zusätzlichen Widerstand, jedoch kein verformbares Bodenmodell und kein physikalisches Einsinken.
+Die niedrigere Reibung eines Kontaktpaars bestimmt die Traktion. Radmaterial, Nabe und Speichen verwenden 0,34; Eis begrenzt die Haftung weiter. Greifende Zacken profitieren von geometrischen Kontakten, nicht von einem Formbonus. Schlamm ergänzt einen zähen Mediumwiderstand und eine regularisierte Fließgrenze. Die Räder tauchen bis zum festen Beckengrund ein; der Boden selbst verformt sich nicht.
 
 Konturen einschließlich Aussparungen werden am Wasserspiegel und an den Ufergrenzen abgeschnitten. Aus nasser Fläche und effektiver Querschnittsbreite folgen verdrängtes Volumen, Auftrieb und dessen Angriffspunkt. Druck auf tatsächlich benetzte Flächen berücksichtigt lokale Translation, Rotation, Flächennormale und Geschwindigkeit; tangentiale Reibung ist viel kleiner. Kräfte und Momente werden mit einer passiven impliziten Begrenzung integriert. Längere Schwimmkörper und dämpfende Rumpfkräfte stabilisieren das Fahrzeug bei geringerem Längswiderstand. Spritzer und Schaum folgen der normalen Bewegung benetzter Konturflächen nahe der Oberfläche. Ihre Aktivität skaliert mit der dritten Potenz der lokalen Normalgeschwindigkeit; das ist ein visueller Indikator für die an Wasser abgegebene Leistung. Rückströmungen, Turbulenz und gekoppelte Wellen werden nicht räumlich simuliert. Die Einheiten des Spiels sind normalisiert. Verfahren und Präzisionsgrenzen: [BALANCING-1.2.md](BALANCING-1.2.md).
 
@@ -79,7 +85,7 @@ Hohes Profil: bis zu zweifache Pixelauflösung und Schatten. Automatik: startet 
 - `npm run test:browser`: produktiver Build in Chromium und WebKit mit 956 × 440 CSS-Pixeln; getrennte Entwürfe, Montage, Tempomat, Pause/Fortsetzen, Bergen, Wasserstrecke, Ergebnisdialog und Streckenauswahl. Separate Chromium-Tests prüfen den vollständigen Neustart ohne Netzwerk und das bestätigte Update nach einer Installation während desselben Seitenbesuchs, einschließlich Erhalt der Lieblingsform.
 - `npm run build`: strenge TypeScript-Prüfung, Produktionsbuild und PWA-Precache-Erzeugung.
 
-Die vollständigen Fahrprüfungen umfassen die zwölf neuen Expeditionen und das Testgelände mit 25 Hindernistypen; zusätzlich bleiben die historischen Rennstrecken als Regression erhalten. Die 47 Physik-, Geometrie- und Fortschrittstests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Neue Steuerungs- und Expeditionsprüfungen: [UPDATE-1.5.md](UPDATE-1.5.md). Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
+Die vollständigen Fahrprüfungen umfassen alle 15 Expeditionen und das Testgelände mit 31 Hindernistypen; zusätzlich bleiben die historischen Rennstrecken als Regression erhalten. Die 52 Physik-, Geometrie- und Fortschrittstests umfassen außerdem die belastete Hinterachse bei frei drehendem Vorderrad, das wiederholte Anheben und Fahren mit einem geraden Strich aus vier Startwinkeln, form- und geschwindigkeitsabhängige Spritzaktivität, die Konvexität der sichtbaren Felsblöcke, den durchgehenden Boden hinter dem Start, Eis, Wasser und sehr lange Zeichnungen. `npm run test:races` prüft zusätzlich die Zielankunft aller vier Fahrzeuge in zwölf Rennen. Neue Steuerungs- und Expeditionsprüfungen: [UPDATE-1.5.md](UPDATE-1.5.md). Vergleichswerte: [UPDATE-1.4.md](UPDATE-1.4.md), vorheriger Stand: [BALANCING-1.3.md](BALANCING-1.3.md).
 
 Der Countdown verwendet tatsächlich verstrichene Zeit unabhängig vom begrenzten Physik-Zeitschritt. Ein Browserregressionstest erzwingt eine niedrige Bildrate und prüft, dass die Startphase nicht künstlich länger wird.
 

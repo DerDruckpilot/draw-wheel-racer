@@ -2,7 +2,7 @@ import RAPIER from '@dimforge/rapier2d-compat';
 import type { Course, Obstacle, Water } from './courses';
 import { courseRunout, groundAt, suggestedShape, surfaceFriction, zoneAt } from './courses';
 import { clamp, preset, radiusOf, sanitizeShape, shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point, type ShapeName } from './shapes';
-import { HULL_HYDRO, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
+import { HULL_HYDRO, MUD_MEDIUM, waterForces, wheelHydro, wheelMassProperties, type HydroShape } from './hydrodynamics';
 import { roofOutline } from './structures';
 
 export const FIXED_DT = 1 / 120;
@@ -14,7 +14,7 @@ export interface Vehicle {
   id: number; body: RAPIER.RigidBody; wheels: RAPIER.RigidBody[]; carriers: RAPIER.RigidBody[]; joints: RAPIER.ImpulseJoint[];
   shapes: Point[][]; hydros: HydroShape[][]; radialTravels: number[]; desiredShapes: (Point[] | null)[]; axleRevisions: number[];
   shape: Point[]; revision: number; checkpoint: number; resets: number; finished: boolean; finishTime: number;
-  water: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
+  water: number; mud: number; lastX: number; stuck: number; aiTimer: number; desiredShape: Point[] | null;
   changeCooldown: number; buoyancy: number; drive: number; brake: number; motorDirection: number; shapeChanges: number; aiShape: ShapeName;
   hydro: HydroShape[]; motorTorques: number[]; motorIntegrals: number[]; radialTravel: number; motorCut: boolean; displacedVolume: number; waterThrust: number; waterDragPower: number;
 }
@@ -94,7 +94,7 @@ export class Simulation {
       joint.setContactsEnabled(false);
       wheels.push(w); carriers.push(carrier); joints.push(joint, spring);
     }
-    const car: Vehicle = { id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
+    const car: Vehicle = { id, body, wheels, carriers, joints, shapes: this.initialShapes.map(s => s.slice()), hydros: [[], []], radialTravels: [0, 0], desiredShapes: [null, null], axleRevisions: [0, 0], shape: this.initialShapes[0], revision: 0, checkpoint: 2, resets: 0, finished: false, finishTime: 0, water: 0, mud: 0, lastX: x, stuck: 0, aiTimer: id * .4, desiredShape: null, changeCooldown: 0, buoyancy: 0, drive: courseDrive(this.course), brake: 0, motorDirection: 1, shapeChanges: 0, aiShape: 'round', hydro: [], motorTorques: [0, 0], motorIntegrals: [0, 0], radialTravel: 0, motorCut: false, displacedVolume: 0, waterThrust: 0, waterDragPower: 0 };
     this.replaceColliders(car);
     return car;
   }
@@ -242,10 +242,9 @@ export class Simulation {
       car.water = water ? clamp(water.level - (p.y - .65), 0, 1) : 0;
       car.buoyancy = 0; car.displacedVolume = 0; car.waterThrust = 0; car.waterDragPower = 0;
       if (water) this.applyWater(car, water);
-      if (zone?.kind === 'mud') {
-        const v = car.body.linvel();
-        car.body.addForce({ x: -v.x * Math.abs(v.x) * .7, y: 0 }, true);
-      }
+      const mud = this.course.muds?.find(w => p.x + 2.7 > w.start && p.x - 2.7 < w.end);
+      car.mud = mud ? clamp(mud.level - (p.y - 1.2), 0, 1) : 0;
+      if (mud) this.applyWater(car, mud, true);
       // Each axle has its own speed regulator and full stall torque. An airborne
       // front axle reaching its speed limit cannot starve the loaded rear axle.
       // A steep land pitch does not reduce motor demand. The driver manages
@@ -310,11 +309,11 @@ export class Simulation {
     this.world.step();
   }
 
-  applyWater(car: Vehicle, water: Water) {
+  applyWater(car: Vehicle, water: Water, mud = false) {
     for (const body of [car.body, ...car.wheels]) {
       const pose = { position: body.translation(), center: body.worldCom(), angle: body.rotation(), velocity: body.linvel(), omega: body.angvel(), invMass: body.invMass(), invInertia: body.invPrincipalInertia() };
       for (const shape of body === car.body ? HULL_HYDRO : car.hydros[car.wheels.indexOf(body)]) {
-        const force = waterForces(shape, pose, water, FIXED_DT);
+        const force = waterForces(shape, pose, water, FIXED_DT, mud ? MUD_MEDIUM : undefined);
         body.addForce({ x: force.x, y: force.y }, true); body.addTorque(force.torque, true);
         car.buoyancy += force.buoyancy; car.displacedVolume += force.volume; car.waterDragPower += force.dragPower;
         if (body !== car.body) car.waterThrust += force.dragX;

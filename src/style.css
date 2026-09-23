@@ -76,3 +76,32 @@ dialog{max-height:calc(100dvh - 24px);max-width:580px;border-radius:18px}.modal-
 @media(orientation:portrait){.orientation-note{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;text-align:center;background:#15251ff7;color:#f2f4e7;padding:30px}.orientation-note>span{font-size:65px;color:#d9ee8e}.orientation-note>strong{font-size:24px}.orientation-note p{font-size:13px;line-height:1.8;color:#bccbb9}dialog{z-index:25}}
 @media(max-height:360px){.game{--cockpit-height:100px}.axle-toolbar{height:38px}.draft-tools{top:39px}.home-heading{top:55px}.home-heading h1{font-size:34px}.home-heading .eyebrow{display:none}.home-bottom{top:58px}.race-title>span,.journey-note{display:none}.drive-info{bottom:154px}.wordmark{font-size:10px}}
 .drive-info .terrain-chip{position:fixed;top:calc(env(safe-area-inset-top,0px) + 78px);left:50%;bottom:auto;transform:translateX(-50%);margin:0;width:max-content;max-width:60%;overflow:hidden}
+
+/* 1.7: square drafting glass and hinged pedals; notifications stay by the logo. */
+.game{--cockpit-height:clamp(112px,34dvh,190px)}
+.cockpit{grid-template-columns:clamp(86px,13vw,144px) auto clamp(86px,13vw,144px);gap:18px}
+.axle-pads{grid-template-columns:repeat(2,var(--cockpit-height));gap:14px}
+.drawing-field{width:var(--cockpit-height);height:var(--cockpit-height);aspect-ratio:1;border-color:#ffffff9e;background:#eef6ed19;border-radius:16px}
+.axle-toolbar{height:39px;justify-content:center}
+.mount-button{min-width:44px;width:44px;height:34px;padding:0;background:#d9ee8edb;border-radius:10px}
+.mount-button svg{width:21px;height:21px}.mount-button:disabled{opacity:.3}.mount-button.preparing{opacity:.9;animation:mount-pulse .7s infinite alternate}@keyframes mount-pulse{to{opacity:.35}}
+.draft-tools{top:42px;right:2px}.draft-tools button{width:30px;height:30px;background:#14292318}
+.pedal{height:clamp(108px,33dvh,168px);background:none!important;border:0!important;border-radius:0;box-shadow:none!important;backdrop-filter:none;overflow:visible;perspective:450px;transform:none!important;transition:none;padding:0}
+.pedal .pedal-arm{position:absolute;bottom:4px;left:calc(50% - 9px);width:18px;height:78%;background:linear-gradient(90deg,#19201e,#80918a 45%,#293b34 65%);border-radius:8px;box-shadow:3px 4px 5px #0007;transform:rotate(-12deg);transform-origin:center bottom}
+.pedal-face{position:absolute;left:13%;top:3%;width:74%;height:77%;border:3px solid #87928b;border-radius:13px;background:linear-gradient(135deg,#626e65,#1b2520 38%,#101914 82%,#47564b);box-shadow:inset 0 0 0 3px #101b16,inset 2px 2px 3px #c7d1c657,5px 10px 0 #151c18,8px 14px 12px #0006;display:flex;flex-direction:column;justify-content:space-evenly;padding:11px 10px;transform:rotateX(-23deg) rotateZ(-7deg);transform-origin:50% 100%;transition:transform .11s,box-shadow .11s,filter .11s}
+.pedal .pedal-face>i{position:static;left:auto;bottom:auto;flex-shrink:0;height:7px;width:100%;border-radius:2px;background:linear-gradient(#101814,#4f6154);box-shadow:0 1px 1px #9aab9170}
+.gas-pedal .pedal-face{left:27%;width:52%;height:89%;top:-7%;border-radius:17px;transform:rotateX(-23deg) rotateZ(7deg)}
+.gas-pedal .pedal-arm{transform:rotate(10deg)}
+.pedal.held .pedal-face{transform:translateY(11px) rotateX(19deg) rotateZ(-7deg);box-shadow:inset 0 0 0 3px #101b16,inset 2px 2px 3px #c7d1c657,2px 3px 0 #151c18,3px 6px 8px #0006;filter:brightness(1.18)}
+.gas-pedal.held .pedal-face{transform:translateY(11px) rotateX(19deg) rotateZ(7deg)}
+.cruise-light{position:absolute;right:5px;top:0;font-size:17px!important;width:24px;height:24px;border-radius:50%;background:#1a3025;border:1px solid #d9ee8e;color:#d9ee8e;display:none}
+.pedal.cruising .cruise-light{display:grid;place-items:center;opacity:1}.pedal.cruising .pedal-face{border-color:#d9ee8e}
+.toast,.game[data-state="home"] .toast{left:max(18px,env(safe-area-inset-left,0px));top:56px;bottom:auto;max-width:205px;text-align:left;font-size:10px;padding:9px 11px;border-radius:10px;transform:translateY(-5px);background:#e9f1dfed}
+.toast.visible{transform:translateY(0)}
+.drive-info .terrain-chip{display:none}
+@media(max-height:360px){.game{--cockpit-height:108px}.draft-tools{top:42px}.axle-toolbar{height:39px}.pedal{height:108px}}
+@media(prefers-reduced-motion:reduce){.pedal-face{transition:none}.mount-button.preparing{animation:none}}
+
+/* Keep every part of the square available to the pen, including its corners. */
+.axle-pad .draft-tools{top:4px;left:0;right:0;width:100%;justify-content:space-between;pointer-events:none}
+.axle-pad .draft-tools button{pointer-events:auto}

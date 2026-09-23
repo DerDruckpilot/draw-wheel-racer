@@ -4,13 +4,17 @@ import type { Obstacle, Structure } from './courses';
 // and anchored rock shoulders outside the driving corridor. No floating slab.
 export function archSection(o: Obstacle, lateral: number, base: number) {
   const style = o.structure ?? 'arch', z = Math.abs(lateral);
-  const halfSpan = style === 'cave' ? 5.6 : style === 'bridge' ? 4.6 : 4.1;
+  const halfSpan = style === 'cave' ? 4.4 : style === 'bridge' ? 3.5 : 3.3;
   const clear = o.y - o.height / 2;
   const t = Math.min(1, Math.max(0, (z - 1.35) / (halfSpan - 1.35)));
   const bottom = base + (clear - base) * Math.sqrt(Math.max(0, 1 - t * t));
   const irregular = .16 * Math.sin(lateral * 2.2 + o.x) + .12 * Math.cos(lateral * 3.7 - o.x);
-  const top = z <= 1.35 ? clear + (style === 'bridge' ? .85 : style === 'cave' ? 2.85 : .9)
+  let top = z <= 1.35 ? clear + (style === 'bridge' ? .85 : style === 'cave' ? 2.85 : .9)
     : style === 'bridge' ? clear + .85 : style === 'cave' ? clear + 2.3 + Math.cos(lateral * .5) * .55 + irregular : bottom + .9 + irregular;
+  if (z > halfSpan) {
+    const extent = structureExtent(style), t = Math.min(1, (z - halfSpan) / (extent - halfSpan)), blend = t * t * (3 - 2 * t);
+    top = top * (1 - blend) + (base - .12) * blend;
+  }
   return { bottom: z >= halfSpan ? base - .6 : bottom, top, halfSpan };
 }
 
@@ -22,7 +26,9 @@ export function roofOutline(o: Obstacle) {
     ...Array.from({ length: 5 }, (_, i) => { const t = 1 - i / 4; return { x: (t - .5) * o.width, y: -o.height / 2 + thickness + Math.sin(t * Math.PI) * crest }; })];
 }
 
+export const structureExtent = (style: Structure) => style === 'cave' ? 18 : style === 'bridge' ? 16 : 11;
 export function archBands(style: Structure) {
-  const edge = style === 'cave' ? 6.5 : style === 'bridge' ? 5.4 : 4.9;
-  return [-edge, -edge + .6, -3.6, -2.7, -2, -1.35, -.65, 0, .65, 1.35, 2, 2.7, 3.6, edge - .6, edge].sort((a, b) => a - b);
+  const edge = structureExtent(style), shoulder = style === 'cave' ? 4.4 : style === 'bridge' ? 3.5 : 3.3;
+  const bands = [0, .65, 1.35, 2, 2.7, shoulder, shoulder + 1, 7, 10, edge - 1, edge];
+  return [...new Set(bands.flatMap(z => [-z, z]))].sort((a, b) => a - b);
 }

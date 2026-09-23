@@ -128,13 +128,18 @@ export function submergedArea(rings: Point[][], water: Water) {
   return twiceArea > 1e-10 ? { area: twiceArea / 2, x: momentX / twiceArea, y: momentY / twiceArea } : { area: 0, x: 0, y: 0 };
 }
 
-export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt: number): WaterForces {
+export interface FluidMedium { density: number; viscosity: number; yieldStress: number; shear: number; pressure: number }
+export const MUD_MEDIUM: FluidMedium = { density: 23, viscosity: 38, yieldStress: 28, shear: 8, pressure: 2.2 };
+// Regularized yield stress and viscous shear act on the actual wet contour.
+// No preset-dependent boost: a paddle pushes clay through its exposed faces.
+export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt: number, medium?: FluidMedium): WaterForces {
+  const density = medium?.density ?? WATER_DENSITY;
   const result: WaterForces = { x: 0, y: 0, torque: 0, volume: 0, buoyancy: 0, dragX: 0, dragY: 0, dragTorque: 0, dragPower: 0 };
   const co = Math.cos(pose.angle), si = Math.sin(pose.angle);
   const rings = shape.rings.map(r => r.map(p => ({ x: pose.position.x + p.x * co - p.y * si, y: pose.position.y + p.x * si + p.y * co })));
   const wet = submergedArea(rings, water);
   result.volume = wet.area * shape.width;
-  result.buoyancy = result.volume * WATER_DENSITY * GRAVITY;
+  result.buoyancy = result.volume * density * GRAVITY;
   result.y = result.buoyancy;
   result.torque = (wet.x - pose.center.x) * result.buoyancy;
   if (!wet.area) return result;
@@ -171,10 +176,10 @@ export function waterForces(shape: HydroShape, pose: HydroPose, water: Water, dt
       const vn = vx * nx + vy * ny, vt = vx * tx + vy * ty;
       // Windward pressure: F = 1/2 rho Cd A v_normal². The wake side does
       // not push a second time. Surface shear remains much smaller.
-      const coefficient = .5 * WATER_DENSITY * cd * area;
-      const resistance = coefficient * Math.max(0, vn) + linear * area;
+      const coefficient = .5 * density * cd * area * (medium?.pressure ?? 1);
+      const resistance = coefficient * Math.max(0, vn) + (linear + (medium?.viscosity ?? 0) + (medium?.yieldStress ?? 0) / (.08 + Math.abs(vn))) * area;
       const pressure = -vn * resistance;
-      const shearCoefficient = .5 * WATER_DENSITY * shape.skin * area * Math.abs(vt);
+      const shearCoefficient = (.5 * density * shape.skin * Math.abs(vt) + (medium?.shear ?? 0)) * area;
       const shear = -vt * shearCoefficient;
       const fx = nx * pressure + tx * shear, fy = ny * pressure + ty * shear;
       result.dragX += fx; result.dragY += fy; result.dragTorque += rx * fy - ry * fx;

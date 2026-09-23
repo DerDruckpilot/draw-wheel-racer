@@ -74,3 +74,13 @@ mehrere Striche und explizite Montage. Keine fertigen Radvorlagen in der
 Oberfläche. Ein kostenloses importiertes Offroad-Modell ersetzt das generierte
 Fahrzeug. Sprunglücken werden als geschlossene Gräben modelliert, freiliegende
 Geländekanten seitlich unregelmäßig geformt. Details: [UPDATE-1.6.md](UPDATE-1.6.md).
+
+
+## Version 1.7 – Einzelspieler und Expertenstrecken
+
+- Keine eingeblendeten Lösungen für Hindernisse; Statusmeldungen links unter dem Spielnamen.
+- Quadratische Felder ohne sichtbare Beschriftungen; Montage per Häkchen leert nur den Entwurf.
+- Gerippte, sichtbar betätigte Pedale; Wisch-Tempomat bleibt erhalten, mit kleiner Kontrollanzeige.
+- Eine einzelne Fahrspur mit Umgebung, längs und quer auslaufende Bauwerksflanken statt abgeschnittener Enden.
+- Schlammkräfte hängen von benetzten Konturen und Materialgeschwindigkeit ab. Ein zähes Oberflächenmodell und braune Klumpen ergänzen die Physik.
+- Bestehende Level- und Spielstand-IDs bleiben erhalten. Drei Expertenstrecken werden als IDs 13–15 ergänzt; das Testgelände bleibt ID 12 und steht am Ende der Auswahl.

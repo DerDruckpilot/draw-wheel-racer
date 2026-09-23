@@ -29,8 +29,8 @@ export class DrawingPad {
     const r = this.canvas.getBoundingClientRect(); this.width = r.width; this.height = r.height;
     const dpr = Math.min(devicePixelRatio, 2); this.canvas.width = Math.round(r.width * dpr); this.canvas.height = Math.round(r.height * dpr); this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); this.render();
   }
-  get scale() { return Math.min(this.width * .44, this.height * .43) / 1.2; }
-  get dirty() { return this.draft.length > 1 && JSON.stringify(this.draft) !== JSON.stringify(this.shape); }
+  get scale() { return Math.min(this.width, this.height) * .43 / 1.2; }
+  get dirty() { return this.draft.length > 1; }
   get visibleShape() { return this.draft; }
   point(e: PointerEvent): Point { const r = this.canvas.getBoundingClientRect(); return { x: (e.clientX - r.left - this.width / 2) / this.scale, y: -(e.clientY - r.top - this.height / 2) / this.scale }; }
   down(e: PointerEvent) {
@@ -69,10 +69,10 @@ export class DrawingPad {
       const ready = await preparation;
       if (id !== this.mountId) return false;
       this.busy = false; this.canvas.removeAttribute('aria-busy');
-      if (!ready) { this.feedback('Die Kontur konnte nicht vorbereitet werden. Tippe erneut auf Montieren.'); this.render(); return false; }
+      if (!ready) { this.feedback('Die Kontur konnte nicht vorbereitet werden. Tippe erneut auf das Häkchen.'); this.render(); return false; }
     }
     const ok = this.onShape(valid);
-    if (ok) { this.shape = valid; this.draft = valid; }
+    if (ok) { this.shape = valid; this.draft = []; }
     else this.feedback('Die Kontur konnte nicht montiert werden. Versuche es noch einmal.');
     this.render(); return ok;
   }

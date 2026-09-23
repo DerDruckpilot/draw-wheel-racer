@@ -10,11 +10,12 @@ test('landscape cockpit fits both pads between the pedals and frames the vehicle
     await expect.poll(()=>page.evaluate(()=>document.querySelector('.game')!.getBoundingClientRect().width)).toBe(width);
     const l=await page.evaluate(()=>{
       const r=(q:string)=>document.querySelector(q)!.getBoundingClientRect().toJSON();
-      return {left:r('[data-pedal="brake"]'),right:r('[data-pedal="gas"]'),rear:r('#drawing-rear'),front:r('#drawing-front'),scene:r('#scene'),scroll:document.documentElement.scrollWidth,buttons:[...document.querySelectorAll('.cockpit button')].map(b=>{const r=b.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===b};})};
+      const ink=[...document.querySelectorAll<HTMLCanvasElement>('.drawing-field canvas')].flatMap(c=>{const b=c.getBoundingClientRect();return [[.2,.2],[.8,.2],[.2,.8],[.8,.8]].map(([x,y])=>document.elementFromPoint(b.x+b.width*x,b.y+b.height*y)===c)});
+      return {ink,left:r('[data-pedal="brake"]'),right:r('[data-pedal="gas"]'),rear:r('#drawing-rear'),front:r('#drawing-front'),scene:r('#scene'),scroll:document.documentElement.scrollWidth,buttons:[...document.querySelectorAll('.cockpit button')].map(b=>{const r=b.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest('button')===b};})};
     });
-    expect(l.scene.width).toBe(width);expect(l.scene.height).toBe(height);expect(l.scroll).toBeLessThanOrEqual(width);
+    expect(l.ink.every(Boolean)).toBe(true);expect(l.scene.width).toBe(width);expect(l.scene.height).toBe(height);expect(l.scroll).toBeLessThanOrEqual(width);
     expect(l.left.right).toBeLessThan(l.rear.x);expect(l.rear.right).toBeLessThan(l.front.x);expect(l.front.right).toBeLessThan(l.right.x);
-    expect(l.rear.height).toBeGreaterThanOrEqual(110);expect(l.front.width).toBeGreaterThanOrEqual(140);
+    expect(l.rear.height).toBeGreaterThanOrEqual(110);expect(l.front.width).toBeGreaterThanOrEqual(110);expect(Math.abs(l.front.width-l.front.height)).toBeLessThan(1);expect(Math.abs(l.rear.width-l.rear.height)).toBeLessThan(1);
     // Disabled pedals on the home screen intentionally ignore hit testing.
     for(const b of l.buttons){expect(b.x).toBeGreaterThanOrEqual(0);expect(b.right).toBeLessThanOrEqual(width);expect(b.bottom).toBeLessThanOrEqual(height);}
     for(const id of [3,4,2]){

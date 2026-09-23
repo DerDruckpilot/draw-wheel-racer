@@ -1,11 +1,11 @@
 import { initPhysics, Simulation } from '../src/physics.ts';
-import { createExpedition, suggestedShape, zoneAt } from '../src/courses.ts';
+import { EXPEDITION_COUNT, createExpedition, suggestedShape, zoneAt } from '../src/courses.ts';
 import { preset, type ShapeName } from '../src/shapes.ts';
 
 await initPhysics();
 const ids = process.argv.slice(2).map(Number);
 let failures = 0;
-for (const id of ids.length ? ids : Array.from({ length: 13 }, (_, i) => i)) {
+for (const id of ids.length ? ids : Array.from({ length: EXPEDITION_COUNT }, (_, i) => i)) {
   const sim = new Simulation(createExpedition(id), 1), car = sim.cars[0]; sim.started = true;
   let last: ShapeName = 'round';
   for (let step = 0; step < 120 * (id === 12 ? 600 : 300) && !car.finished; step++) {

@@ -1,13 +1,18 @@
 import type { Course, Segment } from './courses';
 
 export const TRACK_FRONT = 3.2;
-export const TRACK_BACK = -11;
+export const TRACK_BACK = -1.2;
 
-// The collision course remains in the four marked lanes. These banks continue
+// One driving corridor continues into terrain on both sides. These banks continue
 // its exact edge into the surrounding land, well beyond the camera's foreground.
+export function bankHeight(x: number, y: number, z: number) {
+  const d = Math.max(0, z - TRACK_FRONT, TRACK_BACK - z), t = Math.min(1, d / 10), blend = t * t * (3 - 2 * t);
+  const land = .45 + Math.sin(x * .081 + z * .06) * .18 + Math.cos(x * .17 - z * .09) * .12;
+  return y * (1 - blend) + land * blend;
+}
 export function landscapeData(course: Course, front: boolean) {
   const edge = front ? TRACK_FRONT : TRACK_BACK;
-  const bands = front ? [0, 1.2, 3, 6, 10, 18, 32, 64] : [0, 2, 5, 10, 20, 35];
+  const bands = front ? [0, 1.2, 3, 6, 10, 18, 32, 64] : [0, 2, 5, 10, 20, 35, 55];
   const segments: Segment[] = [];
   let previous = { x: -100, y: 0 };
   for (const s of course.segments) {
@@ -17,10 +22,7 @@ export function landscapeData(course: Course, front: boolean) {
   segments.push({ a: previous, b: { x: course.length + 100, y: 0 }, surface: 'stone' });
   const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
   const height = (x: number, y: number, d: number) => {
-    const t = Math.min(1, d / 10), blend = t * t * (3 - 2 * t);
-    const z = edge + (front ? d : -d);
-    const land = .45 + Math.sin(x * .081 + z * .06) * .18 + Math.cos(x * .17 - z * .09) * .12;
-    return y * (1 - blend) + land * blend;
+    return bankHeight(x, y, edge + (front ? d : -d));
   };
   const fine = course.expedition ? segments.flatMap(s => {
     const count = Math.max(1, Math.ceil((s.b.x - s.a.x) / 2));

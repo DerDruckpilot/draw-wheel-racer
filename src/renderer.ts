@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { courseRunout, groundAt, type Course, type Obstacle, type Segment, type Surface, type Water } from './courses';
 import { AXLES, type Simulation, type Vehicle } from './physics';
 import { shapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
-import { landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
+import { bankHeight, landscapeData, TRACK_BACK, TRACK_FRONT } from './landscape';
 import { waterMaterial, WaterSpray } from './water-visuals';
 import { RouteLayout } from './route-layout';
 import { archBands, archSection } from './structures';
@@ -123,6 +123,7 @@ export class GameRenderer {
   private resizeObserver: ResizeObserver;
   private env: THREE.WebGLRenderTarget;
   readonly spray: WaterSpray;
+  readonly mudSpray: WaterSpray;
   private frames = 0;
   private average = 16;
   private pixelRatio = 1.5;
@@ -142,7 +143,7 @@ export class GameRenderer {
     this.sun.castShadow = true; this.sun.shadow.mapSize.set(2048, 2048);
     Object.assign(this.sun.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: .5, far: 80 });
     this.sun.shadow.bias = -.0003; this.sun.shadow.normalBias = .04;
-    this.spray = new WaterSpray(this.scene);
+    this.spray = new WaterSpray(this.scene); this.mudSpray = new WaterSpray(this.scene, true);
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(host); this.resize();
   }
 
@@ -178,7 +179,7 @@ export class GameRenderer {
       stone,
       road: stone.clone(),
       ice: new THREE.MeshPhysicalMaterial({ map: iceTexture(), color: 0xc1edf9, roughness: .16, metalness: .12, clearcoat: 1, clearcoatRoughness: .08, envMapIntensity: 1.1, side: THREE.DoubleSide }),
-      mud: new THREE.MeshStandardMaterial({ map: ground, normalMap: groundNormal, color: 0x443024, roughness: .29, normalScale: new THREE.Vector2(.3, .3), side: THREE.DoubleSide }),
+      mud: new THREE.MeshStandardMaterial({ map: ground, normalMap: groundNormal, color: 0xb3a28a, roughness: .75, normalScale: new THREE.Vector2(.3, .3), side: THREE.DoubleSide }),
       wood: new THREE.MeshStandardMaterial({ color: 0x8d6745, roughness: .85 })
     };
     this.mats.road.color.set(0xcbbca0);
@@ -200,6 +201,7 @@ export class GameRenderer {
     this.camera.aspect = w / h; this.camera.updateProjectionMatrix();
     this.renderer.setPixelRatio(this.pixelRatio); this.renderer.setSize(w, h, false);
     this.spray.material.uniforms.pixels.value = h * this.pixelRatio;
+    this.mudSpray.material.uniforms.pixels.value = h * this.pixelRatio;
   }
 
   setCourse(sim: Simulation) {
@@ -212,7 +214,7 @@ export class GameRenderer {
     });
     for (const m of disposable) { const map = (m as THREE.MeshStandardMaterial).map; if (map && (map as THREE.CanvasTexture).isCanvasTexture) map.dispose(); m.dispose(); }
     this.terrain.clear(); this.rocks = []; this.waters = []; this.beamMeshes = []; this.cacheMeshes = []; this.checkpointFlags = []; this.roofs = [];
-    this.spray.clear();
+    this.spray.clear(); this.mudSpray.clear();
     for (const car of this.cars) {
       for (const root of [car.root, ...car.wheels]) { this.disposeObject(root); this.scene.remove(root); }
       if (car.tag) { this.scene.remove(car.tag); car.tag.material.map?.dispose(); car.tag.material.dispose(); }
@@ -243,6 +245,7 @@ export class GameRenderer {
     }
     this.addScenery(course);
     for (const w of course.waters) this.addWater(course, w);
+    for (const mud of course.muds ?? []) this.addWater(course, mud, true);
     const metal = new THREE.MeshStandardMaterial({ color: 0x3d4846, roughness: .58, metalness: .6 });
     for (const o of course.obstacles) {
       if (o.kind === 'boulder') {
@@ -279,8 +282,8 @@ export class GameRenderer {
           const pivot = new THREE.Mesh(new THREE.ConeGeometry(.32, .65, 4), metal); pivot.position.set(o.x, o.y - .4, LANES[i]); this.terrain.add(pivot);
         }
       } else if (o.kind === 'log') {
-        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, 14.2, 16), this.cliffMat);
-        mesh.rotation.x = Math.PI / 2; mesh.position.set(o.x, o.y, -3.9); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(o.width / 2, o.width / 2, TRACK_FRONT - TRACK_BACK + .5, 16), this.cliffMat);
+        mesh.rotation.x = Math.PI / 2; mesh.position.set(o.x, o.y, 1); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       } else {
         if (o.structure) { this.addRockStructure(course, o); continue; }
         const depth = course.expedition ? 4.4 : 14.2, center = course.expedition ? 1 : -3.9;
@@ -298,6 +301,19 @@ export class GameRenderer {
     this.addGate(course.length, course.expedition ? 'ZIELLAGER' : 'ZIEL', !course.expedition);
     if (course.expedition) this.addExpeditionMarkers(course);
     this.bendLandscape();
+    for (const roof of this.roofs) {
+      const material = roof.mesh.material as THREE.MeshStandardMaterial;
+      const uniforms = { center: { value: new THREE.Vector2() }, radius: { value: 0 }, aspect: { value: 1 } };
+      material.userData.cutaway = uniforms; material.transparent = true; material.depthWrite = false;
+      // Only a soft window around the vehicle becomes translucent. The complete
+      // hillside remains present instead of vanishing along a planar half-cut.
+      material.onBeforeCompile = shader => {
+        shader.uniforms.cutCenter = uniforms.center; shader.uniforms.cutRadius = uniforms.radius; shader.uniforms.cutAspect = uniforms.aspect;
+        shader.vertexShader = 'varying vec4 vRockClip;\n' + shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\nvRockClip = gl_Position;');
+        shader.fragmentShader = 'varying vec4 vRockClip; uniform vec2 cutCenter; uniform float cutRadius; uniform float cutAspect;\n' + shader.fragmentShader.replace('#include <opaque_fragment>', 'float aperture = smoothstep(cutRadius*.35, max(.001,cutRadius), length((vRockClip.xy/vRockClip.w-cutCenter)*vec2(cutAspect,1.0))); diffuseColor.a *= mix(1.0,.08+.92*aperture,step(.1,cutRadius));\n#include <opaque_fragment>');
+      };
+      material.customProgramCacheKey = () => 'local-rock-window-v2';
+    }
     this.viewX = 2; this.camera.position.set(-8, 11, 18); this.target.set(4, 0, -.5); this.camera.lookAt(this.target);
   }
 
@@ -312,7 +328,7 @@ export class GameRenderer {
         r.add(scan); const size = 7 + random() * 15;
         r.scale.set(size * (.6 + random()), size * (1 + random()), size);
         r.rotation.y = random() * Math.PI * 2;
-        r.position.set(x, size * .23 - 2, -17 - random() * 12); this.terrain.add(r); this.rocks.push(r);
+        r.position.set(x, size * .23 - 2, -8 - random() * 12); this.terrain.add(r); this.rocks.push(r);
       }
       // Small scree on the verge, kept away from the drivable lanes.
       const pebble = new THREE.Mesh(new THREE.DodecahedronGeometry(.18 + random() * .4, 0), this.cliffMat);
@@ -339,7 +355,7 @@ export class GameRenderer {
     for (let x = 0; x < course.length; x += 9) {
       const y = groundAt(course, x);
       if (y < -.3) continue;
-      for (const z of [2.85, -10.5]) {
+      for (const z of [TRACK_FRONT - .35, TRACK_BACK + .25]) {
         posts.add(box(.075, .7, .075, darkMat, x, y + .35, z)); posts.add(box(.09, .12, .09, postMat, x, y + .59, z));
       }
     }
@@ -388,6 +404,16 @@ export class GameRenderer {
     if (style === 'bridge') material.color.set(0xd2c4a5);
     else material.color.multiplyScalar(1.18);
     material.normalScale.set(.7, .7);
+    const vertex = (t: number, z: number, top: boolean) => {
+            const shoulder = Math.max(0, Math.abs(z) - 1.35);
+            const jagged = style === 'bridge' ? 0 : Math.sin(z * 2.1 + t * 9 + o.x) * Math.min(1.2, shoulder * .16);
+            const spread = 1 + Math.min(1.6, Math.max(0, Math.abs(z) - 2.7) * .18);
+            const s = o.x + (t - .5) * o.width * spread + jagged;
+            const foot = bankHeight(s, groundAt(course, s), 1 + z);
+            const shape = archSection(o, z, Math.abs(z) <= 1.35 ? base : foot);
+            const crest = style === 'bridge' ? 0 : Math.sin(t * Math.PI) * (style === 'cave' ? 1.8 : .4) * Math.max(0, 1 - shoulder / (bands.at(-1)! - 1.35));
+            return [s, top ? shape.top + crest : shape.bottom, 1 + z];
+          };
     for (const near of [false, true]) {
       const positions: number[] = [], uvs: number[] = [];
       const quad = (a: number[], b: number[], c: number[], d: number[]) => {
@@ -397,28 +423,44 @@ export class GameRenderer {
       };
       for (let j = 1; j < bands.length; j++) {
         if ((bands[j - 1] >= 0) !== near) continue;
-        const gap = style === 'bridge' ? .025 : 0, za = bands[j - 1] + gap, zb = bands[j] - gap;
+        const gap = 0, za = bands[j - 1] + gap, zb = bands[j] - gap;
         for (let k = 0; k < 4; k++) {
           const t0 = k / 4, t1 = (k + 1) / 4;
-          const vertex = (t: number, z: number, top: boolean) => {
-            const shape = archSection(o, z, base);
-            const shoulder = Math.max(0, Math.abs(z) - 1.35);
-            const jagged = style === 'bridge' ? 0 : Math.sin(z * 2.1 + t * 9 + o.x) * .15 * shoulder;
-            const s = o.x + (t - .5) * o.width + jagged;
-            const crest = style === 'bridge' ? 0 : Math.sin(t * Math.PI) * (style === 'cave' ? 1.8 : .4);
-            return [s, top ? shape.top + crest : shape.bottom, 1 + z];
-          };
+
           const a = vertex(t0, za, false), b = vertex(t1, za, false), c = vertex(t1, zb, false), d = vertex(t0, zb, false);
           const e = vertex(t0, za, true), f = vertex(t1, za, true), g = vertex(t1, zb, true), h = vertex(t0, zb, true);
           quad(a, d, c, b); quad(e, f, g, h);
           if (k === 0) quad(a, e, h, d); if (k === 3) quad(b, c, g, f);
-          if (style === 'bridge' || j === 1) quad(a, b, f, e);
-          if (style === 'bridge' || j === bands.length - 1) quad(d, h, g, c);
+          if (j === 1) quad(a, b, f, e);
+          if (j === bands.length - 1) quad(d, h, g, c);
         }
       }
       const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3)); geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2)); geometry.computeVertexNormals();
       const mesh = new THREE.Mesh(geometry, near ? material.clone() : material); mesh.castShadow = true; mesh.receiveShadow = true; this.terrain.add(mesh);
       if (near) this.roofs.push({ x: o.x, width: o.width, mesh });
+    }
+    // Sloping earth/rock aprons bury the vertical end faces on both sides of
+    // the opening. Only the playable mouth stays exposed; the shoulders merge
+    // into surrounding land along AND across the route.
+    for (const side of [-1, 1]) {
+      const positions: number[] = [], uvs: number[] = [];
+      const zs = [1.4, ...bands.filter(z => z > 1.4)];
+      const vertexAt = (end: number, z: number, t: number) => {
+        const wall = vertex(end < 0 ? 0 : 1, z * side, true);
+        const run = (style === 'bridge' ? 3 : 5) + Math.min(7, z * .6);
+        const x = wall[0] + end * run * t;
+        const floor = bankHeight(x, groundAt(course, x), wall[2]) - .07;
+        const blend = t * t * (3 - 2 * t);
+        return [x, wall[1] * (1 - blend) + floor * blend, wall[2]];
+      };
+      for (const end of [-1, 1]) for (let j = 1; j < zs.length; j++) for (let k = 0; k < 6; k++) {
+        const a = vertexAt(end, zs[j-1], k/6), b = vertexAt(end, zs[j], k/6), c = vertexAt(end, zs[j], (k+1)/6), d = vertexAt(end, zs[j-1], (k+1)/6);
+        for (const p of [a,b,c,a,c,d]) {positions.push(...p);uvs.push(p[0]/4,p[2]/4);}
+      }
+      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.computeVertexNormals();
+      const apronMaterial = (style === 'bridge' ? this.mats.stone : material).clone();
+      const mesh = new THREE.Mesh(geometry,apronMaterial);mesh.castShadow=true;mesh.receiveShadow=true;this.terrain.add(mesh);
+      if(side>0)this.roofs.push({x:o.x,width:o.width+2,mesh});
     }
     const edge = bands.at(-1)!;
     if (style === 'bridge') {
@@ -426,7 +468,7 @@ export class GameRenderer {
       const masonry = new THREE.Group();
       for (const x of [o.x - o.width / 2 + .18, o.x + o.width / 2 - .18]) for (let z = -edge; z < edge; z += .9) {
         const h = .45 + .1 * Math.sin(z * 2.7 + x);
-        masonry.add(box(.36, h, .84, material, x, o.y - o.height / 2 + .85 + h / 2, z + 1));
+        masonry.add(box(.36, h, .84, material, x, archSection(o, z, bankHeight(x, groundAt(course, x), z + 1)).top + h / 2, z + 1));
       }
       mergeRigidGroup(masonry); this.terrain.add(masonry);
     }
@@ -439,7 +481,7 @@ export class GameRenderer {
       scan.traverse(object => { if (object instanceof THREE.Mesh) { object.userData.shared = true; object.castShadow = true; object.receiveShadow = true; } });
       rock.add(scan);
       const height = side > 0 ? 1.4 : style === 'cave' ? 4.2 : 2.6;
-      rock.position.set(o.x + (j - 1) * o.width * .32, base + height * .18, 1 + side * edge);
+      rock.position.set(o.x + (j - 1) * o.width * .32, base + height * .18, 1 + side * (style === 'cave' ? 4.6 : 3.8));
       rock.scale.set(Math.max(2.5, o.width * .42) / size.x, height / size.y, 3.4 / size.z); rock.rotation.y = j * .71 + o.x;
       this.terrain.add(rock); this.rocks.push(rock);
     }
@@ -488,9 +530,9 @@ export class GameRenderer {
     }
   }
 
-  addWater(course: Course, water: Water) {
+  addWater(course: Course, water: Water, mud = false) {
     const { start, end, level: y } = water;
-    const material = waterMaterial(course, water, this.skyTexture, this.camera.position);
+    const material = waterMaterial(course, water, this.skyTexture, this.camera.position, mud);
     // Water continues into the banks; opaque land occludes it at the natural
     // shoreline, instead of ending in a rectangular cut at the front lane.
     const geo = new THREE.PlaneGeometry(end - start, 60, 32, 20); const mesh = new THREE.Mesh(geo, material);
@@ -501,14 +543,14 @@ export class GameRenderer {
   addGate(x: number, text: string, finish: boolean) {
     const mat = new THREE.MeshStandardMaterial({ color: 0x303b37, metalness: .4, roughness: .65 });
     const group = new THREE.Group();
-    for (const z of [3.05, -10.75]) group.add(box(.16, 4, .16, mat, x, 2, z));
-    group.add(box(.18, .16, 14, mat, x, 4, -3.85));
+    for (const z of [TRACK_FRONT - .15, TRACK_BACK + .15]) group.add(box(.16, 4, .16, mat, x, 2, z));
+    group.add(box(.18, .16, 4.1, mat, x, 4, 1));
     mergeRigidGroup(group); this.terrain.add(group);
     const canvas = document.createElement('canvas'); canvas.width = 1024; canvas.height = 128;
     const ctx = canvas.getContext('2d')!; ctx.fillStyle = finish ? '#dceda3' : '#22362e'; ctx.fillRect(0, 0, 1024, 128); ctx.fillStyle = finish ? '#23362d' : '#e7edcf'; ctx.font = 'bold 58px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(text, 512, 86);
     const t = new THREE.CanvasTexture(canvas); t.colorSpace = THREE.SRGBColorSpace;
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(13, .95), new THREE.MeshStandardMaterial({ map: t, roughness: .8, side: THREE.DoubleSide }));
-    mesh.rotation.y = Math.PI / 2; mesh.position.set(x, 3.65, -3.85); this.terrain.add(mesh);
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.8, .6), new THREE.MeshStandardMaterial({ map: t, roughness: .8, side: THREE.DoubleSide }));
+    mesh.rotation.y = Math.PI / 2; mesh.position.set(x, 3.65, 1); this.terrain.add(mesh);
     if (finish) {
       const finishGroup = new THREE.Group(); const black = new THREE.MeshStandardMaterial({ color: 0x26302c }), white = new THREE.MeshStandardMaterial({ color: 0xe2e3d5 });
       for (let i = 0; i < 28; i++) for (let j = 0; j < 2; j++) finishGroup.add(box(.45, .012, .5, (i + j) % 2 ? black : white, x + j * .45, .022, -10.5 + i * .5));
@@ -566,12 +608,7 @@ export class GameRenderer {
     this.checkpointFlags.forEach(flag => flag.mesh.material.color.set(flag.x <= sim.cars[0].checkpoint ? 0xd9ee8e : 0xe2a252));
     sim.beams.forEach((b, i) => { const mesh = this.beamMeshes[i]; if (mesh) { const bp = b.body.translation(), p = this.layout.point(bp.x, LANES[b.lane]); mesh.position.set(p.x, bp.y, p.z); mesh.rotation.set(0, p.yaw, b.body.rotation(), 'YXZ'); } });
     const player = sim.cars[0].body.translation();
-    for (const roof of this.roofs) {
-      const material = roof.mesh.material as THREE.MeshStandardMaterial;
-      const cutaway = sim.course.expedition && Math.abs(player.x - roof.x) < roof.width / 2 + 3;
-      if (material.transparent !== !!cutaway) { material.transparent = !!cutaway; material.needsUpdate = true; }
-      material.opacity = cutaway ? .10 : 1; material.depthWrite = !cutaway; roof.mesh.castShadow = !cutaway;
-    }
+
     if (sim.cars[0].resets !== this.lastResets) { this.snapNextFrame = true; this.lastResets = sim.cars[0].resets; }
     const factor = this.snapNextFrame ? 1 : 1 - Math.exp(-dt * 4); this.snapNextFrame = false;
     this.viewX += (player.x - this.viewX) * factor;
@@ -580,6 +617,14 @@ export class GameRenderer {
     temp.set(cameraPoint.x, y + 8, cameraPoint.z);
     this.camera.position.lerp(temp, factor);
     temp.set(targetPoint.x, y - 1.15, targetPoint.z); this.target.lerp(temp, factor); this.camera.lookAt(this.target);
+    this.camera.updateMatrixWorld();
+    const apertureCenter = this.layout.point(player.x, 1);
+    temp.set(apertureCenter.x, player.y + .1, apertureCenter.z).project(this.camera);
+    for (const roof of this.roofs) {
+      const uniforms = (roof.mesh.material as THREE.MeshStandardMaterial).userData.cutaway;
+      const cutaway = sim.course.expedition && Math.abs(player.x - roof.x) < roof.width / 2 + .6;
+      uniforms.center.value.set(temp.x, temp.y); uniforms.aspect.value = this.camera.aspect; uniforms.radius.value = cutaway ? .65 : 0;
+    }
     const sun = this.layout.point(this.viewX - 16, 15), sunTarget = this.layout.point(this.viewX + 4, -3);
     this.sun.position.set(sun.x, 25, sun.z); this.sun.target.position.set(sunTarget.x, 0, sunTarget.z);
     for (const rock of this.rocks) rock.visible = Math.abs(rock.userData.trackX - this.viewX) < 78;
@@ -587,7 +632,7 @@ export class GameRenderer {
       water.uniforms.time.value = this.clock;
       for (const car of sim.cars) {
         const wake = water.uniforms.wakes.value[car.id] as THREE.Vector4;
-        const p = car.body.translation(), strength = this.spray.strengths[car.id];
+        const p = car.body.translation(), strength = (water.uniforms.mud.value ? this.mudSpray : this.spray).strengths[car.id];
         wake.set(p.x, LANES[car.id], strength, car.body.linvel().x);
       }
     }
@@ -596,6 +641,7 @@ export class GameRenderer {
 
   advanceEffects(sim: Simulation, dt: number) {
     this.spray.update(sim, dt, LANES, sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
+    this.mudSpray.update(sim, dt, LANES, sim.cars[0].body.translation().x, (x, z) => this.layout.point(x, z));
   }
 
   playerFraming() {

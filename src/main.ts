@@ -1,6 +1,6 @@
 import './style.css';
 import { registerSW } from 'virtual:pwa-register';
-import { createExpedition, expeditionList as courseList, zoneAt } from './courses';
+import { createExpedition, expeditionList as courseList, EXPEDITION_COUNT, zoneAt } from './courses';
 import { DriveControls } from './drive-controls';
 import { expeditionStars, recordExpedition, restoreExpeditions, type ExpeditionRecord } from './expedition';
 import { DrawingPad } from './drawing';
@@ -29,7 +29,7 @@ let saved: Saved = defaultSave();
 try {
   const raw = JSON.parse(localStorage.getItem('formdrive.v1') ?? 'null');
   if (raw && typeof raw === 'object') {
-    saved.level = Number.isInteger(raw.level) ? clamp(raw.level, 0, 12) : 0;
+    saved.level = Number.isInteger(raw.level) ? clamp(raw.level, 0, EXPEDITION_COUNT - 1) : 0;
     saved.sound = raw.sound === true; saved.tutorial = raw.tutorial === true;
     saved.expeditions = restoreExpeditions(raw.expeditions); saved.expeditionTutorial = raw.expeditionTutorial === true;
     if (['auto', 'high', 'eco'].includes(raw.quality)) saved.quality = raw.quality;
@@ -56,7 +56,7 @@ document.querySelector('#app')!.innerHTML = `
     </div>
     <div class="home-content" id="home-content">
       <div class="home-heading"><p class="eyebrow"><i></i> DEINE EXPEDITION</p><h1>FORM<br><em>DRIVE.</em></h1><p class="home-tagline">Schaffst du den Weg?<br>Fahre. Zeichne. Klettere.</p></div>
-      <div class="home-bottom"><button class="course-preview" id="choose-course"><span class="course-number" id="course-number">01</span><span><small id="course-region">CANYON</small><strong id="course-name">Zum Basislager</strong></span>${svg('grid')}</button><button class="primary-button" id="start-button" disabled><span>Welt wird geladen …</span><b>${svg('arrow')}</b></button><div class="home-meta"><span id="offline-status"><i></i> WIRD VORBEREITET</span><span>12 EXPEDITIONEN · KEIN ZEITLIMIT</span></div></div>
+      <div class="home-bottom"><button class="course-preview" id="choose-course"><span class="course-number" id="course-number">01</span><span><small id="course-region">CANYON</small><strong id="course-name">Zum Basislager</strong></span>${svg('grid')}</button><button class="primary-button" id="start-button" disabled><span>Welt wird geladen …</span><b>${svg('arrow')}</b></button><div class="home-meta"><span id="offline-status"><i></i> WIRD VORBEREITET</span><span>15 EXPEDITIONEN · KEIN ZEITLIMIT</span></div></div>
     </div>
     <div class="drive-info" id="drive-info" hidden><div class="speed"><strong id="speed">0</strong><span>KM/H</span></div><div class="terrain-chip"><i></i><span id="terrain-label">FESTER BODEN</span></div><button class="rescue-button" id="rescue-button" aria-label="Zum letzten Checkpoint zurücksetzen">${svg('reset')}<span>BERGEN</span></button></div>
     <div class="countdown" id="countdown" hidden>3</div>
@@ -64,13 +64,13 @@ document.querySelector('#app')!.innerHTML = `
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </section>
   <section class="cockpit" id="drive-controls" aria-label="Fahren und Räder zeichnen">
-    <button class="pedal brake-pedal" data-pedal="brake" aria-label="Bremse und Rückwärtsgang" aria-pressed="false"><b>Ⅱ / ↶</b><span>BREMSE</span><small>HALTEN: RÜCKWÄRTS</small></button>
+    <button class="pedal brake-pedal" data-pedal="brake" aria-label="Bremse und Rückwärtsgang" aria-pressed="false"><i class="pedal-arm"></i><span class="pedal-face"><i></i><i></i><i></i><i></i></span></button>
     <div class="axle-pads">${['rear', 'front'].map((axle, i) => `<section class="axle-pad" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen">
-      <div class="axle-toolbar"><span>${i ? 'VORNE' : 'HINTEN'}</span><button class="mount-button" id="mount-${axle}" disabled>Montieren ${svg('check')}</button></div>
-      <div class="drawing-field"><canvas id="drawing-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen, mehrere Striche möglich"></canvas><span class="draw-hint" id="hint-${axle}">DEINE RADFORM</span></div>
+      <div class="axle-toolbar"><button class="mount-button" id="mount-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} montieren" disabled>${svg('check')}</button></div>
+      <div class="drawing-field"><canvas id="drawing-${axle}" aria-label="${i ? 'Vorderräder' : 'Hinterräder'} zeichnen, mehrere Striche möglich"></canvas></div>
       <div class="draft-tools"><button id="undo-${axle}" aria-label="Letzten Strich ${i ? 'vorne' : 'hinten'} entfernen">${svg('undo')}</button><button id="clear-${axle}" aria-label="Zeichenfläche ${i ? 'vorne' : 'hinten'} leeren">${svg('close')}</button></div>
     </section>`).join('')}</div>
-    <button class="pedal gas-pedal" data-pedal="gas" aria-label="Gas, nach oben wischen aktiviert den Tempomat" aria-pressed="false"><b>↑</b><span>GAS</span><small>↑ WISCHEN: TEMPOMAT</small><i></i></button>
+    <button class="pedal gas-pedal" data-pedal="gas" aria-label="Gas, nach oben wischen aktiviert den Tempomat" aria-pressed="false"><i class="pedal-arm"></i><span class="pedal-face"><i></i><i></i><i></i><i></i><i></i></span><b class="cruise-light" aria-hidden="true">↟</b></button>
   </section>
 </main>
 <dialog id="modal" aria-labelledby="modal-title"><div class="modal-shell"><button class="modal-close small-icon" id="close-modal" aria-label="Dialog schließen">${svg('close')}</button><div id="modal-content"></div></div></dialog>
@@ -94,8 +94,6 @@ let lastTerrain = '';
 let lastResetCount = 0;
 let lastCollected = 0;
 let lastCheckpoint = 2;
-let lastWaterHint = -60;
-let lastApproach = -1;
 let lastHud = 0;
 let slow = false;
 function toast(message: string) {
@@ -107,8 +105,9 @@ const pads = ['rear', 'front'].map((name, axle) => {
     if (!pad) return;
     const button = $<HTMLButtonElement>(`mount-${name}`);
     button.disabled = !pad.enabled || !pad.dirty || pad.busy || pad.active;
-    button.innerHTML = `${pad.busy ? 'Wird gebaut …' : pad.dirty ? 'Montieren' : pad.shape.length ? 'Montiert' : 'Montieren'} ${svg('check')}`;
-    $(`hint-${name}`).textContent = pad.draft.length ? (pad.dirty ? 'ENTWURF · NOCH NICHT MONTIERT' : 'WEITERMALEN ODER LEEREN') : 'DEINE RADFORM';
+    button.classList.toggle('preparing', pad.busy);
+    button.setAttribute('aria-busy', String(pad.busy));
+    button.setAttribute('title', pad.busy ? 'Rad wird vorbereitet' : `${axle ? 'Vorderräder' : 'Hinterräder'} montieren`);
   };
   pad = new DrawingPad($<HTMLCanvasElement>(`drawing-${name}`), shape => !sim || sim.requestShape(shape, 0, axle), toast, refresh);
   $(`mount-${name}`).onclick = () => { if (!modal.open) void pad.mount(); };
@@ -119,7 +118,8 @@ const pads = ['rear', 'front'].map((name, axle) => {
 const controls = new DriveControls($('drive-controls'), (drive, brake) => { if (sim) { sim.cars[0].drive = drive; sim.cars[0].brake = brake; } }, () => sim?.cars[0].body.linvel().x ?? 0);
 
 const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
-const region = (id: number) => id === 12 ? 'EXPERIMENT' : id < 4 ? 'CANYON' : id < 8 ? 'ALPINE' : 'STEINBRUCH';
+const courseNumber = (id: number) => id === 12 ? '∞' : String(id > 12 ? id : id + 1).padStart(2, '0');
+const region = (id: number) => id === 12 ? 'EXPERIMENT' : id > 12 ? 'EXPERTE' : id < 4 ? 'CANYON' : id < 8 ? 'ALPINE' : 'STEINBRUCH';
 
 function setState(next: typeof state) {
   state = next;
@@ -139,13 +139,13 @@ function loadLevel(id: number, stayHome = true) {
   pads.forEach(pad => pad.cancel());
   sim?.dispose(); currentLevel = id; saved.level = id;
   sim = new Simulation(createExpedition(id), 1, pads.map(pad => pad.shape)); renderer.setCourse(sim);
-  accumulator = 0; lastResetCount = 0; lastTerrain = ''; lastWaterHint = -60; lastApproach = -1; slow = false;
+  accumulator = 0; lastResetCount = 0; lastTerrain = ''; slow = false;
   lastCollected = 0; lastCheckpoint = 2;
   clearTimeout(toastTimer); $('toast').classList.remove('visible');
-  $('course-number').textContent = id === 12 ? '∞' : (id + 1).toString().padStart(2, '0');
+  $('course-number').textContent = courseNumber(id);
   $('course-region').textContent = `${region(id)} · EXPEDITION`;
   $('course-name').textContent = sim.course.name;
-  $('race-region').textContent = `${region(id)} / ${id === 12 ? 'FREIES FAHREN' : (id + 1).toString().padStart(2, '0')}`;
+  $('race-region').textContent = `${region(id)} / ${id === 12 ? 'FREIES FAHREN' : courseNumber(id)}`;
   $('race-name').textContent = sim.course.name;
   $('journey-goal').textContent = id === 12 ? 'FREI EXPERIMENTIEREN' : 'ERREICHE DAS ZIELLAGER';
   persist(); setState(stayHome ? 'home' : 'countdown');
@@ -154,7 +154,7 @@ function loadLevel(id: number, stayHome = true) {
 
 function begin() {
   if (state === 'loading') return;
-  if (pads.some(pad => !pad.shape.length)) { toast('Zeichne für beide Achsen eine Form und tippe jeweils auf Montieren.'); return; }
+  if (pads.some(pad => !pad.shape.length)) { toast('Zeichne für beide Achsen eine Form und bestätige mit den Häkchen.'); return; }
   const orientation = screen.orientation as ScreenOrientation & { lock?: (mode: string) => Promise<void> };
   orientation.lock?.('landscape').catch(() => {});
   sound.unlock().catch(() => {});
@@ -188,12 +188,12 @@ function showPause() {
 }
 
 function showCourses() {
-  openModal(`<p class="eyebrow dark">DEIN NÄCHSTES ABENTEUER</p><h2 id="modal-title">Wähle deinen Weg.</h2><p class="modal-copy">Erreiche das Ziellager. Zusätzliche Sterne: ohne Bergung ankommen und alle drei Fundstücke mitbringen. Kein Zeitlimit. Alle Expeditionen sind frei wählbar.</p><div class="course-list">${courseList.map((c, id) => `${id % 4 === 0 && id < 12 ? `<h3 class="collection-label">${region(id)} <span>0${id / 4 + 1}</span></h3>` : ''}<button class="level-card ${id === currentLevel ? 'active' : ''}" data-level="${id}"><span class="level-no">${id === 12 ? '∞' : (id + 1).toString().padStart(2, '0')}</span><span class="level-text"><strong>${c.name}</strong><small>${c.subtitle}</small></span><span class="level-record">${saved.expeditions[id] ? `<b>${'★'.repeat(expeditionStars(saved.expeditions[id]))}</b><small>GESCHAFFT</small>` : id === 12 ? 'FREI' : '○'.repeat(c.difficulty)}</span></button>`).join('')}</div>`);
+  openModal(`<p class="eyebrow dark">DEIN NÄCHSTES ABENTEUER</p><h2 id="modal-title">Wähle deinen Weg.</h2><p class="modal-copy">Erreiche das Ziellager. Zusätzliche Sterne: ohne Bergung ankommen und alle drei Fundstücke mitbringen. Kein Zeitlimit. Alle Expeditionen sind frei wählbar.</p><div class="course-list">${courseList.filter(c => c.id !== 12).concat(courseList[12]).map(c => { const id = c.id; return `${id === 13 ? '<h3 class="collection-label">EXPERTENEXPEDITIONEN</h3>' : id % 4 === 0 && id < 12 ? `<h3 class="collection-label">${region(id)} <span>0${id / 4 + 1}</span></h3>` : ''}<button class="level-card ${id === currentLevel ? 'active' : ''}" data-level="${id}"><span class="level-no">${courseNumber(id)}</span><span class="level-text"><strong>${c.name}</strong><small>${c.subtitle}</small></span><span class="level-record">${saved.expeditions[id] ? `<b>${'★'.repeat(expeditionStars(saved.expeditions[id]))}</b><small>GESCHAFFT</small>` : id === 12 ? 'FREI' : '○'.repeat(c.difficulty)}</span></button>`; }).join('')}</div>`);
   document.querySelectorAll<HTMLButtonElement>('[data-level]').forEach(b => b.onclick = () => { resumeState = null; modal.close(); loadLevel(+b.dataset.level!); });
 }
 
 function showSettings() {
-  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.6.0 · Spielstand auf diesem Gerät</p>`);
+  openModal(`<p class="eyebrow dark">DEIN COCKPIT</p><h2 id="modal-title">Feinabstimmung.</h2><div class="setting-row"><div><strong>Motor & Signale</strong><small>Ton lässt sich jederzeit ausschalten.</small></div><button class="toggle ${saved.sound ? 'on' : ''}" id="sound-toggle" role="switch" aria-checked="${saved.sound}" aria-label="Spielton"><i></i></button></div><div class="setting-block"><strong>Grafikqualität</strong><div class="segmented">${(['auto', 'high', 'eco'] as const).map(q => `<button data-quality="${q}" class="${saved.quality === q ? 'active' : ''}" aria-pressed="${saved.quality === q}">${q === 'auto' ? 'Automatisch' : q === 'high' ? 'Detailreich' : 'Sparsam'}</button>`).join('')}</div><p>Automatisch passt die Auflösung an die gemessene Bildrate an.</p></div><div class="settings-links"><button id="install-help">${svg('save')} Auf dem iPhone installieren ${svg('arrow')}</button><button id="help-button">${svg('info')} So funktioniert’s ${svg('arrow')}</button><a href="${import.meta.env.BASE_URL}credits.html" target="_blank" rel="noopener">${svg('info')} Quellen & Physik ${svg('arrow')}</a>${updateReady ? '<button id="apply-update">Neue Version laden ↗</button>' : ''}</div><p class="version">FORMDRIVE 1.7.0 · Spielstand auf diesem Gerät</p>`);
   $('sound-toggle').onclick = () => { saved.sound = !saved.sound; sound.enabled = saved.sound; sound.unlock().catch(() => {}); persist(); const b = $('sound-toggle'); b.classList.toggle('on', saved.sound); b.setAttribute('aria-checked', String(saved.sound)); };
   document.querySelectorAll<HTMLButtonElement>('[data-quality]').forEach(b => b.onclick = () => {
     saved.quality = b.dataset.quality as Saved['quality']; renderer.setQuality(saved.quality); persist();
@@ -209,7 +209,7 @@ function showInstall() {
   $('install-done').onclick = closeModal;
 }
 function showHelp() {
-  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Orange Fundstücke sind zusätzliche Herausforderungen.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Erst Montieren übernimmt den Entwurf auf die jeweilige Achse. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Nutze Gelände und Wasser.</strong> Ausläufer stützen sich an Kanten ab und schieben eingetauchtes Wasser zurück. Runde Räder rollen ruhig, große Formen passen nicht durch jeden Felsgang.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt. Gesammelte Fundstücke bleiben bei einer Bergung erhalten.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
+  openModal(`<p class="eyebrow dark">DEINE EXPEDITION</p><h2 id="modal-title">Finde deinen Weg.</h2><ol class="help-list"><li><strong>Erreiche das Ziellager.</strong> Es gibt keine Gegner und kein Zeitlimit. Orange Fundstücke sind zusätzliche Herausforderungen.</li><li><strong>Gas halten und dosieren.</strong> Rechts Gas halten. Links bremsen; beim Stillstand weiter halten, um rückwärts zu fahren. Wische auf dem Gas nach oben für den Tempomat. Gas antippen oder bremsen beendet ihn.</li><li><strong>Zeichne deine Räder.</strong> Links zeichnest du die Hinterräder, rechts die Vorderräder. Setze beliebig ab und ergänze weitere Striche. Das Häkchen montiert den Entwurf auf der jeweiligen Achse und leert das Feld für die nächste Form. Der Pfeil entfernt den letzten Strich, das Kreuz leert das Feld. Dünne Speichen verbinden lose Striche mit der Achse.</li><li><strong>Experimentiere.</strong> Deine Kontur bestimmt Kontakt, Masse und Verdrängung. Es gibt keine fest vorgegebene Lösung für einen Abschnitt.</li><li><strong>Festgefahren?</strong> Rolle zurück, zeichne eine andere Form oder tippe auf Bergen. Markierte Lager sichern deinen Fortschritt innerhalb der Fahrt. Gesammelte Fundstücke bleiben bei einer Bergung erhalten.</li></ol><p class="modal-copy">Tastatur: D / → Gas, A / ← zurück, Leertaste bremsen, Esc pausieren. Auf dem Testgelände gibt es Zeitlupe. Sterne bleiben über mehrere abgeschlossene Fahrten erhalten.</p><button class="primary-button full" id="help-done">Los geht’s ${svg('arrow')}</button>`);
   $('help-done').onclick = closeModal;
 }
 
@@ -219,9 +219,10 @@ function finish() {
   const stars = expeditionStars(run);
   saved.expeditions[currentLevel] = recordExpedition(saved.expeditions[currentLevel], car.resets, sim.collected.size, total);
   persist(); setState('finished'); resumeState = null; sound.beep(880, .3);
+  const nextLevel = currentLevel === 11 ? 13 : currentLevel === 12 || currentLevel === EXPEDITION_COUNT - 1 ? null : currentLevel + 1;
   const checks = [['Ziellager erreicht', true], ['Ohne Bergung angekommen', car.resets === 0], [`Alle Fundstücke (${sim.collected.size}/${total})`, run.allCaches]] as const;
-  openModal(`<p class="eyebrow dark">${currentLevel === 12 ? 'TESTFAHRT ABGESCHLOSSEN' : 'EXPEDITION GESCHAFFT'}</p><h2 id="modal-title">Im Lager angekommen.</h2>${total ? `<div class="result-stars">${'★'.repeat(stars)}<span>${'☆'.repeat(3 - stars)}</span></div><ul class="mission-results">${checks.map(([label, done]) => `<li class="${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${label}</li>`).join('')}</ul>` : ''}<div class="result-stats"><div><strong>${car.resets}</strong><small>BERGUNGEN</small></div><div><strong>${car.shapeChanges}</strong><small>FORMWECHSEL</small></div><div><strong>${formatTime(car.finishTime)}</strong><small>UNTERWEGS</small></div></div><button class="primary-button full" id="next-level">${currentLevel < 11 ? 'Nächste Expedition' : 'Expeditionen entdecken'} ${svg('arrow')}</button><div class="button-pair"><button class="secondary-button" id="race-again">Noch einmal</button><button class="secondary-button" id="finish-home">Zur Auswahl</button></div>`, false);
-  $('next-level').onclick = () => { modal.close(); if (currentLevel < 11) { loadLevel(currentLevel + 1); begin(); } else { loadLevel(0); showCourses(); } };
+  openModal(`<p class="eyebrow dark">${currentLevel === 12 ? 'TESTFAHRT ABGESCHLOSSEN' : 'EXPEDITION GESCHAFFT'}</p><h2 id="modal-title">Im Lager angekommen.</h2>${total ? `<div class="result-stars">${'★'.repeat(stars)}<span>${'☆'.repeat(3 - stars)}</span></div><ul class="mission-results">${checks.map(([label, done]) => `<li class="${done ? 'done' : ''}"><span>${done ? '✓' : '○'}</span>${label}</li>`).join('')}</ul>` : ''}<div class="result-stats"><div><strong>${car.resets}</strong><small>BERGUNGEN</small></div><div><strong>${car.shapeChanges}</strong><small>FORMWECHSEL</small></div><div><strong>${formatTime(car.finishTime)}</strong><small>UNTERWEGS</small></div></div><button class="primary-button full" id="next-level">${nextLevel !== null ? 'Nächste Expedition' : 'Expeditionen entdecken'} ${svg('arrow')}</button><div class="button-pair"><button class="secondary-button" id="race-again">Noch einmal</button><button class="secondary-button" id="finish-home">Zur Auswahl</button></div>`, false);
+  $('next-level').onclick = () => { modal.close(); if (nextLevel !== null) { loadLevel(nextLevel); begin(); } else { loadLevel(0); showCourses(); } };
   $('race-again').onclick = () => { modal.close(); loadLevel(currentLevel); begin(); };
   $('finish-home').onclick = () => { modal.close(); loadLevel(currentLevel); showCourses(); };
 }
@@ -314,10 +315,10 @@ async function boot() {
         framing: () => renderer.playerFraming(),
         drive: (value: number, brake = 0) => { sim.cars[0].drive = clamp(value, -1, 1); sim.cars[0].brake = clamp(brake, 0, 1); },
         sceneImage: () => { renderer.render(sim, 0, state === 'home'); return renderer.renderer.domElement.toDataURL('image/png'); },
-        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, player: { x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
+        snapshot: () => ({ state, level: currentLevel, time: sim.elapsed, carCount: sim.cars.length, collected: sim.collected.size, caches: sim.course.caches, controls: { drive: sim.cars[0].drive, brake: sim.cars[0].brake, cruise: controls.cruise }, drafts: pads.map(pad => pad.draft), player: { mud: sim.cars[0].mud, x: sim.cars[0].body.translation().x, y: sim.cars[0].body.translation().y, pitch: sim.cars[0].body.rotation(), water: sim.cars[0].water, shape: sim.cars[0].shape.length, shapes: sim.cars[0].shapes, axleRevisions: sim.cars[0].axleRevisions, motorTorques: sim.cars[0].motorTorques, revision: sim.cars[0].revision, resets: sim.cars[0].resets, finished: sim.cars[0].finished }, mudSpray: { count: renderer.mudSpray.activeCount, strengths: [...renderer.mudSpray.strengths] }, spray: { count: renderer.spray.activeCount, strengths: [...renderer.spray.strengths] }, render: renderer.renderer.info.render, geometry: renderer.renderer.info.memory, courseLength: sim.course.length }),
         step: (n: number) => { sim.started = true; for (let i = 0; i < Math.min(n, 20000); i++) sim.tick(); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); },
         water: () => { const lake = sim.course.waters.find(w => w.deep && sim.course.zones.some(z => z.kind === 'lake' && z.start <= w.start && z.end >= w.end)) ?? sim.course.waters.find(w => w.deep)!; sim.cars[0].checkpoint = lake.start + 9; pads.forEach(pad => pad.usePreset('paddle')); sim.resetCar(0, false); previewSteps(720); setState('paused'); renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
-        load: (id: number) => loadLevel(clamp(id, 0, 12)),
+        load: (id: number) => loadLevel(clamp(id, 0, EXPEDITION_COUNT - 1)),
         preset: (name: ShapeName) => pads.forEach(pad => pad.usePreset(name)),
         obstacle: (kind: string, steps = 240, name: ShapeName = 'grip') => { const zone = sim.course.zones.find(z => z.kind === kind); if (!zone) return; setState('paused'); pads.forEach(pad => pad.usePreset(name)); sim.cars[0].checkpoint = zone.start - 2; sim.resetCar(0, false); previewSteps(steps); sim.started = false; renderer.snapNextFrame = true; renderer.viewX = sim.cars[0].body.translation().x; renderer.render(sim, 1); updateHud(); },
         finish: () => { sim.cars[0].finished = true; sim.cars[0].finishTime = Math.max(1, sim.elapsed); finish(); }
@@ -342,24 +343,7 @@ function updateHud() {
   $('progress-fill').style.width = `${progress}%`; $('progress-dot').style.left = `${progress}%`;
   const zone = zoneAt(sim.course, p.x); const terrain = zone?.label || 'FESTER BODEN';
   if (terrain !== lastTerrain) { $('terrain-label').textContent = terrain; lastTerrain = terrain; document.querySelector('.terrain-chip')!.classList.toggle('water', zone?.kind === 'lake' || zone?.kind === 'ford' || zone?.kind === 'causeway'); }
-  const ahead = zoneAt(sim.course, p.x + 6);
-  if (state === 'racing' && ahead && ahead.start !== lastApproach) {
-    lastApproach = ahead.start;
-    if (ahead.kind === 'ridge') toast('Abfahrt: Gas lösen und mit der Bremse die Landung vorbereiten.');
-    else if (ahead.kind === 'ravine') toast('Schlucht: Nimm Schwung mit. Hinter der Lücke warten neue Stufen.');
-    else if (ahead.kind === 'tunnel' || ahead.kind === 'crawl') toast('Niedrige Durchfahrt: Zeichne kleine Räder.');
-    else if (ahead.kind === 'steps') toast('Hohe Kanten: Kleine Räder haben es hier schwer.');
-    else if (ahead.kind === 'ramp') toast('Riffelrampe: Zacken greifen zwischen die Rippen.');
-    else if (ahead.kind === 'ford') toast('Furt: Wasser bremst die eingetauchten Räder.');
-    else if (ahead.kind === 'ice') toast('Glatteis: Deine Räder drehen durch. Schwung bleibt länger erhalten.');
-    else if (ahead.kind === 'iceclimb') toast('Eisanstieg: Zacken können sich an den gefrorenen Kanten abstützen.');
-    else if (ahead.kind === 'rollers') toast('Die Walzen drehen frei mit. Suche Halt zwischen ihnen.');
-    else if (ahead.kind === 'trenches') toast('Quergräben: Welche Form überbrückt die Öffnungen?');
-    else if (ahead.kind === 'rocking') toast('Kippplatten: Runde Konturen verteilen die Last gleichmäßiger.');
-    else if (ahead.kind === 'causeway') toast('Versunkener Steg: Deine Form muss paddeln und auf die Steine klettern.');
-  }
-  if (state === 'racing' && zone?.kind === 'lake' && sim.elapsed - lastWaterHint > 24) { toast('Tiefes Wasser: Flächen quer zur Drehrichtung schieben Wasser zurück.'); lastWaterHint = sim.elapsed; }
-  if (state === 'racing' && car.resets > lastResetCount) { toast('Geborgen · zeichne eine neue Lösung.'); lastResetCount = car.resets; }
+  if (state === 'racing' && car.resets > lastResetCount) { toast('Zurück am Checkpoint'); lastResetCount = car.resets; }
   const justCollected = sim.collected.size > lastCollected;
   if (state === 'racing' && justCollected) { toast(`Fundstück ${sim.collected.size} / ${sim.course.caches?.length ?? 0} gesichert`); lastCollected = sim.collected.size; sound.beep(740, .12); }
   if (state === 'racing' && car.checkpoint > lastCheckpoint) { if (!justCollected) toast('Lager erreicht · neuer Checkpoint'); lastCheckpoint = car.checkpoint; }
