@@ -33,6 +33,9 @@ const selection = [
   ['industrial_valve', 3200, 'modular_industrial_pipes_01', '^modular_industrial_pipes_01_pipe08$'],
   ['nettle_plant', 1800, 'nettle_plant', '^nettle_plant_medium_b_LOD0$', 512],
   ['wooden_picnic_table', 4200],
+  ['grass_medium_02', 1250, 'grass_medium_02', '^grass_medium_02_d$', 512],
+  ['scrub_rooibos', 720, 'wild_rooibos_bush', '^wild_rooibos_bush_b$', 512],
+  ['flower_gazania', 1250, 'flower_gazania', '^flower_gazania_h_LOD0$', 512],
 ];
 await MeshoptSimplifier.ready;
 const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);

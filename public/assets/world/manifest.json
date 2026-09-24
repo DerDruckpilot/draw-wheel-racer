@@ -1952,5 +1952,161 @@
       }
     ],
     "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "grass_medium_02",
+    "name": "Grass Medium 02",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/grass_medium_02",
+    "variant": "^grass_medium_02_d$",
+    "glb": "grass_medium_02.glb",
+    "size": [
+      0.8769093920252137,
+      0.7194196965735736,
+      1
+    ],
+    "triangles": 1250,
+    "bytes": 262996,
+    "sha256": "46ac4ae679e51874fe6942dfbe8ebaab1d1bc69f4f8724ff0c8b75e31601a678",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/grass_medium_02/grass_medium_02_1k.gltf",
+        "sha256": "7037f8d2dfc6aeec0bf72f4eeb96cfa3f6b3a5e6c6f0bc5de537c055b2fd5d04"
+      },
+      {
+        "file": "textures/grass_medium_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_02/grass_medium_02_nor_gl_1k.jpg",
+        "sha256": "0b464550366ed72a6cad9c357e19ac4c83fc9adc87272771479138129853b300"
+      },
+      {
+        "file": "textures/grass_medium_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_02/grass_medium_02_diff_1k.jpg",
+        "sha256": "91ae99005b449011aceb207a68a937258fd9bfd66ff367d344c50398b1df389c"
+      },
+      {
+        "file": "textures/grass_medium_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_02/grass_medium_02_arm_1k.jpg",
+        "sha256": "f0d57bfd95bff7710526b49d47cf2326ee3796e425639d53b983d1472480b57d"
+      },
+      {
+        "file": "grass_medium_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/grass_medium_02/grass_medium_02.bin",
+        "sha256": "aa8493bc1544a89e08bf440c7ba361042bfe6ea48b1fefc7e4af2dfff42fdf4a"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/grass_medium_02/grass_medium_02_alpha_1k.png",
+        "sha256": "15976877b3dbd22cd496a9549f1eb7d86710846a3631fb87eedbf046519e339f"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "scrub_rooibos",
+    "name": "Wild Rooibos Bush",
+    "authors": {
+      "James Ray Cock": "modeling",
+      "Jenelle van Heerden": "photography"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/wild_rooibos_bush",
+    "variant": "^wild_rooibos_bush_b$",
+    "glb": "scrub_rooibos.glb",
+    "size": [
+      0.9686896189796552,
+      1,
+      0.8770082963505205
+    ],
+    "triangles": 1710,
+    "bytes": 516024,
+    "sha256": "f8e4fa7c8b3ba38bcc9a4c81b1650c2474342975d60846bfc6d685d998438f52",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wild_rooibos_bush/wild_rooibos_bush_1k.gltf",
+        "sha256": "7f3fb17e4606e33d0bc4239c4901c9610b4bd17fe26b6780ba11ab4493f25d29"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_nor_gl_1k.jpg",
+        "sha256": "ffd557b4cb732d24988d41741398df150567f3ac9d1433f11b88d60158c953d4"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_diff_1k.jpg",
+        "sha256": "d963cdaf769bc39bb57295d518b37cd9456168cf5e3b82fd59f58c98d3faf596"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_arm_1k.jpg",
+        "sha256": "e0e512f263b8f1fe1c485e61912ba1ce5d42b397cf9a4e2b1786677e732bb84b"
+      },
+      {
+        "file": "wild_rooibos_bush.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/wild_rooibos_bush/wild_rooibos_bush.bin",
+        "sha256": "7a3471b4d110fe9927f4a200191eae86fa3c0a08f8e8e797d22e94a1703322e1"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/wild_rooibos_bush/wild_rooibos_bush_alpha_1k.png",
+        "sha256": "6a9fcd7a62aab1366b0ae50273c4a638591e932049a647ccadce6687ce657b72"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "flower_gazania",
+    "name": "Flower Gazania",
+    "authors": {
+      "James Ray Cock": "modeling",
+      "Jenelle van Heerden": "Photography"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/flower_gazania",
+    "variant": "^flower_gazania_h_LOD0$",
+    "glb": "flower_gazania.glb",
+    "size": [
+      1,
+      0.49039341476251574,
+      0.966356911529983
+    ],
+    "triangles": 1247,
+    "bytes": 484632,
+    "sha256": "f89457723c1a453f3d71c6d21fd53006c779a5bc3d08860ce84f0938f618cbe4",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/flower_gazania/flower_gazania_1k.gltf",
+        "sha256": "73c7f4094f2ad78ddfbe6373f8372ddb736a5d9fc6485db08ae32301edc95a24"
+      },
+      {
+        "file": "flower_gazania.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/flower_gazania/flower_gazania.bin",
+        "sha256": "a3864c51fce2dacb01629a0c364730e5988ac5a7a937acc0e2635c946d786797"
+      },
+      {
+        "file": "textures/flower_gazania_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/flower_gazania/flower_gazania_nor_gl_1k.jpg",
+        "sha256": "802d0f9234ccd778c537b3b5ea3714f219d73a80ab794ea77271ab47dbbc9789"
+      },
+      {
+        "file": "textures/flower_gazania_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/flower_gazania/flower_gazania_diff_1k.jpg",
+        "sha256": "9d3022ebe7bfe0493a3e46aad87ea4746ea51df8c8b3e19294f1bb718a3147bb"
+      },
+      {
+        "file": "textures/flower_gazania_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/flower_gazania/flower_gazania_arm_1k.jpg",
+        "sha256": "80800dca73ad66b8c51b089db771b7a15c9e57dfd959e0da5cde434b3d8151b4"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
   }
 ]

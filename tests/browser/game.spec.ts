@@ -19,7 +19,7 @@ test('independent square multi-stroke drafts mount explicitly, clear after mount
   const installed=(await snapshot(page)).shapes;expect((await snapshot(page)).drafts).toEqual([[],[]]);
   await drawStroke(page,'rear',[[-.8,0],[.8,0]]);await page.locator('#undo-rear').click();await expect(page.locator('#mount-rear')).toBeDisabled();
   await page.locator('#clear-front').click();expect((await snapshot(page)).shapes).toEqual(installed);
-  await page.locator('#settings-button').click();await expect(page.locator('.version')).toContainText('2.1.0');await page.locator('#close-modal').click();
+  await page.locator('#settings-button').click();await expect(page.locator('.version')).toContainText('2.2.0');await page.locator('#close-modal').click();
   await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
   await page.locator('#pause-button').click();const time=(await snapshot(page)).elapsed;await page.waitForTimeout(180);expect((await snapshot(page)).elapsed).toBe(time);await page.locator('#resume-game').click();
   await page.locator('#rescue-button').click();expect((await snapshot(page)).rescues).toBe(1);expect(Object.keys((await snapshot(page)).radar).sort()).toEqual(['angle','band']);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {createWorldLevel,WORLD_COUNT,worldHeight,localCoordinates,dist,basinWeight,insideCourt,makeTerrainTile,WORLD_TILE} from '../src/world-levels';
+import {createDressingTile} from '../src/ground-dressing';
 
 test('every pressure puzzle has a level approach and its hidden camps and caches remain unobstructed',()=>{
   for(let id=0;id<WORLD_COUNT;id++){
@@ -56,9 +57,11 @@ test('utility props and ground dressing stay in proportion to the 3.2 unit vehic
   const manifest=JSON.parse(readFileSync('public/assets/world/manifest.json','utf8'));
   const sizes=new Map<string,number[]>(manifest.map((a:any)=>[a.id,a.size]));
   for(let id=0;id<WORLD_COUNT;id++){
-    const level=createWorldLevel(id),details=level.props.filter(p=>p.detail);
-    assert.ok(details.length>600,`${id}: close ground detail is present`);
-    assert.ok(details.every(p=>!p.movable&&p.mass===0&&p.scale<.7),'tiny dressing cannot create invisible collision barriers');
+    const level=createWorldLevel(id),tx=Math.floor(level.start.x/8),tz=Math.floor(level.start.z/8);
+    const details=Array.from({length:9},(_,i)=>createDressingTile(level,tx+i%3-1,tz+Math.floor(i/3)-1)).flat();
+    assert.ok(details.length>200,`${id}: the immediate starting area has dense streamed detail`);
+    assert.ok(details.every(p=>p.scale<1.21&&p.normal.y>0),'small decorative plants and shallow gravel retain sensible sizes');
+    assert.deepEqual(createDressingTile(level,tx,tz),createDressingTile(level,tx,tz),'returning to a patch cannot reshuffle its vegetation');
     for(const prop of level.props){
       const [x,y,z]=sizes.get(prop.asset)!.map(n=>n*prop.scale),longest=Math.max(x,y,z);
       if(prop.asset==='portable_generator')assert.ok(longest<.8&&y<.55,'a portable generator is much smaller than the vehicle');

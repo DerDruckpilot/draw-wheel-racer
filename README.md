@@ -2,13 +2,13 @@
 
 Zeichne deine Räder, erkunde eine offene Landschaft und löse physische Rätsel. Ein Solo-Abenteuer für das iPhone im Querformat, ohne Zeitlimit, Werbung oder Anmeldung.
 
-**Version 2.1.0 — freie Kamera, Radgrößen und maßstäbliche Umgebung.**
+**Version 2.2.0 — breitere Räder, präzisere Lenkung, ruhigeres Crawlen und dichter Bodenbewuchs.**
 
-[Spiel öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Technik und Grenzen](docs/IMPLEMENTIERUNG.md) · [Prüfbericht](docs/QA-2.1.md) · [Assetquellen](https://derdruckpilot.github.io/draw-wheel-racer/credits.html)
+[Spiel öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Technik und Grenzen](docs/IMPLEMENTIERUNG.md) · [Prüfbericht](docs/QA-2.2.md) · [Assetquellen](https://derdruckpilot.github.io/draw-wheel-racer/credits.html)
 
-![Waldgebiet mit importierten Bäumen, Farnen und Laubboden](docs/screenshots/forest.png)
+![Canyon mit dichterem Bewuchs, Kies und breiteren gezeichneten Rädern](docs/screenshots/canyon-2.2.png)
 
-![Befahrbares Küstenbecken mit Ventil, Steg und gezeichneten Paddelrädern](docs/screenshots/water.png)
+![Waldgebiet mit importierten Bäumen, Sträuchern, Farnen und Laubboden](docs/screenshots/forest-2.2.png)
 
 ## Spielen
 
@@ -36,11 +36,15 @@ Die frühen Gebiete sind auf etwa 5–10 Minuten Erkundung ausgelegt; Umfang und
 
 ## Umgebung
 
-35 importierte Modellvarianten und neun PBR-Materialsets von Poly Haven (CC0): unterschiedliche Felsen, Bäume, Gras, Farne, Brennnesseln, Sträucher, Baumstümpfe, Totholz, Stege, Kisten, Fässer, Lampen, Generatoren und technische Details. Der Truck stammt aus CesiumJS (Apache-2.0).
+38 importierte Modellvarianten und neun PBR-Materialsets von Poly Haven (CC0): unterschiedliche Felsen, Bäume, Gras, Farne, Wildblumen, Sträucher, Baumstümpfe, Totholz, Stege, Kisten, Fässer, Lampen, Generatoren und technische Details. Der Truck stammt aus CesiumJS (Apache-2.0).
 
 Die Landschaft besitzt durchgehende Texturen, räumlich gemischte Fels- und Bodenmaterialien, bewachsene Wegränder, dichte kleine Grasgruppen, gescannten Kies, Schatten und eine nahe, frei drehbare Kamera. Generatoren, Lagerausstattung, Jungbäume und Bodenpflanzen sind am Maßstab des Trucks ausgerichtet. Dezente, verblassende Fahrspuren helfen dabei, kürzlich erkundete Stellen wiederzuerkennen. Staub entsteht an belasteten Rädern auf trockenem Untergrund. Wasser verwendet gemeinsame Wellen für Darstellung und Auftrieb, sichtbare Tiefe, Reflexionen, Uferschaum und formabhängige Spritzer. Matsch besitzt eine langsam bewegte, texturierte Oberfläche; Eis liegt in eigenen Gletschergebieten.
 
-Modelle, Texturen und Lizenzen sind lokal enthalten. GPU-komprimierte Texturen, Instanzen, räumliche Sichtbarkeitsgrenzen und wiederverwendete Radpuffer begrenzen den Aufwand auf Mobilgeräten. Der automatische Grafikmodus kann Auflösung und Schatten anpassen; „Detailreich“ behält die volle Darstellung.
+Die Bodendetails werden in kleinen Kacheln rund um das Fahrzeug aufgebaut und beim Zurückfahren an denselben Stellen wiederhergestellt. Dichtere Grasbüschel, Rooibos-Sträucher, Gazanien und unterschiedlich große Kiesel folgen Gelände und Biom. Druckplatten bleiben frei sichtbar. Die winzigen dekorativen Steine erzeugen keine unsichtbaren Fahrhindernisse.
+
+Modelle, Texturen und Lizenzen sind lokal enthalten. GPU-komprimierte Texturen, Instanzen, räumliche Sichtbarkeitsgrenzen und wiederverwendete Radpuffer begrenzen den Aufwand auf Mobilgeräten. Der automatische Grafikmodus kann Auflösung, Schatten und die Reichweite kleiner Details anpassen; „Detailreich“ behält die volle Darstellung.
+
+Die gezeichneten Radstriche besitzen jetzt 0,42 statt 0,19 Einheiten Achsbreite, mit abgerundeten Schultern. Die Zeichenkontur bleibt gleich. Innen- und Außenräder erhalten zur Kurve passende Lenkwinkel und Drehzahlen; ein tieferer Schwerpunkt und gedämpfte Rollbewegungen verbessern die Stabilität. Die Kamera filtert kurze Bewegungen beim Crawlen, ohne die freie Fingersteuerung zu verzögern.
 
 ## Spielstände
 
@@ -50,7 +54,7 @@ Spielstände aus 2.0 bleiben erhalten; bisherige Steifigkeitswerte werden nicht 
 
 Browserdaten zu löschen entfernt den Spielstand und den Offlinecache. Ein App-Update wird erst nach Antippen installiert.
 
-Beim Wechsel auf Version 2.1: Öffne die App mit Internetverbindung und warte auf den Updatehinweis. Öffne die Einstellungen danach erneut und tippe auf **Neue Version laden**. Die Versionszeile zeigt anschließend **2.1.0**. Warte für den nächsten Start ohne Verbindung wieder auf **Offline bereit**.
+Beim Wechsel auf Version 2.2: Öffne die App mit Internetverbindung und warte auf den Updatehinweis. Öffne die Einstellungen danach erneut und tippe auf **Neue Version laden**. Die Versionszeile zeigt anschließend **2.2.0**. Warte für den nächsten Start ohne Verbindung wieder auf **Offline bereit**. Fortschritt und Zeichnungen aus 2.0 und 2.1 bleiben erhalten.
 
 ## Lokal entwickeln und prüfen
 

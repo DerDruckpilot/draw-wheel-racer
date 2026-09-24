@@ -1,6 +1,7 @@
 import {InstancedMesh,PlaneGeometry,MeshBasicMaterial,InstancedBufferAttribute,Matrix4,Quaternion,Vector3,DynamicDrawUsage} from 'three';
 import {groundType,basinWeight} from './world-levels';
 import type {WorldSimulation,Wheel3D} from './world-physics';
+import {WHEEL_WIDTH} from './wheel-profile';
 
 /** Faint marks from actual tyre/ground contacts. They help recognize a recently
  * explored turn without revealing anything on the radar or adding a map. */
@@ -41,7 +42,7 @@ export class WheelTrails {
       const forward=new Vector3(1,0,0).applyQuaternion(new Quaternion().copy(wheel.knuckle.rotation()));forward.addScaledVector(normal,-forward.dot(normal)).normalize();
       const right=forward.clone().cross(normal).normalize(),rotation=new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right,forward,normal));
       point.y=ground;point.addScaledVector(normal,.022);
-      const matrix=new Matrix4().compose(point,rotation,new Vector3(.24*wheel.size,.55,1)),index=this.next++%this.capacity;
+      const matrix=new Matrix4().compose(point,rotation,new Vector3(WHEEL_WIDTH*wheel.size,.55,1)),index=this.next++%this.capacity;
       this.mesh.setMatrixAt(index,matrix);this.born[index]=sim.elapsed;this.strength[index]=material==='mud'?.38:sim.level.biome==='glacier'?.10:.19;
       this.mesh.count=Math.min(this.next,this.capacity);this.last.set(wheel,point);changed=true;
     }

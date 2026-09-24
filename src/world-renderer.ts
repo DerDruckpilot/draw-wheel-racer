@@ -6,6 +6,8 @@ import {HDRLoader} from 'three/addons/loaders/HDRLoader.js';
 import {clamp} from './shapes';
 import {updateWheelGeometry} from './wheel-mesh';
 import {WheelTrails} from './wheel-trails';
+import {ChaseCamera} from './chase-camera';
+import {GroundDressing} from './ground-dressing';
 import {worldHeight,basinWeight,groundType,WORLD_TILE} from './world-levels';
 import {waterSurface,type WorldSimulation,type Wheel3D} from './world-physics';
 import {naturalTerrain} from './terrain-material';
@@ -15,7 +17,6 @@ import {gateFrame,bridgeFrame,LIFT_DEPTH,PLATE_EMBED} from './world-mechanisms';
 import type {AssetInfo,AssetCollisions,Ground,Basin,V3,WorldProp,Biome} from './world-types';
 
 const BASE=import.meta.env.BASE_URL;
-const UP=new THREE.Vector3(0,1,0);
 const vector=(p:V3)=>new THREE.Vector3(p.x,p.y,p.z);
 const quaternion=(q:{x:number;y:number;z:number;w:number})=>new THREE.Quaternion(q.x,q.y,q.z,q.w);
 type Quality='auto'|'high'|'eco';
@@ -39,6 +40,7 @@ export class WorldRenderer {
   private scenery:{mesh:THREE.InstancedMesh;center:THREE.Vector3;range:number}[]=[];
   private skyTexture!:THREE.Texture;
   private trails=new WheelTrails();
+  private dressing=new GroundDressing();
   private windTime={value:0};private focusPosition={value:new THREE.Vector3()};
   private worldMaterials=new Set<THREE.Material>();
   private signalLights:{signal:string;mesh:THREE.Mesh<THREE.SphereGeometry,THREE.MeshStandardMaterial>}[]=[];
@@ -46,7 +48,7 @@ export class WorldRenderer {
   private rubber=new THREE.MeshStandardMaterial({color:0x102923,roughness:.9});
   private brass=new THREE.MeshStandardMaterial({color:0xa8904c,metalness:.72,roughness:.4});
   private lamp=new THREE.MeshStandardMaterial({color:0xd7ea9a,emissive:0xb2ce64,emissiveIntensity:.8});
-  private quality:Quality='auto';private frame=0;private average=16;private pixelRatio=1.4;private adaptiveClock=0;private shadowTier=0;private cameraHeading=0;private cameraTarget=new THREE.Vector3();private dirty=true;
+  private quality:Quality='auto';private frame=0;private average=16;private pixelRatio=1.4;private adaptiveClock=0;private shadowTier=0;private cameraHeading=0;private cameraRig=new ChaseCamera();private dirty=true;
   private orbitYaw=0;private orbitPitch=Math.atan2(6.4,Math.hypot(9.5,5.5));private orbitChanged=false;
   private particles:THREE.Points;private particlePositions=new Float32Array(1800*3);private particleColors=new Float32Array(1800*3);private particleOpacity=new Float32Array(1800);private particleSizes=new Float32Array(1800);private dustBudget=[0,0,0,0];
   private particleData:{p:THREE.Vector3;v:THREE.Vector3;life:number;total:number;mud:boolean;dust:boolean;size:number;color?:number[]}[]=[];
@@ -55,7 +57,7 @@ export class WorldRenderer {
     this.renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});this.renderer.outputColorSpace=THREE.SRGBColorSpace;this.renderer.toneMapping=THREE.ACESFilmicToneMapping;this.renderer.toneMappingExposure=1.05;
     this.renderer.shadowMap.enabled=true;this.renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.append(this.renderer.domElement);this.renderer.domElement.setAttribute('aria-label','Frei befahrbare 3D-Welt');
     this.sun.castShadow=true;this.sun.shadow.mapSize.set(1536,1536);Object.assign(this.sun.shadow.camera,{left:-25,right:25,top:25,bottom:-25,near:.5,far:90});this.sun.shadow.bias=-.0004;this.sun.shadow.normalBias=.055;
-    this.scene.add(this.root,this.sun,this.sun.target,this.light,this.trails.mesh);
+    this.scene.add(this.root,this.sun,this.sun.target,this.light,this.trails.mesh,this.dressing.root);
     const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(this.particlePositions,3));geometry.setAttribute('color',new THREE.BufferAttribute(this.particleColors,3));geometry.setAttribute('particleOpacity',new THREE.BufferAttribute(this.particleOpacity,1));geometry.setAttribute('particleSize',new THREE.BufferAttribute(this.particleSizes,1));geometry.setDrawRange(0,0);
     const sprayMaterial=new THREE.PointsMaterial({size:.13,vertexColors:true,transparent:true,opacity:.76,depthWrite:false});
     sprayMaterial.onBeforeCompile=shader=>{
@@ -77,7 +79,7 @@ export class WorldRenderer {
     const loader=new GLTFLoader().setKTX2Loader(compressed);
     await Promise.all(manifest.map(async item=>{
       const [gltf,geometry]=await Promise.all([loader.loadAsync(`${BASE}assets/world/${item.glb}`),fetch(`${BASE}assets/world/${item.id}.collision.json`).then(r=>r.json())]);
-      gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.receiveShadow=true;const materials=Array.isArray(o.material)?o.material:[o.material];for(const m of materials){if(m instanceof THREE.MeshStandardMaterial){m.envMapIntensity=.4;if(/grass|fern|nettle|shrub|rooibos|pine|quiver_tree|tree_small/.test(item.id))this.foliageMaterial(m,/grass|fern|nettle|shrub|rooibos/.test(item.id));}}}});
+      gltf.scene.traverse(o=>{if(o instanceof THREE.Mesh){o.castShadow=true;o.receiveShadow=true;const materials=Array.isArray(o.material)?o.material:[o.material];for(const m of materials){if(m instanceof THREE.MeshStandardMaterial){m.envMapIntensity=.4;if(/grass|fern|flower|nettle|shrub|rooibos|pine|quiver_tree|tree_small/.test(item.id))this.foliageMaterial(m,/grass|fern|flower|nettle|shrub|rooibos/.test(item.id));}}}});
       this.models.set(item.id,gltf.scene);this.collisions[item.id]=geometry;complete();
     }));
     const textureLoader=compressed;
@@ -136,13 +138,14 @@ export class WorldRenderer {
     this.sun.shadow.mapSize.set(size,size);this.sun.shadow.needsUpdate=true;
   }
   private resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;this.renderer.setPixelRatio(this.pixelRatio);this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.setViewOffset(w,h,0,h*.1,w,h);this.camera.updateProjectionMatrix();this.dirty=true;}
-  needsFrame(sim:WorldSimulation){return this.dirty||this.snapNextFrame||this.lastRescues!==sim.rescues||sim.wheels.some((wheel,i)=>wheel.revision!==this.wheelRevision[i]||this.wheelMeshes[i]?.scale.x!==wheel.size);}
+  needsFrame(sim:WorldSimulation){return this.dirty||this.snapNextFrame||this.dressing.needsFrame||this.lastRescues!==sim.rescues||sim.wheels.some((wheel,i)=>wheel.revision!==this.wheelRevision[i]||this.wheelMeshes[i]?.scale.x!==wheel.size);}
   orbitBy(dx:number,dy:number){
     this.orbitYaw=Math.atan2(Math.sin(this.orbitYaw-dx*Math.PI*2),Math.cos(this.orbitYaw-dx*Math.PI*2));
     this.orbitPitch=clamp(this.orbitPitch+dy*1.5,.18,1.18);this.orbitChanged=true;this.dirty=true;
   }
   private model(id:string,scale:number){const mesh=this.models.get(id)!.clone(true);mesh.scale.setScalar(scale);return mesh;}
   setWorld(sim:WorldSimulation){
+    this.dressing.setWorld(sim,this.models);
     // Shared asset geometries/materials remain cached; generated world meshes do not.
     this.root.traverse(o=>{
       if(o instanceof THREE.Mesh&&o.userData.generated)o.geometry.dispose();
@@ -235,7 +238,7 @@ export class WorldRenderer {
     }
     this.root.add(this.goal);
     for(const basin of sim.level.basins)if(basin.material!=='ice')this.addWater(sim,basin);
-    this.snapNextFrame=true;this.lastRescues=sim.rescues;this.cameraHeading=sim.heading;this.orbitYaw=0;this.orbitPitch=Math.atan2(6.4,Math.hypot(9.5,5.5));this.orbitChanged=false;
+    this.snapNextFrame=true;this.lastRescues=sim.rescues;this.cameraHeading=sim.heading;this.cameraRig.reset();this.orbitYaw=0;this.orbitPitch=Math.atan2(6.4,Math.hypot(9.5,5.5));this.orbitChanged=false;
     this.updateTerrain(sim,true);
   }
   private updateTerrain(sim:WorldSimulation,force=false){
@@ -322,35 +325,15 @@ export class WorldRenderer {
     }
     this.effects(sim,Math.min(dt,.1));this.trails.update(sim);
     const snap=this.snapNextFrame||this.lastRescues!==sim.rescues;this.snapNextFrame=false;this.lastRescues=sim.rescues;
-    const diff=Math.atan2(Math.sin(sim.heading-this.cameraHeading),Math.cos(sim.heading-this.cameraHeading));this.cameraHeading+=diff*(snap?1:1-Math.exp(-dt*2.7));
-    const forward=new THREE.Vector3(Math.cos(this.cameraHeading),0,-Math.sin(this.cameraHeading)),side=new THREE.Vector3(-forward.z,0,forward.x),p=vector(sim.position);
-    const target=p.clone().addScaledVector(forward,1.2);target.y+=.45;
-    const distance=Math.hypot(9.5,5.5,6.4),offset=forward.clone().multiplyScalar(-9.5).addScaledVector(side,5.5).normalize().applyAxisAngle(UP,this.orbitYaw).multiplyScalar(distance*Math.cos(this.orbitPitch));offset.y=distance*Math.sin(this.orbitPitch);
-    const desired=p.clone().add(offset);
-    desired.y=Math.max(desired.y,worldHeight(sim.level,desired.x,desired.z)+2.4);
-    const anchor=p.clone().add(new THREE.Vector3(0,.1,0)),cameraShape=new RAPIER.Ball(.32);
-    const unobstructed=(candidate:THREE.Vector3)=>{
-      const delta=candidate.clone().sub(anchor),length=delta.length();delta.divideScalar(length);
-      const hit=sim.world.castShape(anchor,{x:0,y:0,z:0,w:1},delta,cameraShape,.02,length,true,undefined,0x00020005,undefined,sim.body);
-      return {point:anchor.clone().addScaledVector(delta,hit?Math.max(.6,hit.time_of_impact-.08):length),distance:hit?hit.time_of_impact:length};
-    };
-    let safe=unobstructed(desired);
-    if(safe.distance<7){
-      // A thin tree should make the boom move around its trunk, not zoom all
-      // the way into the vehicle. Try nearby views before shortening it.
-      let score=safe.distance;
-      for(const angle of [-.42,.42,-.84,.84]){
-        const offset=desired.clone().sub(p).applyAxisAngle(UP,angle),candidate=p.clone().add(offset);
-        candidate.y=Math.max(candidate.y,sim.surfaceHeight(candidate.x,candidate.z)+.65);
-        const alternative=unobstructed(candidate),candidateScore=alternative.distance-Math.abs(angle)*2.1;
-        if(candidateScore>score+.35){safe=alternative;score=candidateScore;}
-      }
-    }
-    if(safe.distance<4){
-      const low=p.clone().add(offset.clone().setY(0).normalize().multiplyScalar(6.4));low.y+=1.2;low.y=Math.max(low.y,sim.surfaceHeight(low.x,low.z)+.5);
-      const alternate=unobstructed(low);if(alternate.distance>safe.distance+1)safe=alternate;
-    }
-    this.camera.position.lerp(safe.point,snap||this.orbitChanged?1:1-Math.exp(-dt*5));this.camera.position.copy(unobstructed(this.camera.position).point);this.cameraTarget.lerp(target,snap?1:1-Math.exp(-dt*7));this.camera.lookAt(this.cameraTarget);this.orbitChanged=false;
+    const p=vector(sim.position),cameraShape=new RAPIER.Ball(.32);
+    const framing=this.cameraRig.update({position:p,heading:sim.heading,speed:sim.signedSpeed,upright:new THREE.Vector3(0,1,0).applyQuaternion(quaternion(sim.body.rotation())).y},this.orbitYaw,this.orbitPitch,dt,snap,this.orbitChanged,
+      (x,z)=>sim.surfaceHeight(x,z),(anchor,candidate)=>{
+        const delta=candidate.clone().sub(anchor),length=delta.length();if(length<.001)return length;
+        const hit=sim.world.castShape(anchor,{x:0,y:0,z:0,w:1},delta.divideScalar(length),cameraShape,.02,length,true,undefined,0x00020005,undefined,sim.body);
+        return hit?hit.time_of_impact:length;
+      });
+    this.cameraHeading=this.cameraRig.heading;this.camera.position.copy(framing.position);this.camera.lookAt(framing.target);this.orbitChanged=false;
+    this.dressing.update(this.camera,this.quality==='high'?30:this.quality==='eco'||this.shadowTier>1?20:27,this.quality==='eco'?.12:this.quality==='high'?1:this.shadowTier>2?.18:this.shadowTier>1?.4:this.shadowTier===1?.7:1);
     this.sun.position.copy(p).add(new THREE.Vector3(-20,32,17));this.sun.target.position.copy(p);
     this.renderer.render(this.scene,this.camera);
     if(sim.started){
@@ -361,10 +344,11 @@ export class WorldRenderer {
           if(this.pixelRatio>1){this.pixelRatio=Math.max(1,this.pixelRatio-.2);this.resize();}
           else if(this.shadowTier===0){this.shadowTier=1;this.setShadowResolution(1024);}
           else if(this.shadowTier===1&&this.average>34){this.shadowTier=2;this.renderer.shadowMap.enabled=false;}
+          else if(this.shadowTier===2&&this.average>42)this.shadowTier=3;
         }
       }
     }
   }
-  framing(){const v=this.vehicle.position.clone().project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2,camera:this.camera.position.toArray(),heading:this.cameraHeading,orbit:{yaw:this.orbitYaw,pitch:this.orbitPitch},quality:{requested:this.quality,pixelRatio:this.pixelRatio,shadows:this.renderer.shadowMap.enabled,shadowSize:this.sun.shadow.mapSize.x}};}
+  framing(){const v=this.vehicle.position.clone().project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2,camera:this.camera.position.toArray(),heading:this.cameraHeading,orbit:{yaw:this.orbitYaw,pitch:this.orbitPitch},dressing:{instances:this.dressing.count,tiles:this.dressing.cachedTiles,ready:!this.dressing.needsFrame},quality:{requested:this.quality,pixelRatio:this.pixelRatio,shadows:this.renderer.shadowMap.enabled,shadowSize:this.sun.shadow.mapSize.x}};}
   image(){return this.renderer.domElement.toDataURL('image/png');}
 }

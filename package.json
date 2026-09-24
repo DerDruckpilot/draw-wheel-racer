@@ -1,13 +1,13 @@
 {
   "name": "formdrive",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "tsx --test tests/drawing-controls.test.ts tests/world-physics.test.ts tests/world-fluid.test.ts tests/world-mechanisms.test.ts tests/world-save.test.ts tests/world-layout.test.ts tests/world-driving.test.ts",
+    "test": "tsx --test tests/drawing-controls.test.ts tests/world-physics.test.ts tests/world-fluid.test.ts tests/world-mechanisms.test.ts tests/world-save.test.ts tests/world-layout.test.ts tests/world-driving.test.ts tests/handling-camera.test.ts",
     "test:browser": "playwright test",
     "test:layout": "tsx --test tests/world-layout.test.ts"
   },

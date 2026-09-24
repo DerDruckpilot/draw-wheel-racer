@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {fitDrawnWheels,drawStroke,snapshot} from './helpers';
 
 test('swiping the world orbits freely, while drafting and sizing keep their own pointers',async({page})=>{
-  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',e=>{if(e.type()==='error')errors.push(e.text());});
   await page.addInitScript(()=>localStorage.setItem('formdrive.world.v2',JSON.stringify({schema:2,level:0,records:{},runs:{},sound:false,quality:'eco',tutorial:true})));
   await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:120000});
   await fitDrawnWheels(page);await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');
@@ -11,6 +11,9 @@ test('swiping the world orbits freely, while drafting and sizing keep their own 
   const orbit=(await snapshot(page)).framing.orbit;
   expect(Math.abs(orbit.yaw)).toBeGreaterThan(2);expect(orbit.pitch).toBeGreaterThan(before.framing.orbit.pitch);
   expect((await snapshot(page)).drafts).toEqual([[],[]]);
+  await expect.poll(async()=>(await snapshot(page)).framing.dressing.ready,{timeout:60000}).toBe(true);
+  const cover=(await snapshot(page)).framing.dressing;
+  expect(cover.instances).toBeGreaterThan(250);expect(cover.tiles).toBeLessThan(120);
   await drawStroke(page,'rear',[[-.8,0],[.8,0]]);
   const draft=(await snapshot(page)).drafts[0];expect(draft.length).toBeGreaterThan(1);
   expect((await snapshot(page)).framing.orbit).toEqual(orbit);

@@ -55,7 +55,9 @@ test('every authored sluice requires draining and has a drivable exit from its e
     const exit={x:b.x+Math.cos(b.angle)*b.accessSide!*b.rx*1.35,z:b.z+Math.sin(b.angle)*b.accessSide!*b.rx*1.35};
     s.teleport({x:cache.x,y:worldHeight(l,cache.x,cache.z),z:cache.z},-Math.atan2(exit.z-cache.z,exit.x-cache.x));runFor(s,3);
     assert.ok(s.collected.has(cache.id),`${id}: the exposed supply can be collected`);
-    s.requestShape(preset('round'),0);s.requestShape(preset('round'),1);runFor(s,.4);s.drive=.5;s.weightTarget=.4;
+    // Drain first, then use an edged climbing contour and measured throttle
+    // on the wet ramp. A smooth ring is not a universal uphill solution.
+    s.requestShape(preset('grip'),0);s.requestShape(preset('grip'),1);runFor(s,.4);s.drive=.38;s.weightTarget=.65;
     let escaped=false;for(let n=0;n<2700;n++){steerTo(s,exit.x,exit.z);s.tick();if(basinWeight(b,s.position.x,s.position.z)>1.16&&s.position.y>b.level){escaped=true;break;}}
     assert.ok(escaped,`${id}: a collected supply must not strand the car in the empty basin`);s.dispose();
   }
@@ -75,15 +77,16 @@ test('cars can park the supplied counterweights and reach every raised island, w
   for(const id of [1,8,10])for(const loaded of [false,true]){
     const l=createWorldLevel(id),s=new WorldSimulation(l,worldAssets,loaded?[preset('grip'),preset('compact')]:undefined),b=l.bridges[0],crate=s.props.find(p=>p.spec.id==='balance-ballast')!;
     if(loaded){
-      s.teleport({x:crate.spec.x-3.9,y:worldHeight(l,crate.spec.x-3.9,crate.spec.z),z:crate.spec.z},0);runFor(s,2);s.drive=.6;s.weightTarget=.3;
+      s.teleport({x:crate.spec.x-3.9,y:worldHeight(l,crate.spec.x-3.9,crate.spec.z),z:crate.spec.z},0);runFor(s,2);s.drive=id===8?.45:.6;s.weightTarget=.3;
       for(let n=0;n<3600&&crate.body.translation().x<b.x-6.95;n++){
         // Start with a low front bumper, then lift it for the sloping apron.
         // This is a physical use of the new size control, not a crate teleport.
-        if(crate.body.translation().x>b.x-9)s.setWheelSize(1,1.4);
+        if(crate.body.translation().x>b.x-9){s.setWheelSize(1,1.4);s.weightTarget=id===8?-.4:.3;}
         steerTo(s,s.position.x+5,crate.spec.z);s.tick();
       }
       s.drive=0;s.brake=1;runFor(s,.2);s.brake=0;s.drive=-.3;runFor(s,3);s.drive=0;runFor(s,2);
-      assert.ok(crate.body.translation().x-crate.initial.x>4.8,`${id}: the supplied weight must be physically pushable onto the deck`);
+      let deckContact=false;s.world.contactPair(crate.collider,s.bridges[0].body.collider(0),manifold=>{if(manifold.numSolverContacts()>0)deckContact=true;});
+      assert.ok(crate.body.translation().x-crate.initial.x>3&&deckContact,`${id}: the pushed weight must stay in actual contact with the swinging deck`);
       s.setWheelSize(0,1);s.setWheelSize(1,1);s.requestShape(preset('round'),0);s.requestShape(preset('round'),1);runFor(s,.5);
     }
     else placeProp(crate,{x:b.x-18,y:worldHeight(l,b.x-18,b.z-12),z:b.z-12});

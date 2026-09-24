@@ -14,8 +14,11 @@ function run(sim:WorldSimulation,seconds:number){sim.started=true;for(let i=0;i<
 
 test('the vehicle physically turns freely through more than 180 degrees',()=>{
   const sim=new WorldSimulation(flat(),worldAssets);sim.drive=.65;run(sim,3);const before=sim.position.x;
-  sim.steering=.9;run(sim,10);
-  assert.ok(Math.abs(sim.position.z)>8,'real transverse displacement');assert.ok(Math.abs(sim.heading)>1.4,'heading is not clamped to the road');assert.ok(before>7);assert.ok(sim.body.rotation().w!==1);sim.dispose();
+  sim.steering=.9;let maxZ=0,angle=0,heading=sim.heading;
+  runFor(sim,10,()=>{maxZ=Math.max(maxZ,Math.abs(sim.position.z));angle+=Math.atan2(Math.sin(sim.heading-heading),Math.cos(sim.heading-heading));heading=sim.heading;});
+  // A tighter turning circle can return near its starting Z after ten seconds.
+  // Check the travelled arc, not an arbitrary final point on that circle.
+  assert.ok(maxZ>8,'real transverse displacement');assert.ok(angle>Math.PI,'heading is not clamped to the road');assert.ok(before>7);assert.ok(sim.body.rotation().w!==1);sim.dispose();
 });
 test('a pressure gate stays open only while a heavy object remains in contact',()=>{
   const level=flat();level.plates=[{id:'weight',x:8,y:.12,z:0,yaw:0,width:3,depth:3,threshold:7}];

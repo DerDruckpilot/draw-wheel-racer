@@ -4,6 +4,7 @@ import {clamp,preset,radiusOf,sanitizeShape,uniqueShapeEdges,spokeTips,STROKE_RA
 import {wheelMassProperties} from './wheel-geometry';
 import {applyWheelFluid} from './world-fluid';
 import {wheelSize} from './wheel-size';
+import {wheelStrokeCore,WHEEL_WIDTH} from './wheel-profile';
 import {gateFrame,bridgeFrame,LIFT_DEPTH,PLATE_EMBED} from './world-mechanisms';
 import {worldHeight,groundType,basinWeight,basinCoordinates,dist,makeTerrainTile,WORLD_TILE,smooth} from './world-levels';
 import type {WorldLevel,WorldProp,AssetCollisions,Plate,Gate,V3,TerrainTile,Basin,Camp,Cache} from './world-types';
@@ -96,7 +97,7 @@ export class WorldSimulation {
       if(!desc)throw Error('Invalid vehicle collision geometry');
       this.world.createCollider(desc.setMass(0).setFriction(.45).setCollisionGroups(CAR_GROUP),this.body);
     }
-    this.body.setAdditionalMassProperties(27,{x:0,y:-.32,z:0},{x:17,y:33,z:31},IDENTITY,true);this.carBodies.push(this.body);
+    this.body.setAdditionalMassProperties(27,{x:0,y:-.61,z:0},{x:25,y:33,z:31},IDENTITY,true);this.carBodies.push(this.body);
     for(const [index,anchor] of WHEEL_POSITIONS.entries()){
       const position=new Vector3(...anchor).applyQuaternion(rotation).add(new Vector3(level.start.x,y,level.start.z));
       const carrier=this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x,position.y,position.z).setRotation(rotation).setAdditionalMassProperties(.18,ZERO,{x:.035,y:.035,z:.035},IDENTITY));
@@ -106,7 +107,7 @@ export class WorldSimulation {
       if(index>=2){
         knuckle=this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x,position.y,position.z).setRotation(rotation).setAdditionalMassProperties(.18,ZERO,{x:.035,y:.035,z:.035},IDENTITY));
         steer=this.world.createImpulseJoint(RAPIER.JointData.revolute(ZERO,ZERO,{x:0,y:1,z:0}),carrier,knuckle,true) as RAPIER.RevoluteImpulseJoint;
-        steer.setContactsEnabled(false);steer.setLimits(-.72,.72);steer.configureMotorModel(RAPIER.MotorModel.ForceBased);steer.configureMotorPosition(0,350,30);this.carBodies.push(knuckle);
+        steer.setContactsEnabled(false);steer.setLimits(-.94,.94);steer.configureMotorModel(RAPIER.MotorModel.ForceBased);steer.configureMotorPosition(0,520,38);this.carBodies.push(knuckle);
       }
       const body=this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x,position.y,position.z).setRotation(rotation).setAngularDamping(.045).setCcdEnabled(true));
       const motor=this.world.createImpulseJoint(RAPIER.JointData.revolute(ZERO,ZERO,{x:0,y:0,z:1}),knuckle,body,true) as RAPIER.RevoluteImpulseJoint;motor.setContactsEnabled(false);
@@ -200,8 +201,13 @@ export class WorldSimulation {
       const c=this.world.createCollider(desc.setMass(0).setFriction(.42).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setRestitution(.008).setCollisionGroups(CAR_GROUP).setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1),wheel.body);
       wheel.colliders.push(c);this.plateContacts.set(c.handle,8.2);this.wheelOwners.set(c.handle,wheel);
     };
-    add(RAPIER.ColliderDesc.ball(.14*size));
-    const edge=(a:Point,b:Point,r:number)=>{const delta=new Vector3(b.x-a.x,b.y-a.y,0),length=delta.length();if(length<.0001)return;add(RAPIER.ColliderDesc.capsule(length*size/2,r*size).setTranslation((a.x+b.x)*size/2,(a.y+b.y)*size/2,0).setRotation(new Quaternion().setFromUnitVectors(UP,delta.divideScalar(length))));};
+    add(RAPIER.ColliderDesc.cylinder(WHEEL_WIDTH*size/2,.14*size).setRotation(new Quaternion().setFromAxisAngle(new Vector3(1,0,0),Math.PI/2)));
+    const edge=(a:Point,b:Point,r:number)=>{
+      const delta=new Vector3(b.x-a.x,b.y-a.y,0),length=delta.length();if(length<.0001)return;
+      const core=r===STROKE_RADIUS?wheelStrokeCore(length,size):undefined;
+      const desc=core?RAPIER.ColliderDesc.roundConvexMesh(core.vertices,core.indices,core.border)!:RAPIER.ColliderDesc.capsule(length*size/2,r*size);
+      add(desc.setTranslation((a.x+b.x)*size/2,(a.y+b.y)*size/2,0).setRotation(new Quaternion().setFromUnitVectors(UP,delta.divideScalar(length))));
+    };
     for(const [a,b] of uniqueShapeEdges(wheel.points))edge(a,b,STROKE_RADIUS);
     for(const tip of spokeTips(wheel.points))edge({x:0,y:0},tip,SPOKE_RADIUS);
     for(const c of wheel.colliders.splice(slot)){this.plateContacts.delete(c.handle);this.wheelOwners.delete(c.handle);this.world.removeCollider(c,true);}
@@ -209,7 +215,8 @@ export class WorldSimulation {
       wheel.baseMass=wheelMassProperties(base);wheel.massShape=base;
     }
     const mass=wheel.baseMass!,volumeScale=size**3,inertiaScale=size**5;
-    wheel.body.setAdditionalMassProperties(mass.mass*volumeScale,{x:mass.center.x*size,y:mass.center.y*size,z:0},{x:(mass.inertia*.5+mass.mass*.004)*inertiaScale,y:(mass.inertia*.5+mass.mass*.004)*inertiaScale,z:mass.inertia*inertiaScale},IDENTITY,true);
+    const lateralInertia=mass.inertia*.5+mass.mass*WHEEL_WIDTH**2/12;
+    wheel.body.setAdditionalMassProperties(mass.mass*volumeScale,{x:mass.center.x*size,y:mass.center.y*size,z:0},{x:lateralInertia*inertiaScale,y:lateralInertia*inertiaScale,z:mass.inertia*inertiaScale},IDENTITY,true);
     wheel.body.recomputeMassPropertiesFromColliders();
   }
   setWheelSize(axle:number,value:number){
@@ -359,18 +366,28 @@ export class WorldSimulation {
     const position=this.position;if(this.ticks%20===0)this.streamTerrain();
     for(const body of [...this.carBodies,...this.props.filter(p=>p.spec.movable).map(p=>p.body)]){body.resetForces(false);body.resetTorques(false);}
     this.weight+=(clamp(this.weightTarget,-1,1)-this.weight)*.09;
-    this.body.setAdditionalMassProperties(27,{x:this.weight*.8,y:-.32,z:0},{x:17,y:33,z:31},IDENTITY,false);
-    this.steerAngle+=(clamp(this.steering,-1,1)*.65-this.steerAngle)*.085;
+    this.body.setAdditionalMassProperties(27,{x:this.weight*.8,y:-.61,z:0},{x:25,y:33,z:31},IDENTITY,false);
+    this.steerAngle+=(clamp(this.steering,-1,1)*.68-this.steerAngle)*.11;
     this.engineSpeed+=clamp(-this.drive*6.6-this.engineSpeed,-11*WORLD_DT,11*WORLD_DT);
-    for(const w of this.wheels){
-      w.steer?.configureMotorPosition(this.steerAngle,350,30);
+    const curvature=Math.tan(this.steerAngle)/2.56,radii=this.shapes.map((shape,i)=>radiusOf(shape)*this.wheelSizes[i]),rollingRadius=(radii[0]+radii[1])/2;
+    // Ackermann steering and four independent final-drive ratios let outer
+    // wheels cover the longer arc instead of fighting a locked differential.
+    for(const [i,w] of this.wheels.entries()){
+      const lateral=1+curvature*WHEEL_POSITIONS[i][2],frontArc=w.axle===1?2.56*curvature:0;
+      w.steer?.configureMotorPosition(Math.atan2(frontArc,lateral),520,38);
       const axis=new Vector3(0,0,1).applyQuaternion(q(w.knuckle.rotation())),omega=v(w.body.angvel()).sub(v(w.knuckle.angvel())).dot(axis);
       w.spin=omega;
-      const desired=this.brake?0:this.engineSpeed,drag=this.brake?650:Math.abs(this.drive)>.01?900:0;
+      const ratio=Math.hypot(lateral,frontArc)*rollingRadius/radii[w.axle];
+      const desired=this.brake?0:this.engineSpeed*clamp(ratio,.35,2.6),drag=this.brake?650:Math.abs(this.drive)>.01?900:0;
       // The joint solver applies equal-and-opposite motor impulses implicitly.
       // This stays stable for a single thin bar with very little inertia, while
       // retaining enough axle torque to lift the chassis at a long lever arm.
       w.motor.setMotorMaxForce(drag?600:0);w.motor.configureMotorVelocity(desired,drag);
+    }
+    // Dissipate suspension roll motion at loaded contacts, without an upright
+    // target or a restoring force in the air. A steep bank can still overturn it.
+    if(this.wheels.filter(w=>w.contactPoint&&w.load>12).length>=2){
+      const axis=this.forward,rate=v(this.body.angvel()).dot(axis);this.body.addTorque(axis.multiplyScalar(-rate*8),true);
     }
     this.mechanisms();this.fluids();this.world.step(this.contactEvents);this.readWheelLoads();this.discover();
     if(!Number.isFinite(this.position.y)||this.position.y<-35)this.rescue();

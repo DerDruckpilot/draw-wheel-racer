@@ -4,7 +4,7 @@ Alle für das Spiel benötigten Dateien liegen in `public/assets`. Ein normaler 
 
 ## Quellen
 
-- 35 ausgewählte Modellvarianten und neun PBR-Materialsets: [Poly Haven](https://polyhaven.com), CC0. Die genauen URLs, Urheber, Varianten, Änderungen und SHA-256-Prüfsummen stehen in `public/assets/world/manifest.json` und `textures.json`.
+- 38 ausgewählte Modellvarianten und neun PBR-Materialsets: [Poly Haven](https://polyhaven.com), CC0. Die genauen URLs, Urheber, Varianten, Änderungen und SHA-256-Prüfsummen stehen in `public/assets/world/manifest.json` und `textures.json`.
 - Umgebungslicht: [Kloppenheim 06 Pure Sky](https://polyhaven.com/a/kloppenheim_06_puresky), CC0; Herkunft in `public/assets/sources.json`.
 - Fahrzeug: CesiumJS GroundVehicle, Apache-2.0. Fixierte Quellrevision und Bearbeitung in `scripts/prepare-vehicle.mjs`, Nachweise in `public/assets/offroad-source.json`.
 - Texturtranskodierung: Basis Universal über Three.js; vollständige Lizenz in `public/licenses/basis.txt`.
@@ -26,3 +26,5 @@ Feste Gegenstände kollidieren auf denselben vereinfachten Dreiecken wie ihre si
 Für die Baumkronen werden keine frei erfundenen Texturen verwendet: Die mobilen Schichten stammen aus gerenderten Ansichten des importierten Originals. Ihre begrenzte räumliche Auflösung ist aus nächster Nähe erkennbar, spart aber die Millionen ursprünglichen Blattpolygone.
 
 Die veröffentlichten Dateien enthalten nur Laufzeitmodelle, Kollisionen, KTX2-Texturen und Nachweise. Ursprüngliche hochauflösende Downloads und Zwischenformate gehören nicht in den Offlinecache.
+
+Für den dichteren Bodenbewuchs ab 2.2 kommen die Variante `grass_medium_02_d` aus [Grass Medium 02](https://polyhaven.com/a/grass_medium_02), die blühende Variante `flower_gazania_h_LOD0` aus [Flower Gazania](https://polyhaven.com/a/flower_gazania) und eine zusätzliche vereinfachte Variante des vorhandenen [Rooibos-Busches](https://polyhaven.com/a/wild_rooibos_bush) hinzu. Die Pflanzen werden als räumliche Instanzen verteilt; Farne und die bisherigen Grasbüschel bleiben ebenfalls im Einsatz.

@@ -1,5 +1,6 @@
 import polygonClipping, { type Polygon, type Pair } from 'polygon-clipping';
 import { uniqueShapeEdges, spokeTips, SPOKE_RADIUS, STROKE_RADIUS, type Point } from './shapes';
+import {WHEEL_WET_WIDTH} from './wheel-profile';
 
 export interface HydroShape { rings: Point[][]; width: number; }
 
@@ -42,7 +43,7 @@ export function wheelHydro(shape: Point[]): HydroShape[] {
   const origin = { x: 0, y: 0 };
   const spokes = spokeTips(shape).map(p => capsule(origin, p, SPOKE_RADIUS));
   const result: HydroShape[] = [
-    { rings: unionRings(rim), width: Math.PI * STROKE_RADIUS / 2 },
+    { rings: unionRings(rim), width: WHEEL_WET_WIDTH },
     { rings: unionRings(spokes), width: Math.PI * SPOKE_RADIUS / 2 },
   ];
   // A bounded geometry cache is shared by the two independently drawn axles.
@@ -54,7 +55,7 @@ export function wheelMassProperties(shape: Point[]) {
   const parts = wheelHydro(shape);
   let mass = .24, momentX = 0, momentY = 0, polar = .24 * .15 ** 2 / 2;
   for (const [index, part] of parts.entries()) {
-    const density = index === 0 ? .26 / (2 * STROKE_RADIUS) : .02 / (2 * SPOKE_RADIUS);
+    const density = index === 0 ? .26 / (2 * STROKE_RADIUS)*part.width/(Math.PI*STROKE_RADIUS/2) : .02 / (2 * SPOKE_RADIUS);
     for (const ring of part.rings) for (let i = 0; i < ring.length; i++) {
       const a = ring[i], b = ring[(i + 1) % ring.length], cross = a.x * b.y - b.x * a.y;
       mass += cross * density / 2;
