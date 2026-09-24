@@ -3,7 +3,8 @@ import {Euler,Quaternion,Vector3} from 'three';
 import {clamp,preset,radiusOf,sanitizeShape,uniqueShapeEdges,spokeTips,STROKE_RADIUS,SPOKE_RADIUS,type Point} from './shapes';
 import {wheelMassProperties} from './wheel-geometry';
 import {applyWheelFluid} from './world-fluid';
-import {gateFrame,bridgeFrame,LIFT_DEPTH} from './world-mechanisms';
+import {wheelSize} from './wheel-size';
+import {gateFrame,bridgeFrame,LIFT_DEPTH,PLATE_EMBED} from './world-mechanisms';
 import {worldHeight,groundType,basinWeight,basinCoordinates,dist,makeTerrainTile,WORLD_TILE,smooth} from './world-levels';
 import type {WorldLevel,WorldProp,AssetCollisions,Plate,Gate,V3,TerrainTile,Basin,Camp,Cache} from './world-types';
 
@@ -13,7 +14,7 @@ const ZERO={x:0,y:0,z:0},IDENTITY={x:0,y:0,z:0,w:1},UP=new Vector3(0,1,0);
 const CAR_GROUP=0x00020005,WORLD_GROUP=0x00010006,PROP_GROUP=0x00040007;
 const v=(p:{x:number;y:number;z:number})=>new Vector3(p.x,p.y,p.z);
 const q=(r:{x:number;y:number;z:number;w:number})=>new Quaternion(r.x,r.y,r.z,r.w);
-export interface Wheel3D {body:RAPIER.RigidBody;carrier:RAPIER.RigidBody;knuckle:RAPIER.RigidBody;steer?:RAPIER.RevoluteImpulseJoint;motor:RAPIER.RevoluteImpulseJoint;axle:number;points:Point[];colliders:RAPIER.Collider[];revision:number;compression:number;spin:number;load:number;contactDirection:V3;contactPoint?:V3;massShape?:Point[]}
+export interface Wheel3D {body:RAPIER.RigidBody;carrier:RAPIER.RigidBody;knuckle:RAPIER.RigidBody;steer?:RAPIER.RevoluteImpulseJoint;motor:RAPIER.RevoluteImpulseJoint;axle:number;points:Point[];colliders:RAPIER.Collider[];revision:number;size:number;spin:number;load:number;contactDirection:V3;contactPoint?:V3;massShape?:Point[];baseMass?:ReturnType<typeof wheelMassProperties>}
 export interface PhysicalProp {spec:WorldProp;body:RAPIER.RigidBody;initial:V3;initialRotation:{x:number;y:number;z:number;w:number};collider:RAPIER.Collider}
 export interface PhysicalPlate {spec:Plate;body:RAPIER.RigidBody;collider:RAPIER.Collider;mass:number;active:boolean;qualify:number;loads:Map<number,number>;sleepingLoads:Map<number,number>}
 export interface PhysicalGate {spec:Gate;body:RAPIER.RigidBody;collider:RAPIER.Collider;amount:number;held:number;blocked:boolean}
@@ -41,7 +42,7 @@ export class WorldSimulation {
   wheels:Wheel3D[]=[];carBodies:RAPIER.RigidBody[]=[];
   props:PhysicalProp[]=[];plates:PhysicalPlate[]=[];gates:PhysicalGate[]=[];bridges:PhysicalBridge[]=[];
   tiles=new Map<string,{tile:TerrainTile;colliders:RAPIER.Collider[]}>();
-  shapes:Point[][];shapeRevisions=[0,0];stiffness=[1,1];pending:(Point[]|null)[]=[null,null];
+  shapes:Point[][];shapeRevisions=[0,0];wheelSizes=[1,1];wheelSizeTargets=[1,1];pending:(Point[]|null)[]=[null,null];
   drive=0;brake=0;steering=0;steerAngle=0;weight=0;weightTarget=0;water=0;mud=0;
   started=false;finished=false;elapsed=0;rescues=0;shapeChanges=0;finishTime=0;
   checkpoint:Camp;foundCamps=new Set<string>();collected=new Set<string>();activatedRelays=new Set<string>();latchedSwitches=new Set<string>();signals=new Set<string>();events:WorldEvent[]=[];
@@ -50,15 +51,18 @@ export class WorldSimulation {
   private plateContacts=new Map<number,number>();
   private wheelOwners=new Map<number,Wheel3D>();private contactEvents=new RAPIER.EventQueue(true);
   private plateOwners=new Map<number,PhysicalPlate>();
+  private assetMinY=new Map<string,number>();
+  private seatingHeights=new Map<string,number>();
   constructor(public level:WorldLevel,private assets:AssetCollisions,shapes:Point[][]=[preset('round'),preset('round')]){
     this.world=new RAPIER.World({x:0,y:-9.81,z:0});this.world.timestep=WORLD_DT;this.world.numSolverIterations=10;
     this.shapes=shapes.map(s=>sanitizeShape(s)??preset('round'));
     this.checkpoint={id:'start',...level.start,yaw:level.heading};
     this.ensureTerrain(level.start.x,level.start.z,2);
-    for(const p of [...level.props,...level.plates,...level.gates,...level.camps,...level.bridges])this.ensureTile(Math.floor(p.x/WORLD_TILE),Math.floor(p.z/WORLD_TILE));
+    for(const p of [...level.props.filter(p=>!p.foliage&&!p.detail),...level.plates,...level.gates,...level.camps,...level.bridges])this.ensureTile(Math.floor(p.x/WORLD_TILE),Math.floor(p.z/WORLD_TILE));
     for(const spec of level.props)this.createProp(spec);
+    this.seatingHeights.clear();
     for(const spec of level.plates){
-      const body=this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(spec.x,spec.y,spec.z).setRotation(new Quaternion().setFromAxisAngle(UP,spec.yaw)));
+      const body=this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(spec.x,spec.y-PLATE_EMBED,spec.z).setRotation(new Quaternion().setFromAxisAngle(UP,spec.yaw)));
       const collider=this.world.createCollider(RAPIER.ColliderDesc.roundCuboid(spec.width/2-.025,.015,spec.depth/2-.025,.025).setFriction(.85).setCollisionGroups(WORLD_GROUP).setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.01),body);
       const plate={spec,body,collider,mass:0,active:false,qualify:0,loads:new Map<number,number>(),sleepingLoads:new Map<number,number>()};this.plates.push(plate);this.plateOwners.set(collider.handle,plate);
     }
@@ -107,7 +111,7 @@ export class WorldSimulation {
       const body=this.world.createRigidBody(RAPIER.RigidBodyDesc.dynamic().setTranslation(position.x,position.y,position.z).setRotation(rotation).setAngularDamping(.045).setCcdEnabled(true));
       const motor=this.world.createImpulseJoint(RAPIER.JointData.revolute(ZERO,ZERO,{x:0,y:0,z:1}),knuckle,body,true) as RAPIER.RevoluteImpulseJoint;motor.setContactsEnabled(false);
       motor.configureMotorModel(RAPIER.MotorModel.ForceBased);motor.setMotorMaxForce(600);
-      const wheel:Wheel3D={body,carrier,knuckle,steer,motor,axle:index<2?0:1,points:[],colliders:[],revision:0,compression:0,spin:0,load:0,contactDirection:{x:0,y:-1,z:0}};this.wheels.push(wheel);this.carBodies.push(carrier,body);this.rebuildWheel(wheel);
+      const wheel:Wheel3D={body,carrier,knuckle,steer,motor,axle:index<2?0:1,points:[],colliders:[],revision:0,size:1,spin:0,load:0,contactDirection:{x:0,y:-1,z:0}};this.wheels.push(wheel);this.carBodies.push(carrier,body);this.rebuildWheel(wheel);
     }
     for(const [i,w] of this.wheels.entries())for(const c of w.colliders)this.plateContacts.set(c.handle,8.2);
     for(let i=0;i<this.body.numColliders();i++)this.plateContacts.set(this.body.collider(i).handle,27);
@@ -149,18 +153,30 @@ export class WorldSimulation {
     const tx=Math.floor(position.x/WORLD_TILE),tz=Math.floor(position.z/WORLD_TILE);
     for(const [key,tile] of this.tiles){const [x,z]=key.split(',').map(Number);if(Math.max(Math.abs(x-tx),Math.abs(z-tz))<=8||protectedTiles.has(key))continue;for(const collider of tile.colliders)this.world.removeCollider(collider,false);this.tiles.delete(key);}
   }
-  surfaceHeight(x:number,z:number){
-    const ix=Math.floor(x),iz=Math.floor(z),tx=Math.floor(ix/WORLD_TILE),tz=Math.floor(iz/WORLD_TILE),tile=this.ensureTile(tx,tz),index=(iz-tz*WORLD_TILE)*(WORLD_TILE+1)+ix-tx*WORLD_TILE;
-    const heights=[index,index+1,index+WORLD_TILE+1,index+WORLD_TILE+2].map(i=>tile.positions[i*3+1]),u=x-ix,v=z-iz;
+  surfaceHeight(x:number,z:number,create=true){
+    const ix=Math.floor(x),iz=Math.floor(z),tx=Math.floor(ix/WORLD_TILE),tz=Math.floor(iz/WORLD_TILE),tile=create?this.ensureTile(tx,tz):this.tiles.get(tx+','+tz)?.tile,index=(iz-tz*WORLD_TILE)*(WORLD_TILE+1)+ix-tx*WORLD_TILE;
+    const sample=(x:number,z:number)=>{const key=x+','+z;let height=this.seatingHeights.get(key);if(height===undefined){height=Math.fround(worldHeight(this.level,x,z));this.seatingHeights.set(key,height);}return height;};
+    const heights=tile?[index,index+1,index+WORLD_TILE+1,index+WORLD_TILE+2].map(i=>tile.positions[i*3+1]):[sample(ix,iz),sample(ix+1,iz),sample(ix,iz+1),sample(ix+1,iz+1)],u=x-ix,v=z-iz;
     return u+v<=1?heights[0]+u*(heights[1]-heights[0])+v*(heights[2]-heights[0]):heights[3]+(1-u)*(heights[2]-heights[3])+(1-v)*(heights[1]-heights[3]);
   }
   private createProp(spec:WorldProp){
     const asset=this.assets[spec.asset];if(!asset)throw Error('Missing collision mesh: '+spec.asset);
     const rot=new Quaternion().setFromEuler(new Euler(spec.pitch??0,spec.yaw,spec.roll??0,'YXZ'));
     const scale=new Vector3(spec.stretch?.x??1,spec.stretch?.y??1,spec.stretch?.z??1).multiplyScalar(spec.scale);
-    let minY=Infinity;const sample=new Vector3();for(let i=0;i<asset.positions.length;i+=3){sample.fromArray(asset.positions,i).multiply(scale).applyQuaternion(rot);minY=Math.min(minY,sample.y);}
-    if(!spec.anchored)spec.y=worldHeight(this.level,spec.x,spec.z)-minY+(spec.movable?.05:-Math.min(spec.foliage?.045:.24,spec.scale*.05));
-    if(spec.foliage)return;
+    if(!spec.anchored){
+      let minY=Infinity;
+      if(!spec.pitch&&!spec.roll){
+        let base=this.assetMinY.get(spec.asset);
+        if(base===undefined){base=Infinity;for(let i=1;i<asset.positions.length;i+=3)base=Math.min(base,asset.positions[i]);this.assetMinY.set(spec.asset,base);}
+        minY=base*scale.y;
+      }else{
+        const sample=new Vector3();for(let i=0;i<asset.positions.length;i+=3){sample.fromArray(asset.positions,i).multiply(scale).applyQuaternion(rot);minY=Math.min(minY,sample.y);}
+      }
+      const natural=/rock|boulder|stump|tree|pine|grass|fern|nettle|rooibos|gravel/.test(spec.asset);
+      const burial=natural?Math.min(spec.foliage?.025:.24,spec.scale*.05):.004;
+      spec.y=this.surfaceHeight(spec.x,spec.z,false)-minY+(spec.movable?.05:-burial);
+    }
+    if(spec.foliage||spec.detail)return;
     const vertices=Float32Array.from(asset.positions,(n,i)=>n*scale.getComponent(i%3));
     const body=this.world.createRigidBody((spec.movable?RAPIER.RigidBodyDesc.dynamic():RAPIER.RigidBodyDesc.fixed()).setTranslation(spec.x,spec.y,spec.z).setRotation(rot).setLinearDamping(.14).setAngularDamping(.27).setCcdEnabled(spec.movable));
     const desc=spec.movable?RAPIER.ColliderDesc.convexHull(vertices):RAPIER.ColliderDesc.trimesh(vertices,new Uint32Array(asset.indices),RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES);
@@ -170,30 +186,47 @@ export class WorldSimulation {
     this.props.push({spec,body,collider,initial:{x:spec.x,y:spec.y,z:spec.z},initialRotation:{x:rot.x,y:rot.y,z:rot.z,w:rot.w}});
   }
   private rebuildWheel(wheel:Wheel3D){
-    const base=this.shapes[wheel.axle],down=v(wheel.contactDirection).applyQuaternion(q(wheel.body.rotation()).invert());down.z=0;down.normalize();
-    wheel.points=base.map(p=>{
-      const along=Math.max(0,p.x*down.x+p.y*down.y),amount=wheel.compression*smooth(along/.8);
-      return {...p,x:p.x-down.x*amount,y:p.y-down.y*amount};
-    });
+    const base=this.shapes[wheel.axle],size=this.wheelSizes[wheel.axle];
+    // The renderer scales the same original strokes. Collider radii, segment
+    // positions and mass all use that scale, so a small wheel really fits a gap.
+    if(wheel.points!==base){wheel.points=base;wheel.revision++;}
+    wheel.size=size;
     let slot=0;
     const add=(desc:RAPIER.ColliderDesc)=>{
       const existing=wheel.colliders[slot++];
-      // Deformation updates the same physical pieces instead of destroying
+      // Resizing updates the same physical pieces instead of destroying
       // hundreds of collider handles and their contact registrations each time.
       if(existing){existing.setShape(desc.shape);existing.setTranslationWrtParent(desc.translation);existing.setRotationWrtParent(desc.rotation);return;}
       const c=this.world.createCollider(desc.setMass(0).setFriction(.42).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min).setRestitution(.008).setCollisionGroups(CAR_GROUP).setActiveEvents(RAPIER.ActiveEvents.CONTACT_FORCE_EVENTS).setContactForceEventThreshold(.1),wheel.body);
       wheel.colliders.push(c);this.plateContacts.set(c.handle,8.2);this.wheelOwners.set(c.handle,wheel);
     };
-    add(RAPIER.ColliderDesc.ball(.14));
-    const edge=(a:Point,b:Point,r:number)=>{const delta=new Vector3(b.x-a.x,b.y-a.y,0),length=delta.length();if(length<.0001)return;add(RAPIER.ColliderDesc.capsule(length/2,r).setTranslation((a.x+b.x)/2,(a.y+b.y)/2,0).setRotation(new Quaternion().setFromUnitVectors(UP,delta.divideScalar(length))));};
+    add(RAPIER.ColliderDesc.ball(.14*size));
+    const edge=(a:Point,b:Point,r:number)=>{const delta=new Vector3(b.x-a.x,b.y-a.y,0),length=delta.length();if(length<.0001)return;add(RAPIER.ColliderDesc.capsule(length*size/2,r*size).setTranslation((a.x+b.x)*size/2,(a.y+b.y)*size/2,0).setRotation(new Quaternion().setFromUnitVectors(UP,delta.divideScalar(length))));};
     for(const [a,b] of uniqueShapeEdges(wheel.points))edge(a,b,STROKE_RADIUS);
     for(const tip of spokeTips(wheel.points))edge({x:0,y:0},tip,SPOKE_RADIUS);
     for(const c of wheel.colliders.splice(slot)){this.plateContacts.delete(c.handle);this.wheelOwners.delete(c.handle);this.world.removeCollider(c,true);}
     if(wheel.massShape!==base){
-      const mass=wheelMassProperties(base);wheel.body.setAdditionalMassProperties(mass.mass,{x:mass.center.x,y:mass.center.y,z:0},{x:mass.inertia*.5+mass.mass*.004,y:mass.inertia*.5+mass.mass*.004,z:mass.inertia},IDENTITY,true);
-      wheel.massShape=base;wheel.body.recomputeMassPropertiesFromColliders();
+      wheel.baseMass=wheelMassProperties(base);wheel.massShape=base;
     }
-    wheel.revision++;
+    const mass=wheel.baseMass!,volumeScale=size**3,inertiaScale=size**5;
+    wheel.body.setAdditionalMassProperties(mass.mass*volumeScale,{x:mass.center.x*size,y:mass.center.y*size,z:0},{x:(mass.inertia*.5+mass.mass*.004)*inertiaScale,y:(mass.inertia*.5+mass.mass*.004)*inertiaScale,z:mass.inertia*inertiaScale},IDENTITY,true);
+    wheel.body.recomputeMassPropertiesFromColliders();
+  }
+  setWheelSize(axle:number,value:number){
+    if(axle!==0&&axle!==1)return;
+    this.wheelSizeTargets[axle]=wheelSize(value);
+    if(!this.started){this.wheelSizes[axle]=this.wheelSizeTargets[axle];for(const w of this.wheels)if(w.axle===axle)this.rebuildWheel(w);}
+  }
+  private resizeWheels(){
+    // Small physical increments lift the chassis against the ground instead of
+    // teleporting it or inserting a full-size tyre through a ceiling in one step.
+    if(this.ticks%3!==0)return;
+    for(let axle=0;axle<2;axle++){
+      const change=clamp(this.wheelSizeTargets[axle]-this.wheelSizes[axle],-WORLD_DT*3*.9,WORLD_DT*3*.9);
+      if(Math.abs(change)<1e-7)continue;
+      this.wheelSizes[axle]+=change;
+      for(const w of this.wheels)if(w.axle===axle)this.rebuildWheel(w);
+    }
   }
   requestShape(points:Point[],axle:number){const shape=sanitizeShape(points);if(!shape||(axle!==0&&axle!==1))return false;this.pending[axle]=shape;if(!this.started)this.mountPending();return true;}
   private mountPending(){
@@ -202,7 +235,7 @@ export class WorldSimulation {
     // and no chassis lift is granted by drawing a larger wheel.
     for(let axle=0;axle<2;axle++)if(this.pending[axle]){
       this.shapes[axle]=this.pending[axle]!;this.pending[axle]=null;this.shapeRevisions[axle]++;
-      for(const w of this.wheels.filter(w=>w.axle===axle)){w.compression=0;this.rebuildWheel(w);}
+      for(const w of this.wheels.filter(w=>w.axle===axle))this.rebuildWheel(w);
       if(this.started)this.shapeChanges++;
     }
     this.mountCooldown=.35;
@@ -217,13 +250,14 @@ export class WorldSimulation {
   rescue(count=true){this.teleport(this.checkpoint,this.checkpoint.yaw);if(count)this.rescues++;}
   teleport(position:V3,heading:number){
     this.ensureTerrain(position.x,position.z,2);
-    const rotation=new Quaternion().setFromAxisAngle(UP,heading),height=position.y+Math.max(...this.shapes.map(radiusOf))+.65;
+    this.wheelSizes=[...this.wheelSizeTargets];
+    const rotation=new Quaternion().setFromAxisAngle(UP,heading),height=position.y+Math.max(...this.shapes.map((shape,i)=>radiusOf(shape)*this.wheelSizes[i]))+.65;
     this.body.setTranslation({x:position.x,y:height,z:position.z},true);this.body.setRotation(rotation,true);
     this.body.setLinvel(ZERO,true);this.body.setAngvel(ZERO,true);
     this.wheels.forEach((w,i)=>{
       const p=new Vector3(...WHEEL_POSITIONS[i]).applyQuaternion(rotation).add(new Vector3(position.x,height,position.z));
       for(const body of new Set([w.body,w.carrier,w.knuckle])){body.setTranslation(p,true);body.setRotation(rotation,true);body.setLinvel(ZERO,true);body.setAngvel(ZERO,true);}
-      w.compression=0;w.load=0;w.contactPoint=undefined;w.contactDirection={x:0,y:-1,z:0};this.rebuildWheel(w);
+      w.load=0;w.contactPoint=undefined;w.contactDirection={x:0,y:-1,z:0};this.rebuildWheel(w);
     });
     this.steerAngle=0;this.drive=0;this.brake=0;this.weight=0;this.engineSpeed=0;
   }
@@ -254,8 +288,8 @@ export class WorldSimulation {
     for(const wheel of this.wheels){
       const p=wheel.body.translation();
       for(const basin of this.level.basins){
-        if(basin.material==='ice'||basinWeight(basin,p.x,p.z)>1.28||p.y>(this.basinLevels.get(basin.id)!+basin.waves+1.4))continue;
-        const state=applyWheelFluid(wheel.body,this.shapes[wheel.axle],wheel.compression,wheel.contactDirection,basin.material,point=>({...waterSurface(basin,point.x,point.z,this.elapsed,this.basinLevels.get(basin.id)!),wet:basinWeight(basin,point.x,point.z)<1.06}),WORLD_DT);
+        if(basin.material==='ice'||basinWeight(basin,p.x,p.z)>1.28||p.y>(this.basinLevels.get(basin.id)!+basin.waves+1.4*wheel.size))continue;
+        const state=applyWheelFluid(wheel.body,this.shapes[wheel.axle],basin.material,point=>({...waterSurface(basin,point.x,point.z,this.elapsed,this.basinLevels.get(basin.id)!),wet:basinWeight(basin,point.x,point.z)<1.06}),WORLD_DT,wheel.size);
         if(this.ticks%6===0&&state.waterline&&state.waterlineSpeed>.7){
           const velocity=wheel.body.velocityAtPoint(state.waterline);
           this.sprayPoints.push({p:state.waterline,velocity:{x:velocity.x*.25,y:Math.min(4,.5+state.waterlineSpeed*.4),z:velocity.z*.25},strength:Math.min(1,state.waterlineSpeed*.3),mud:basin.material==='mud'});
@@ -321,7 +355,7 @@ export class WorldSimulation {
   }
   tick(){
     if(!this.started||this.finished)return;
-    this.ticks++;this.elapsed+=WORLD_DT;this.mountCooldown=Math.max(0,this.mountCooldown-WORLD_DT);this.mountPending();
+    this.ticks++;this.elapsed+=WORLD_DT;this.mountCooldown=Math.max(0,this.mountCooldown-WORLD_DT);this.mountPending();this.resizeWheels();
     const position=this.position;if(this.ticks%20===0)this.streamTerrain();
     for(const body of [...this.carBodies,...this.props.filter(p=>p.spec.movable).map(p=>p.body)]){body.resetForces(false);body.resetTorques(false);}
     this.weight+=(clamp(this.weightTarget,-1,1)-this.weight)*.09;
@@ -337,8 +371,6 @@ export class WorldSimulation {
       // This stays stable for a single thin bar with very little inertia, while
       // retaining enough axle torque to lift the chassis at a long lever arm.
       w.motor.setMotorMaxForce(drag?600:0);w.motor.configureMotorVelocity(desired,drag);
-      const target=(1-this.stiffness[w.axle])*.4*clamp(w.load/100,0,1);
-      if(this.ticks%7===0&&(Math.abs(w.compression-target)>.015||(w.compression>.01&&Math.abs(omega)>.15))){w.compression+=(target-w.compression)*.6;this.rebuildWheel(w);}
     }
     this.mechanisms();this.fluids();this.world.step(this.contactEvents);this.readWheelLoads();this.discover();
     if(!Number.isFinite(this.position.y)||this.position.y<-35)this.rescue();
@@ -370,6 +402,6 @@ export class WorldSimulation {
     });
     for(const wheel of this.wheels)wheel.load+=((forces.get(wheel)??0)-wheel.load)*.22;
   }
-  snapshot(){return {position:this.position,rotation:this.body.rotation(),speed:this.signedSpeed,heading:this.heading,elapsed:this.elapsed,water:this.water,mud:this.mud,shapes:this.shapes,stiffness:this.stiffness,weight:this.weight,checkpoint:this.checkpoint.id,camps:[...this.foundCamps],collected:[...this.collected],activatedRelays:[...this.activatedRelays],latchedSwitches:[...this.latchedSwitches],nearbySwitch:this.nearbySwitch?.id,availableCells:this.availableCells,signals:[...this.signals],plates:this.plates.map(p=>({id:p.spec.id,mass:p.mass,active:p.active})),gates:this.gates.map(g=>({id:g.spec.id,amount:g.amount,blocked:g.blocked})),basins:[...this.basinLevels],rescues:this.rescues,finished:this.finished,radar:this.radar};}
+  snapshot(){return {position:this.position,rotation:this.body.rotation(),speed:this.signedSpeed,heading:this.heading,elapsed:this.elapsed,water:this.water,mud:this.mud,shapes:this.shapes,wheelSizes:this.wheelSizes,wheelSizeTargets:this.wheelSizeTargets,weight:this.weight,checkpoint:this.checkpoint.id,camps:[...this.foundCamps],collected:[...this.collected],activatedRelays:[...this.activatedRelays],latchedSwitches:[...this.latchedSwitches],nearbySwitch:this.nearbySwitch?.id,availableCells:this.availableCells,signals:[...this.signals],plates:this.plates.map(p=>({id:p.spec.id,mass:p.mass,active:p.active})),gates:this.gates.map(g=>({id:g.spec.id,amount:g.amount,blocked:g.blocked})),basins:[...this.basinLevels],rescues:this.rescues,finished:this.finished,radar:this.radar};}
   dispose(){this.contactEvents.free();this.world.free();}
 }

@@ -31,6 +31,9 @@ test('a found valve is deliberate and draining still requires sustained weight',
 test('real cars can push and park the supplied crates on authored pressure plates',()=>{
   for(const id of [0,1,3,6,12,18,20]){
     const l=createWorldLevel(id),s=new WorldSimulation(l,worldAssets),p=l.plates[0],crate=s.props.find(o=>o.spec.movable&&Math.hypot(o.spec.x-p.x,o.spec.z-p.z)<6)!;
+    // A low bumper pushes a human-scale crate. Oversized wheels can straddle
+    // it; the live axle sliders are part of preparing the vehicle for the job.
+    s.setWheelSize(0,.65);s.setWheelSize(1,.65);
     const start=rotatedPoint(p,p.yaw,-9,.2);start.y=worldHeight(l,start.x,start.z);s.teleport(start,p.yaw);runFor(s,2);s.drive=.3;
     for(let i=0;i<1500&&localCoordinates(p,crate.body.translation().x,crate.body.translation().z).x<-.15;i++)s.tick();
     assert.ok(localCoordinates(p,crate.body.translation().x,crate.body.translation().z).x>-.4,`${id}: crate can reach the plate`);
@@ -72,11 +75,16 @@ test('cars can park the supplied counterweights and reach every raised island, w
   for(const id of [1,8,10])for(const loaded of [false,true]){
     const l=createWorldLevel(id),s=new WorldSimulation(l,worldAssets,loaded?[preset('grip'),preset('compact')]:undefined),b=l.bridges[0],crate=s.props.find(p=>p.spec.id==='balance-ballast')!;
     if(loaded){
-      s.teleport({x:crate.spec.x-3.9,y:worldHeight(l,crate.spec.x-3.9,crate.spec.z),z:crate.spec.z},0);runFor(s,2);s.drive=.5;
-      for(let n=0;n<3600&&crate.body.translation().x<b.x-6.95;n++){steerTo(s,s.position.x+5,crate.spec.z);s.tick();}
+      s.teleport({x:crate.spec.x-3.9,y:worldHeight(l,crate.spec.x-3.9,crate.spec.z),z:crate.spec.z},0);runFor(s,2);s.drive=.6;s.weightTarget=.3;
+      for(let n=0;n<3600&&crate.body.translation().x<b.x-6.95;n++){
+        // Start with a low front bumper, then lift it for the sloping apron.
+        // This is a physical use of the new size control, not a crate teleport.
+        if(crate.body.translation().x>b.x-9)s.setWheelSize(1,1.4);
+        steerTo(s,s.position.x+5,crate.spec.z);s.tick();
+      }
       s.drive=0;s.brake=1;runFor(s,.2);s.brake=0;s.drive=-.3;runFor(s,3);s.drive=0;runFor(s,2);
       assert.ok(crate.body.translation().x-crate.initial.x>4.8,`${id}: the supplied weight must be physically pushable onto the deck`);
-      s.requestShape(preset('round'),0);s.requestShape(preset('round'),1);runFor(s,.4);
+      s.setWheelSize(0,1);s.setWheelSize(1,1);s.requestShape(preset('round'),0);s.requestShape(preset('round'),1);runFor(s,.5);
     }
     else placeProp(crate,{x:b.x-18,y:worldHeight(l,b.x-18,b.z-12),z:b.z-12});
     // Only the vehicle is repositioned to the approach lane; the parked cargo

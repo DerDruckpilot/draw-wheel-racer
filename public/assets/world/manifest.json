@@ -1858,5 +1858,99 @@
       }
     ],
     "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "gravel_01",
+    "name": "Rock 07 · gravel detail",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/rock_07",
+    "glb": "gravel_01.glb",
+    "size": [
+      0.5139308441853208,
+      0.44552855851667045,
+      1
+    ],
+    "triangles": 120,
+    "bytes": 1315480,
+    "sha256": "b413fb5431184f2c8a2a839ca500b590242b8227de71e384cd20b89773db71ef",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.; low polygon gravel derivative from rock_07; photographed textures retained; open scan base closed.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_07/rock_07_1k.gltf",
+        "sha256": "efcc2dcaa133ff8ad5c865dc2135772e8f5dbc83fa38db2ee2cf25382436b6e6"
+      },
+      {
+        "file": "rock_07.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_07/rock_07.bin",
+        "sha256": "e4a532a6d6cf4a08c288f501b790f32cba0528136a29959ce774c3cd39369e7e"
+      },
+      {
+        "file": "textures/rock_07_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_arm_1k.jpg",
+        "sha256": "1ed76e9a8542c76bdc6b7b018720ae1f52cd75d9f5ae719f613de3f5032cf4da"
+      },
+      {
+        "file": "textures/rock_07_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_diff_1k.jpg",
+        "sha256": "8ff1965aa1664cc4abcc0131c44ee2b97ab14d6e131d7a51429ff261eeb101c8"
+      },
+      {
+        "file": "textures/rock_07_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_nor_gl_1k.jpg",
+        "sha256": "57cb2210951aeb376164fce5f7c65f03e5599def04873b56cad0f173c275d78d"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "gravel_02",
+    "name": "Rock 09 · gravel detail",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/rock_09",
+    "glb": "gravel_02.glb",
+    "size": [
+      0.5069410696180005,
+      0.21334289377551452,
+      1
+    ],
+    "triangles": 120,
+    "bytes": 1305976,
+    "sha256": "8aa467ab3d2209eb9108411ffb4f0005006d622003d6c0dea71ff13e1d443b8b",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.; low polygon gravel derivative from rock_09; photographed textures retained; open scan base closed.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_09/rock_09_1k.gltf",
+        "sha256": "636e57eb0090889627da18edaec202ff9f65f83101b94f91b7da4d21dc080ab9"
+      },
+      {
+        "file": "textures/rock_09_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_arm_1k.jpg",
+        "sha256": "594e2cec49e6bb40bd9bab2649e37dcc261079456cf4d6f680f56770c19db5ea"
+      },
+      {
+        "file": "textures/rock_09_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_nor_gl_1k.jpg",
+        "sha256": "2195b5c7da3a23af2a5f93dbb20f38bc069028509b106397bc8d2aee0bc55729"
+      },
+      {
+        "file": "textures/rock_09_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_diff_1k.jpg",
+        "sha256": "afb7ae5ae82238d304aba589391ac6bc87f7cf1dbfe50980c21f762cfdd87efd"
+      },
+      {
+        "file": "rock_09.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_09/rock_09.bin",
+        "sha256": "780c37d6fc11ca3a01c3763535ef883908b6007271a46bd446d2289ded820751"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
   }
 ]

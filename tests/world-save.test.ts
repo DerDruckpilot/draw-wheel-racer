@@ -10,12 +10,20 @@ await initWorldPhysics();
 function storage(values:Record<string,string>){const map=new Map(Object.entries(values));return {getItem:(k:string)=>map.get(k)??null,setItem:(k:string,v:string)=>{map.set(k,v);},removeItem:(k:string)=>{map.delete(k);}};}
 test('a run restores independent wheels, discovered camps, moved objects and puzzle choices',()=>{
   const level=createWorldLevel(5),first=new WorldSimulation(level,worldAssets),camp=level.camps[0];
-  first.requestShape([{x:-1.15,y:0},{x:1.15,y:0}],0);first.requestShape(preset('compact'),1);first.stiffness=[.1,.85];
+  first.requestShape([{x:-1.15,y:0},{x:1.15,y:0}],0);first.requestShape(preset('compact'),1);first.setWheelSize(0,.6);first.setWheelSize(1,1.25);
   first.foundCamps.add(camp.id);first.checkpoint=camp;first.collected.add('cell-0');first.activatedRelays.add('relay-0');first.latchedSwitches.add('lift-control');first.elapsed=134.5;first.rescues=2;
   const prop=first.props.find(p=>p.spec.movable)!;prop.body.setTranslation({x:prop.initial.x+2,y:prop.initial.y,z:prop.initial.z-1},true);
   const run=JSON.parse(JSON.stringify(captureWorldRun(first))),second=new WorldSimulation(createWorldLevel(5),worldAssets);
-  assert.ok(restoreWorldRun(second,run));assert.deepEqual(second.shapes,first.shapes);assert.deepEqual(second.stiffness,[.1,.85]);assert.equal(second.checkpoint.id,camp.id);assert.equal(second.rescues,2);assert.equal(second.elapsed,134.5);assert.ok(second.latchedSwitches.has('lift-control'));assert.ok(second.activatedRelays.has('relay-0'));
+  assert.ok(restoreWorldRun(second,run));assert.deepEqual(second.shapes,first.shapes);assert.deepEqual(second.wheelSizes,[.6,1.25]);assert.equal(second.checkpoint.id,camp.id);assert.equal(second.rescues,2);assert.equal(second.elapsed,134.5);assert.ok(second.latchedSwitches.has('lift-control'));assert.ok(second.activatedRelays.has('relay-0'));
   assert.ok(Math.abs(second.props.find(p=>p.spec.id===prop.spec.id)!.body.translation().x-prop.body.translation().x)<.001);assert.ok(Math.abs(second.position.x-camp.x)<.001);assert.equal(second.events.length,0);first.dispose();second.dispose();
+});
+test('version 2.0 runs retain progress without interpreting stiffness as wheel size',()=>{
+  const sim=new WorldSimulation(flatWorld(),worldAssets),run=captureWorldRun(sim);
+  delete run.wheelSizes;run.stiffness=[0,.2];run.elapsed=85;
+  sim.setWheelSize(0,.5);assert.ok(restoreWorldRun(sim,run));
+  assert.equal(sim.elapsed,85);assert.deepEqual(sim.wheelSizes,[1,1]);
+  assert.equal(restoreWorldRun(sim,{...run,wheelSizes:[NaN,1]}),false);
+  sim.dispose();
 });
 test('corrupt legacy data cannot destroy a valid current save and malformed records are bounded',()=>{
   const raw={...freshWorldSave(),level:4,sound:true,records:{4:{time:40,rescues:0,stars:'broken',relics:['relic-0','relic-0','relic-99']},999:{time:4,rescues:0,stars:3}}};

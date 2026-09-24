@@ -2,9 +2,9 @@
 
 Zeichne deine Räder, erkunde eine offene Landschaft und löse physische Rätsel. Ein Solo-Abenteuer für das iPhone im Querformat, ohne Zeitlimit, Werbung oder Anmeldung.
 
-**Version 2.0.0 — offene 3D-Welten und mechanische Rätsel.**
+**Version 2.1.0 — freie Kamera, Radgrößen und maßstäbliche Umgebung.**
 
-[Spiel öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Technik und Grenzen](docs/IMPLEMENTIERUNG.md) · [Prüfbericht](docs/QA-2.0.md) · [Assetquellen](https://derdruckpilot.github.io/draw-wheel-racer/credits.html)
+[Spiel öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Technik und Grenzen](docs/IMPLEMENTIERUNG.md) · [Prüfbericht](docs/QA-2.1.md) · [Assetquellen](https://derdruckpilot.github.io/draw-wheel-racer/credits.html)
 
 ![Waldgebiet mit importierten Bäumen, Farnen und Laubboden](docs/screenshots/forest.png)
 
@@ -15,8 +15,9 @@ Zeichne deine Räder, erkunde eine offene Landschaft und löse physische Rätsel
 1. Öffne das Spiel in Safari. Über **Teilen → Zum Home-Bildschirm** kannst du es als PWA installieren. Warte beim ersten Start auf **Offline bereit**; die lokal gespeicherten Modelle und Texturen benötigen ungefähr 80 MB Download.
 2. Halte das iPhone quer. Zeichne links die Hinterräder und rechts die Vorderräder. Mehrere Striche sind möglich. Erst das jeweilige Häkchen montiert die Form und leert den Entwurf.
 3. Rechts Gas geben, links bremsen. Halte die Bremse nach dem Stillstand weiter für den Rückwärtsgang. Weiter oben am Gaspedal drücken gibt mehr Gas; ein Wisch nach oben aktiviert den Tempomat.
-4. Aktiviere die Neigungssteuerung im Fahrwerkmenü: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt. Kalibriere in deiner normalen Halteposition. Dort stehen auch Touchregler bereit.
-5. Die äußeren senkrechten Regler ändern die Steifigkeit der beiden Achsen. Große, kleine, offene und nachgiebige Formen haben unterschiedliche Vor- und Nachteile.
+4. Aktiviere die Neigungssteuerung im Fahrwerkmenü: rechts/links kippen lenkt, vor/zurück kippen verlagert Gewicht. Kalibriere in deiner normalen Halteposition. Dort stehen auch Touchregler bereit.
+5. Die äußeren senkrechten Regler skalieren die montierten Räder unabhängig je Achse: **oben groß, unten klein**, von 40 bis 140 Prozent. Die Originalzeichnung bleibt erhalten. Größe, Kollision, Masse und verdrängtes Wasser verändern sich gemeinsam.
+6. Streiche über die freie Bildmitte, um die Kamera horizontal rund um das Auto und nach oben/unten zu drehen. Das geht auch, während ein anderer Finger Gas gibt.
 
 Tastatur: **D / →** Gas, **A / ←** rückwärts, **W / S** lenken, **Q / E** Gewicht, **Leertaste** bremsen, **Esc** pausieren.
 
@@ -35,19 +36,21 @@ Die frühen Gebiete sind auf etwa 5–10 Minuten Erkundung ausgelegt; Umfang und
 
 ## Umgebung
 
-33 importierte Modellvarianten und neun PBR-Materialsets von Poly Haven (CC0): unterschiedliche Felsen, Bäume, Gras, Farne, Brennnesseln, Sträucher, Baumstümpfe, Totholz, Stege, Kisten, Fässer, Lampen, Generatoren und technische Details. Der Truck stammt aus CesiumJS (Apache-2.0).
+35 importierte Modellvarianten und neun PBR-Materialsets von Poly Haven (CC0): unterschiedliche Felsen, Bäume, Gras, Farne, Brennnesseln, Sträucher, Baumstümpfe, Totholz, Stege, Kisten, Fässer, Lampen, Generatoren und technische Details. Der Truck stammt aus CesiumJS (Apache-2.0).
 
-Die Landschaft besitzt durchgehende Texturen, räumlich gemischte Fels- und Bodenmaterialien, bewachsene Wegränder, Schatten und eine nahe mitlenkende Kamera. Dezente, verblassende Fahrspuren helfen dabei, kürzlich erkundete Stellen wiederzuerkennen. Staub entsteht an belasteten Rädern auf trockenem Untergrund. Wasser verwendet gemeinsame Wellen für Darstellung und Auftrieb, sichtbare Tiefe, Reflexionen, Uferschaum und formabhängige Spritzer. Matsch besitzt eine langsam bewegte, texturierte Oberfläche; Eis liegt in eigenen Gletschergebieten.
+Die Landschaft besitzt durchgehende Texturen, räumlich gemischte Fels- und Bodenmaterialien, bewachsene Wegränder, dichte kleine Grasgruppen, gescannten Kies, Schatten und eine nahe, frei drehbare Kamera. Generatoren, Lagerausstattung, Jungbäume und Bodenpflanzen sind am Maßstab des Trucks ausgerichtet. Dezente, verblassende Fahrspuren helfen dabei, kürzlich erkundete Stellen wiederzuerkennen. Staub entsteht an belasteten Rädern auf trockenem Untergrund. Wasser verwendet gemeinsame Wellen für Darstellung und Auftrieb, sichtbare Tiefe, Reflexionen, Uferschaum und formabhängige Spritzer. Matsch besitzt eine langsam bewegte, texturierte Oberfläche; Eis liegt in eigenen Gletschergebieten.
 
 Modelle, Texturen und Lizenzen sind lokal enthalten. GPU-komprimierte Texturen, Instanzen, räumliche Sichtbarkeitsgrenzen und wiederverwendete Radpuffer begrenzen den Aufwand auf Mobilgeräten. Der automatische Grafikmodus kann Auflösung und Schatten anpassen; „Detailreich“ behält die volle Darstellung.
 
 ## Spielstände
 
-Version 2 verwendet ein neues Format. Alter Streckenfortschritt wird beim ersten Start entfernt; Ton und Grafikqualität werden übernommen. Neue Fahrten speichern Rätselzustände, Fundstücke, montierte Formen, Gegenstände und das zuletzt gefundene Lager. Nach einem Neustart geht es am Lager weiter.
+Version 2 verwendet ein neues Format. Alter Streckenfortschritt wird beim ersten Start entfernt; Ton und Grafikqualität werden übernommen. Neue Fahrten speichern Rätselzustände, Fundstücke, montierte Formen und Radgrößen, Gegenstände und das zuletzt gefundene Lager. Nach einem Neustart geht es am Lager weiter.
+
+Spielstände aus 2.0 bleiben erhalten; bisherige Steifigkeitswerte werden nicht als Größenwerte übernommen.
 
 Browserdaten zu löschen entfernt den Spielstand und den Offlinecache. Ein App-Update wird erst nach Antippen installiert.
 
-Beim Wechsel von Version 1.12: Öffne die App mit Internetverbindung und warte auf den Updatehinweis. Öffne die Einstellungen danach erneut und tippe auf **Neue Version laden**. Die Versionszeile zeigt anschließend **2.0.0**. Warte für den nächsten Start ohne Verbindung wieder auf **Offline bereit**.
+Beim Wechsel auf Version 2.1: Öffne die App mit Internetverbindung und warte auf den Updatehinweis. Öffne die Einstellungen danach erneut und tippe auf **Neue Version laden**. Die Versionszeile zeigt anschließend **2.1.0**. Warte für den nächsten Start ohne Verbindung wieder auf **Offline bereit**.
 
 ## Lokal entwickeln und prüfen
 

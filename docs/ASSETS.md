@@ -4,7 +4,7 @@ Alle für das Spiel benötigten Dateien liegen in `public/assets`. Ein normaler 
 
 ## Quellen
 
-- 33 ausgewählte Modellvarianten und neun PBR-Materialsets: [Poly Haven](https://polyhaven.com), CC0. Die genauen URLs, Urheber, Varianten, Änderungen und SHA-256-Prüfsummen stehen in `public/assets/world/manifest.json` und `textures.json`.
+- 35 ausgewählte Modellvarianten und neun PBR-Materialsets: [Poly Haven](https://polyhaven.com), CC0. Die genauen URLs, Urheber, Varianten, Änderungen und SHA-256-Prüfsummen stehen in `public/assets/world/manifest.json` und `textures.json`.
 - Umgebungslicht: [Kloppenheim 06 Pure Sky](https://polyhaven.com/a/kloppenheim_06_puresky), CC0; Herkunft in `public/assets/sources.json`.
 - Fahrzeug: CesiumJS GroundVehicle, Apache-2.0. Fixierte Quellrevision und Bearbeitung in `scripts/prepare-vehicle.mjs`, Nachweise in `public/assets/offroad-source.json`.
 - Texturtranskodierung: Basis Universal über Three.js; vollständige Lizenz in `public/licenses/basis.txt`.
@@ -17,8 +17,9 @@ Die Pipeline braucht die Entwicklungsabhängigkeiten aus `npm ci`. Originalmodel
 2. `node scripts/fetch-world-textures.mjs` lädt die neun Materialsets in `.local/world-textures/` und aktualisiert ihre Nachweise.
 3. `scripts/bake-tree-canopies.py` rendert mit Blender die ursprünglichen dichten Baumkronen in neun räumliche Tiefenschichten. `node scripts/install-tree-canopies.mjs` kombiniert diese mit der erhaltenen Stammgeometrie.
 4. `node scripts/compress-world-assets.mjs` verwendet `toktx` aus KTX-Software, komprimiert Materialtexturen in ETC1S und Normalen beziehungsweise Alpha-Materialien in UASTC, erzeugt Mipmaps und aktualisiert die Prüfsummen. `TOKTX_PATH` kann den Pfad zu `toktx` überschreiben; der Standard liegt in `.local/tools/ktx/bin/`.
-5. `node scripts/fetch-assets.mjs` aktualisiert ausschließlich das HDRI. `node scripts/prepare-vehicle.mjs` erzeugt das Fahrzeug aus der fixierten Cesium-Quelle neu und ruft anschließend `prepare-vehicle-collision.mjs` für drei passende Kollisionshüllen auf.
-6. Anschließend `npm test` und `npm run build` ausführen und die betroffenen Objekte visuell prüfen.
+5. `node scripts/prepare-ground-details.mjs` erzeugt aus den komprimierten Felsmodellen zwei Kiesvarianten mit jeweils 120 Dreiecken. Die fotografierten Texturen bleiben erhalten; Geometrie, Nachweise und Prüfsummen werden aktualisiert. Die Normierung erfolgt auf eine Einheit entlang der längsten Seite. Der Größenkatalog in `src/world-scale.ts` ordnet Gegenstände anschließend relativ zum Truck ein.
+6. `node scripts/fetch-assets.mjs` aktualisiert ausschließlich das HDRI. `node scripts/prepare-vehicle.mjs` erzeugt das Fahrzeug aus der fixierten Cesium-Quelle neu und ruft anschließend `prepare-vehicle-collision.mjs` für drei passende Kollisionshüllen auf.
+7. Anschließend `npm test` und `npm run build` ausführen und die betroffenen Objekte visuell prüfen.
 
 Feste Gegenstände kollidieren auf denselben vereinfachten Dreiecken wie ihre sichtbare Geometrie. Bewegliche Gegenstände verwenden konvexe Hüllen. Bei Pflanzen werden Blätter aus den harten Kollisionen ausgeschlossen. Die zugeschnittene Holzdeck-Variante enthält ausschließlich die waagerechten Bohlen des ursprünglichen Stegs. Bei zwei Fels-Scans werden offene Unterseiten entlang ihrer originalen Konturen trianguliert; `repair-rock-bases.mjs` kann diese Reparatur auch auf bestehende komprimierte Modelle anwenden.
 

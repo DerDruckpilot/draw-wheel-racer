@@ -21,8 +21,10 @@ export class TiltFilter {
   update(sample:TiltSample,dt:number){
     if(!this.neutral||sample.angle!==this.angle)this.calibrate(sample);
     const p=screenTilt(sample),blend=1-Math.exp(-Math.min(.1,dt)/.12);
-    this.weight+=(-response(difference(p.roll,this.neutral!.roll),20)-this.weight)*blend;
-    this.steer+=(response(difference(p.pitch,this.neutral!.pitch),18)-this.steer)*blend;
+    // Lowering the screen's right edge steers right. Tilting the far edge down
+    // shifts the ballast toward the bonnet in the rear-facing driving view.
+    this.steer+=(-response(difference(p.roll,this.neutral!.roll),18)-this.steer)*blend;
+    this.weight+=(-response(difference(p.pitch,this.neutral!.pitch),20)-this.weight)*blend;
     return {weight:this.weight,steer:this.steer};
   }
 }

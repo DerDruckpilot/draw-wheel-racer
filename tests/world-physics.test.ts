@@ -62,15 +62,20 @@ test('ice leaves a much longer braking distance than dry ground',()=>{
   assert.ok(results[1].distance>results[0].distance*2.5,'locked wheels slide visibly further on ice');
   assert.ok(results[1].speed>2,'ice cannot behave like the ordinary road');
 });
-test('soft wheels flatten under load without changing mass, and retracing cannot add grip pieces',()=>{
-  const heights=[];let referenceMass=0;
-  for(const stiffness of [1,0]){
-    const sim=new WorldSimulation(flatWorld(),worldAssets);sim.stiffness=[stiffness,stiffness];runFor(sim,6);
-    const mass=sim.wheels[0].body.mass();if(stiffness)referenceMass=mass;else assert.ok(Math.abs(mass-referenceMass)<1e-5);
-    heights.push(sim.position.y);assert.ok(sim.wheels.every(w=>Number.isFinite(w.body.translation().y)));
-    if(!stiffness)assert.ok(sim.wheels.every(w=>w.compression>.2));sim.dispose();
-  }
-  assert.ok(heights[0]-heights[1]>.18,'the slider produces a substantial change under the same vehicle weight');
+test('live wheel sizing changes real ground clearance and mass without editing the drawing',()=>{
+  const sim=new WorldSimulation(flatWorld(),worldAssets),original=JSON.stringify(sim.shapes);
+  sim.brake=1;runFor(sim,2);const fullHeight=sim.position.y,fullMass=sim.wheels[0].body.mass();
+  sim.setWheelSize(0,.5);sim.setWheelSize(1,.5);runFor(sim,3);
+  assert.ok(fullHeight-sim.position.y>.25,'smaller colliders lower the chassis onto the actual ground');
+  assert.ok(Math.abs(sim.wheels[0].body.mass()/fullMass-.125)<.0001,'uniform volume sets physical mass');
+  const smallHeight=sim.position.y;sim.setWheelSize(0,1.35);sim.setWheelSize(1,1.35);runFor(sim,4);
+  assert.ok(sim.position.y-smallHeight>.5,'growing mounted wheels lifts against the ground');
+  assert.ok(Math.abs(sim.signedSpeed)<.5,'resizing at rest must not launch the vehicle');
+  assert.equal(JSON.stringify(sim.shapes),original);assert.equal(sim.rescues,0);
+  sim.setWheelSize(0,.6);runFor(sim,2);assert.equal(sim.wheelSizes[1],1.35);assert.ok(Math.abs(sim.wheelSizes[0]-.6)<1e-6,'axles resize independently');
+  sim.dispose();
+});
+test('retracing cannot add physical grip pieces or mass',()=>{
   const line=[{x:-1.1,y:.2},{x:1.1,y:-.2}],sim=new WorldSimulation(flatWorld(),worldAssets,[line,line]);
   const counts=sim.wheels.map(w=>w.colliders.length),mass=sim.wheels[0].body.mass();
   for(const axle of [0,1])sim.requestShape([...line,{...line[1],move:true as const},line[0]],axle);

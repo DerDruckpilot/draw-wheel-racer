@@ -41,7 +41,7 @@ export class WheelTrails {
       const forward=new Vector3(1,0,0).applyQuaternion(new Quaternion().copy(wheel.knuckle.rotation()));forward.addScaledVector(normal,-forward.dot(normal)).normalize();
       const right=forward.clone().cross(normal).normalize(),rotation=new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right,forward,normal));
       point.y=ground;point.addScaledVector(normal,.022);
-      const matrix=new Matrix4().compose(point,rotation,new Vector3(.24+wheel.compression*.18,.55,1)),index=this.next++%this.capacity;
+      const matrix=new Matrix4().compose(point,rotation,new Vector3(.24*wheel.size,.55,1)),index=this.next++%this.capacity;
       this.mesh.setMatrixAt(index,matrix);this.born[index]=sim.elapsed;this.strength[index]=material==='mud'?.38:sim.level.biome==='glacier'?.10:.19;
       this.mesh.count=Math.min(this.next,this.capacity);this.last.set(wheel,point);changed=true;
     }

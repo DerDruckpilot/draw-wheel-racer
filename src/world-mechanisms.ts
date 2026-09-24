@@ -2,6 +2,7 @@ import type {Gate,Bridge,V3} from './world-types';
 
 export interface MechanismPart {position:V3;size:V3;yaw:number}
 export const LIFT_DEPTH=6.4;
+export const PLATE_EMBED=.025;
 /** Both the renderer and physics consume these exact dimensions. */
 export function gateFrame(spec:Gate):MechanismPart[]{
   const parts:MechanismPart[]=[],height=spec.height+spec.travel;

@@ -11,7 +11,7 @@ import {waterSurface,type WorldSimulation,type Wheel3D} from './world-physics';
 import {naturalTerrain} from './terrain-material';
 import {landscapeMaterial,type SurfaceMaps} from './world-materials';
 import {worldWaterMaterial} from './world-water';
-import {gateFrame,bridgeFrame,LIFT_DEPTH} from './world-mechanisms';
+import {gateFrame,bridgeFrame,LIFT_DEPTH,PLATE_EMBED} from './world-mechanisms';
 import type {AssetInfo,AssetCollisions,Ground,Basin,V3,WorldProp,Biome} from './world-types';
 
 const BASE=import.meta.env.BASE_URL;
@@ -47,6 +47,7 @@ export class WorldRenderer {
   private brass=new THREE.MeshStandardMaterial({color:0xa8904c,metalness:.72,roughness:.4});
   private lamp=new THREE.MeshStandardMaterial({color:0xd7ea9a,emissive:0xb2ce64,emissiveIntensity:.8});
   private quality:Quality='auto';private frame=0;private average=16;private pixelRatio=1.4;private adaptiveClock=0;private shadowTier=0;private cameraHeading=0;private cameraTarget=new THREE.Vector3();private dirty=true;
+  private orbitYaw=0;private orbitPitch=Math.atan2(6.4,Math.hypot(9.5,5.5));private orbitChanged=false;
   private particles:THREE.Points;private particlePositions=new Float32Array(1800*3);private particleColors=new Float32Array(1800*3);private particleOpacity=new Float32Array(1800);private particleSizes=new Float32Array(1800);private dustBudget=[0,0,0,0];
   private particleData:{p:THREE.Vector3;v:THREE.Vector3;life:number;total:number;mud:boolean;dust:boolean;size:number;color?:number[]}[]=[];
   private resizeObserver:ResizeObserver;snapNextFrame=true;private lastRescues=-1;private goal!:THREE.Group;
@@ -112,7 +113,9 @@ export class WorldRenderer {
           plantPosition=(modelMatrix*vec4(transformed,1.)).xyz;
         #endif
       `);
-      if(leaves)shader.fragmentShader='varying vec3 plantPosition;uniform vec3 vehicleFocus;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>',`
+      // Only tall canopies obscure the driving view. Fading tiny ground plants
+      // along the same camera ray erased the very detail around the vehicle.
+      if(leaves&&!wind)shader.fragmentShader='varying vec3 plantPosition;uniform vec3 vehicleFocus;\n'+shader.fragmentShader.replace('#include <alphatest_fragment>',`
         vec3 viewPath=cameraPosition-vehicleFocus;
         float along=dot(plantPosition-vehicleFocus,viewPath)/max(.01,dot(viewPath,viewPath));
         float distanceToPath=length(plantPosition-(vehicleFocus+viewPath*along));
@@ -124,7 +127,7 @@ export class WorldRenderer {
         #include <alphatest_fragment>
       `);
     };
-    material.customProgramCacheKey=()=> 'world-plants-4-'+wind+'-'+leaves;
+    material.customProgramCacheKey=()=> 'world-plants-5-'+wind+'-'+leaves;
   }
   setQuality(quality:Quality){this.quality=quality;this.average=16;this.adaptiveClock=0;this.shadowTier=0;this.pixelRatio=quality==='eco'?1:quality==='high'?Math.min(2,devicePixelRatio):1.4;this.renderer.shadowMap.enabled=quality!=='eco';this.setShadowResolution(1536);this.resize();}
   private setShadowResolution(size:number){
@@ -133,7 +136,11 @@ export class WorldRenderer {
     this.sun.shadow.mapSize.set(size,size);this.sun.shadow.needsUpdate=true;
   }
   private resize(){const w=this.host.clientWidth,h=this.host.clientHeight;if(!w||!h)return;this.renderer.setPixelRatio(this.pixelRatio);this.renderer.setSize(w,h);this.camera.aspect=w/h;this.camera.setViewOffset(w,h,0,h*.1,w,h);this.camera.updateProjectionMatrix();this.dirty=true;}
-  needsFrame(sim:WorldSimulation){return this.dirty||this.snapNextFrame||this.lastRescues!==sim.rescues||sim.wheels.some((wheel,i)=>wheel.revision!==this.wheelRevision[i]);}
+  needsFrame(sim:WorldSimulation){return this.dirty||this.snapNextFrame||this.lastRescues!==sim.rescues||sim.wheels.some((wheel,i)=>wheel.revision!==this.wheelRevision[i]||this.wheelMeshes[i]?.scale.x!==wheel.size);}
+  orbitBy(dx:number,dy:number){
+    this.orbitYaw=Math.atan2(Math.sin(this.orbitYaw-dx*Math.PI*2),Math.cos(this.orbitYaw-dx*Math.PI*2));
+    this.orbitPitch=clamp(this.orbitPitch+dy*1.5,.18,1.18);this.orbitChanged=true;this.dirty=true;
+  }
   private model(id:string,scale:number){const mesh=this.models.get(id)!.clone(true);mesh.scale.setScalar(scale);return mesh;}
   setWorld(sim:WorldSimulation){
     // Shared asset geometries/materials remain cached; generated world meshes do not.
@@ -159,20 +166,20 @@ export class WorldRenderer {
     const groups=new Map<string,WorldProp[]>();
     for(const prop of sim.level.props){
       if(prop.movable){const object=this.model(prop.asset,prop.scale);if(prop.stretch)object.scale.multiply(vector(prop.stretch));this.propMeshes.set(prop.id,object);this.root.add(object);continue;}
-      const key=prop.asset+':'+Math.floor(prop.x/48)+','+Math.floor(prop.z/48);const list=groups.get(key)??[];list.push(prop);groups.set(key,list);
+      const chunk=prop.detail?24:48,key=prop.asset+':'+(prop.detail?'detail':prop.foliage?'plant':'solid')+':'+Math.floor(prop.x/chunk)+','+Math.floor(prop.z/chunk);const list=groups.get(key)??[];list.push(prop);groups.set(key,list);
     }
     const matrix=new THREE.Matrix4();
     for(const props of groups.values()){
       this.models.get(props[0].asset)!.traverse(o=>{if(o instanceof THREE.Mesh){
-        const mesh=new THREE.InstancedMesh(o.geometry,o.material,props.length);mesh.castShadow=!props[0].foliage;mesh.receiveShadow=true;
+        const mesh=new THREE.InstancedMesh(o.geometry,o.material,props.length);mesh.castShadow=!props[0].foliage&&!props[0].detail;mesh.receiveShadow=true;
         props.forEach((p,i)=>{const scale=new THREE.Vector3(p.stretch?.x??1,p.stretch?.y??1,p.stretch?.z??1).multiplyScalar(p.scale);matrix.compose(vector(p),new THREE.Quaternion().setFromEuler(new THREE.Euler(p.pitch??0,p.yaw,p.roll??0,'YXZ')),scale);mesh.setMatrixAt(i,matrix);});mesh.computeBoundingSphere();this.root.add(mesh);
-        mesh.userData.castsShadow=!props[0].foliage;this.scenery.push({mesh,center:mesh.boundingSphere!.center.clone(),range:props[0].foliage?62:96});
+        mesh.userData.castsShadow=mesh.castShadow;this.scenery.push({mesh,center:mesh.boundingSphere!.center.clone(),range:props[0].detail?43:props[0].foliage?62:96});
       }});
     }
     for(const plate of sim.plates){
       const group=new THREE.Group(),base=box(plate.spec.width,.05,plate.spec.depth,this.metal);base.userData.generated=true;group.add(base);
       const inset=box(plate.spec.width-.16,.02,plate.spec.depth-.16,this.brass);inset.position.y=.03;inset.userData.generated=true;group.add(inset);
-      group.position.copy(vector(plate.spec));group.rotation.y=plate.spec.yaw;this.root.add(group);this.plateMeshes.set(plate.spec.id,group);
+      group.position.copy(vector(plate.spec));group.position.y-=PLATE_EMBED;group.rotation.y=plate.spec.yaw;this.root.add(group);this.plateMeshes.set(plate.spec.id,group);
     }
     for(const gate of sim.gates){
       const spec=gate.spec,group=new THREE.Group(),lift=spec.kind==='lift';
@@ -204,8 +211,8 @@ export class WorldRenderer {
     }
     for(const camp of sim.level.camps){
       const group=new THREE.Group();group.position.copy(vector(camp));
-      const beacon=box(.09,2.6,.09,this.metal);beacon.position.y=1.3;beacon.userData.generated=true;group.add(beacon);
-      const sign=label('LAGER');sign.position.y=2.5;group.add(sign);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.13,10,6),this.lamp);lamp.position.y=2.85;lamp.userData.generated=true;group.add(lamp);
+      const beacon=box(.055,1.8,.055,this.metal);beacon.position.y=.9;beacon.userData.generated=true;group.add(beacon);
+      const sign=label('LAGER');sign.scale.set(1.25,.39,1);sign.position.y=1.72;group.add(sign);const lamp=new THREE.Mesh(new THREE.SphereGeometry(.075,10,6),this.lamp);lamp.position.y=1.94;lamp.userData.generated=true;group.add(lamp);
       this.campMeshes.set(camp.id,group);this.root.add(group);
     }
     for(const cache of sim.level.caches){
@@ -213,12 +220,12 @@ export class WorldRenderer {
       const model=this.model(cache.kind==='cell'?'old_military_crate':'wooden_crate_01',cache.kind==='cell'?.7:.65);group.add(model);
       const light=new THREE.Mesh(new THREE.SphereGeometry(.08,8,5),cache.kind==='cell'?this.lamp:this.brass);light.position.y=.24;light.userData.generated=true;group.add(light);this.cacheMeshes.set(cache.id,group);this.root.add(group);
     }
-    for(const relay of sim.level.relays){const light=new THREE.Mesh(new THREE.SphereGeometry(.12,10,6),this.brass.clone());this.worldMaterials.add(light.material);light.position.set(relay.x,relay.y+2,relay.z);light.userData.generated=true;this.relayLights.set(relay.id,light);this.root.add(light);}
+    for(const relay of sim.level.relays){const light=new THREE.Mesh(new THREE.SphereGeometry(.065,10,6),this.brass.clone());this.worldMaterials.add(light.material);light.position.set(relay.x,relay.y+.50,relay.z);light.userData.generated=true;this.relayLights.set(relay.id,light);this.root.add(light);}
     for(const control of sim.level.switches){
       const light=new THREE.Mesh(new THREE.SphereGeometry(.09,10,6),this.lamp.clone());light.userData.generated=true;this.worldMaterials.add(light.material);this.signalLights.push({signal:control.id,mesh:light});
       const gate=control.gate?sim.gates.find(g=>g.spec.id===control.gate):undefined;
-      if(gate){const group=this.gateMeshes.get(gate.spec.id)!,valve=this.model('industrial_valve',1);valve.position.set(control.x-gate.spec.x,.75,control.z-gate.spec.z);group.add(valve);light.position.copy(valve.position).add(new THREE.Vector3(0,.6,0));group.add(light);}
-      else{light.position.set(control.x,control.y+1.65,control.z);this.root.add(light);}
+      if(gate){const group=this.gateMeshes.get(gate.spec.id)!,valve=this.model('industrial_valve',.65);valve.position.set(control.x-gate.spec.x,.75,control.z-gate.spec.z);group.add(valve);light.position.copy(valve.position).add(new THREE.Vector3(0,.39,0));group.add(light);}
+      else{light.position.set(control.x,control.y+.78,control.z);this.root.add(light);}
     }
     this.goal=new THREE.Group();this.goal.position.copy(vector(sim.level.goal));
     const labelMesh=label('ZIELLAGER');labelMesh.position.y=3.5;this.goal.add(labelMesh);
@@ -228,7 +235,7 @@ export class WorldRenderer {
     }
     this.root.add(this.goal);
     for(const basin of sim.level.basins)if(basin.material!=='ice')this.addWater(sim,basin);
-    this.snapNextFrame=true;this.lastRescues=sim.rescues;this.cameraHeading=sim.heading;
+    this.snapNextFrame=true;this.lastRescues=sim.rescues;this.cameraHeading=sim.heading;this.orbitYaw=0;this.orbitPitch=Math.atan2(6.4,Math.hypot(9.5,5.5));this.orbitChanged=false;
     this.updateTerrain(sim,true);
   }
   private updateTerrain(sim:WorldSimulation,force=false){
@@ -260,7 +267,7 @@ export class WorldRenderer {
   }
   private updateWheels(sim:WorldSimulation){
     for(const [i,wheel] of sim.wheels.entries()){
-      const mesh=this.wheelMeshes[i];mesh.position.copy(vector(wheel.body.translation()));mesh.quaternion.copy(quaternion(wheel.body.rotation()));
+      const mesh=this.wheelMeshes[i];mesh.position.copy(vector(wheel.body.translation()));mesh.quaternion.copy(quaternion(wheel.body.rotation()));mesh.scale.setScalar(wheel.size);
       if(this.wheelRevision[i]===wheel.revision)continue;this.wheelRevision[i]=wheel.revision;
       updateWheelGeometry(mesh.geometry,wheel.points);
     }
@@ -311,14 +318,15 @@ export class WorldRenderer {
       position.needsUpdate=true;mesh.material.uniforms.time.value=sim.elapsed;
       mesh.material.uniforms.forward.value.set(sim.forward.x,sim.forward.z).multiplyScalar(sim.signedSpeed<-.1?-1:1);
       const wakes=mesh.material.uniforms.wakes.value as THREE.Vector4[];
-      sim.wheels.forEach((wheel,i)=>{const p=wheel.body.translation(),wet=basinWeight(basin,p.x,p.z)<1.1&&p.y-1.2<level,activity=sim.sprayPoints.filter(e=>Math.hypot(e.p.x-p.x,e.p.z-p.z)<1.5).reduce((n,e)=>Math.max(n,e.strength),0),strength=wet?Math.min(1,activity+Math.abs(sim.signedSpeed)*.14):0;wakes[i].set(p.x,p.z,wakes[i].z+(strength-wakes[i].z)*Math.min(1,dt*6),0);});
+      sim.wheels.forEach((wheel,i)=>{const p=wheel.body.translation(),wet=basinWeight(basin,p.x,p.z)<1.1&&p.y-1.2*wheel.size<level,activity=sim.sprayPoints.filter(e=>Math.hypot(e.p.x-p.x,e.p.z-p.z)<1.5).reduce((n,e)=>Math.max(n,e.strength),0),strength=wet?Math.min(1,activity+Math.abs(sim.signedSpeed)*.14):0;wakes[i].set(p.x,p.z,wakes[i].z+(strength-wakes[i].z)*Math.min(1,dt*6),0);});
     }
     this.effects(sim,Math.min(dt,.1));this.trails.update(sim);
     const snap=this.snapNextFrame||this.lastRescues!==sim.rescues;this.snapNextFrame=false;this.lastRescues=sim.rescues;
     const diff=Math.atan2(Math.sin(sim.heading-this.cameraHeading),Math.cos(sim.heading-this.cameraHeading));this.cameraHeading+=diff*(snap?1:1-Math.exp(-dt*2.7));
     const forward=new THREE.Vector3(Math.cos(this.cameraHeading),0,-Math.sin(this.cameraHeading)),side=new THREE.Vector3(-forward.z,0,forward.x),p=vector(sim.position);
     const target=p.clone().addScaledVector(forward,1.2);target.y+=.45;
-    const desired=p.clone().addScaledVector(forward,-9.5).addScaledVector(side,5.5);desired.y+=6.4;
+    const distance=Math.hypot(9.5,5.5,6.4),offset=forward.clone().multiplyScalar(-9.5).addScaledVector(side,5.5).normalize().applyAxisAngle(UP,this.orbitYaw).multiplyScalar(distance*Math.cos(this.orbitPitch));offset.y=distance*Math.sin(this.orbitPitch);
+    const desired=p.clone().add(offset);
     desired.y=Math.max(desired.y,worldHeight(sim.level,desired.x,desired.z)+2.4);
     const anchor=p.clone().add(new THREE.Vector3(0,.1,0)),cameraShape=new RAPIER.Ball(.32);
     const unobstructed=(candidate:THREE.Vector3)=>{
@@ -339,10 +347,10 @@ export class WorldRenderer {
       }
     }
     if(safe.distance<4){
-      const low=p.clone().addScaledVector(forward,-6).addScaledVector(side,2);low.y+=1.2;low.y=Math.max(low.y,sim.surfaceHeight(low.x,low.z)+.5);
+      const low=p.clone().add(offset.clone().setY(0).normalize().multiplyScalar(6.4));low.y+=1.2;low.y=Math.max(low.y,sim.surfaceHeight(low.x,low.z)+.5);
       const alternate=unobstructed(low);if(alternate.distance>safe.distance+1)safe=alternate;
     }
-    this.camera.position.lerp(safe.point,snap?1:1-Math.exp(-dt*5));this.camera.position.copy(unobstructed(this.camera.position).point);this.cameraTarget.lerp(target,snap?1:1-Math.exp(-dt*7));this.camera.lookAt(this.cameraTarget);
+    this.camera.position.lerp(safe.point,snap||this.orbitChanged?1:1-Math.exp(-dt*5));this.camera.position.copy(unobstructed(this.camera.position).point);this.cameraTarget.lerp(target,snap?1:1-Math.exp(-dt*7));this.camera.lookAt(this.cameraTarget);this.orbitChanged=false;
     this.sun.position.copy(p).add(new THREE.Vector3(-20,32,17));this.sun.target.position.copy(p);
     this.renderer.render(this.scene,this.camera);
     if(sim.started){
@@ -357,6 +365,6 @@ export class WorldRenderer {
       }
     }
   }
-  framing(){const v=this.vehicle.position.clone().project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2,camera:this.camera.position.toArray(),heading:this.cameraHeading,quality:{requested:this.quality,pixelRatio:this.pixelRatio,shadows:this.renderer.shadowMap.enabled,shadowSize:this.sun.shadow.mapSize.x}};}
+  framing(){const v=this.vehicle.position.clone().project(this.camera);return {x:(v.x+1)/2,y:(1-v.y)/2,camera:this.camera.position.toArray(),heading:this.cameraHeading,orbit:{yaw:this.orbitYaw,pitch:this.orbitPitch},quality:{requested:this.quality,pixelRatio:this.pixelRatio,shadows:this.renderer.shadowMap.enabled,shadowSize:this.sun.shadow.mapSize.x}};}
   image(){return this.renderer.domElement.toDataURL('image/png');}
 }

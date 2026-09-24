@@ -1,4 +1,5 @@
 import {clamp} from './shapes';
+import {propScale} from './world-scale';
 import type {V2,V3,WorldLevel,WorldProp,Biome,Trail,Basin,Ground,TerrainTile,TerrainFeature,RockCourt} from './world-types';
 
 // Every expedition has its own fixed seed, terrain arrangement and puzzle recipe.
@@ -205,6 +206,7 @@ export function createWorldLevel(id:number):WorldLevel{
   const point=(n:number,dx=0,dz=0)=>{const p=nodes[clamp(n,0,nodes.length-1)];return {x:p.x+dx,y:p.y,z:p.z+dz};};
   let serial=0;
   const prop=(asset:string,p:V2,scale:number,mass=0,yaw=rand()*6.28)=>{
+    scale=propScale(asset,scale);
     const result:WorldProp={id:'prop-'+serial++,asset,x:p.x,z:p.z,y:worldHeight(level,p.x,p.z)+scale*.32,scale,yaw,mass,movable:mass>0};level.props.push(result);return result;
   };
   const rockPassage=(p:V3,yaw:number,cave:boolean)=>{
@@ -467,6 +469,39 @@ export function createWorldLevel(id:number):WorldLevel{
     prop('dead_tree_trunk',p,3.8+rand()*1.8,i%2===0?12:0);
   }
   for(let i=0;i<2+Math.floor(id/8);i++){const p=point(1+i,9,-7);if(!serviceSpace(p,2))prop('wooden_ladder_02',p,3.5+rand());}
+  // A separate seed keeps dressing independent of puzzle placement and saved
+  // prop IDs. Small clumps gather at road shoulders, rock feet and campsite
+  // margins. The worn centre stays open, with occasional gravel in the ruts.
+  const detailRand=randomSource(seed^0x57c31ab9);
+  let detailIndex=0;
+  const detail=(asset:string,p:V2,scale:number,foliage:boolean)=>{
+    level.props.push({id:'detail-'+detailIndex++,asset,...p,y:worldHeight(level,p.x,p.z),scale,yaw:detailRand()*Math.PI*2,mass:0,movable:false,foliage,detail:true});
+  };
+  const scatterPocket=(anchor:V2,spread:number,count:number)=>{
+    for(let n=0;n<count;n++){
+      const angle=detailRand()*Math.PI*2,radius=Math.sqrt(detailRand())*spread;
+      const p={x:anchor.x+Math.cos(angle)*radius,z:anchor.z+Math.sin(angle)*radius};
+      if(!suitable(p,false))continue;
+      const near=nearestTrail(level,p.x,p.z),gravel=detailRand()<(biome==='forest'?.35:biome==='glacier'?.88:.62);
+      if(gravel){
+        // Imported scan derivatives are only 100–160 triangles per stone.
+        // These pebbles are below tyre-tread size, so they add no snagging hulls.
+        detail(detailRand()<.5?'gravel_01':'gravel_02',p,.035+detailRand()**2*.115,false);
+      }else if(near.distance>near.width*.26||detailRand()<.1){
+        const asset=biome==='forest'&&n%13===0?'fern_02':n%7===0?'grass_clump':'grass_medium_01';
+        detail(asset,p,asset==='fern_02'?.28+detailRand()*.4:.12+detailRand()*.23,true);
+      }
+    }
+  };
+  for(const trail of level.trails)for(let segment=1;segment<trail.points.length;segment++){
+    const a=trail.points[segment-1],b=trail.points[segment],length=dist(a,b),dx=(b.x-a.x)/Math.max(.01,length),dz=(b.z-a.z)/Math.max(.01,length);
+    const pockets=Math.ceil(length/(biome==='forest'?2.2:3));
+    for(let i=0;i<pockets;i++){
+      const t=(i+.15+detailRand()*.7)/pockets,side=detailRand()<.5?-1:1,offset=side*(trail.width*(.37+detailRand()*.22));
+      scatterPocket({x:a.x+(b.x-a.x)*t-dz*offset,z:a.z+(b.z-a.z)*t+dx*offset},.75+detailRand()*.8,biome==='forest'?16:12);
+    }
+  }
+  for(const p of [...planted,...level.camps,...level.relays])scatterPocket(p,3.8,32);
   level.heading=-Math.atan2(level.trails[0].points[1].z-level.start.z,level.trails[0].points[1].x-level.start.x);
   level.start.y=worldHeight(level,level.start.x,level.start.z);
   level.goal.y=worldHeight(level,level.goal.x,level.goal.z);

@@ -4,7 +4,7 @@ import type {WorldSimulation} from './world-physics';
 export interface WorldRecord {stars:number;rescues:number;time:number;relics:string[]}
 export interface WorldRun {
   seed:number;elapsed:number;rescues:number;shapeChanges:number;checkpoint:string;
-  foundCamps:string[];collected:string[];activatedRelays:string[];latchedSwitches?:string[];shapes:Point[][];stiffness:number[];
+  foundCamps:string[];collected:string[];activatedRelays:string[];latchedSwitches?:string[];shapes:Point[][];wheelSizes?:number[];stiffness?:number[];
   props:Record<string,number[]>;gates:Record<string,number>;basins:Record<string,number>;bridges?:Record<string,number>;
 }
 export interface WorldSave {schema:2;level:number;records:Record<number,WorldRecord>;runs:Record<number,WorldRun>;sound:boolean;quality:'auto'|'high'|'eco';tutorial:boolean}
@@ -14,7 +14,7 @@ function parse(value:string|null){try{return JSON.parse(value??'null');}catch{re
 const finite=(v:unknown):v is number=>typeof v==='number'&&Number.isFinite(v);
 const strings=(v:unknown):string[]=>Array.isArray(v)?v.filter((s:unknown)=>typeof s==='string'&&s.length<60).slice(0,100):[];
 function validRun(run:any):run is WorldRun{
-  return !!run&&Number.isInteger(run.seed)&&finite(run.elapsed)&&run.elapsed>=0&&run.elapsed<604800&&Number.isInteger(run.rescues)&&run.rescues>=0&&run.rescues<10000&&Array.isArray(run.shapes)&&run.shapes.length===2&&run.shapes.every((s:Point[])=>!!sanitizeShape(s))&&Array.isArray(run.stiffness)&&run.stiffness.length===2&&run.stiffness.every(finite);
+  return !!run&&Number.isInteger(run.seed)&&finite(run.elapsed)&&run.elapsed>=0&&run.elapsed<604800&&Number.isInteger(run.rescues)&&run.rescues>=0&&run.rescues<10000&&Array.isArray(run.shapes)&&run.shapes.length===2&&run.shapes.every((s:Point[])=>!!sanitizeShape(s))&&(run.wheelSizes===undefined||(Array.isArray(run.wheelSizes)&&run.wheelSizes.length===2&&run.wheelSizes.every(finite)));
 }
 export function restoreWorldSave(storage:Pick<Storage,'getItem'|'setItem'|'removeItem'>){
   const save=freshWorldSave();let migrated=false;
@@ -38,7 +38,7 @@ export function restoreWorldSave(storage:Pick<Storage,'getItem'|'setItem'|'remov
 export function captureWorldRun(sim:WorldSimulation):WorldRun{
   const rounded=(n:number)=>Math.round(n*10000)/10000;
   return {seed:sim.level.seed,elapsed:sim.elapsed,rescues:sim.rescues,shapeChanges:sim.shapeChanges,checkpoint:sim.checkpoint.id,
-    foundCamps:[...sim.foundCamps],collected:[...sim.collected],activatedRelays:[...sim.activatedRelays],latchedSwitches:[...sim.latchedSwitches],shapes:sim.shapes,stiffness:[...sim.stiffness],
+    foundCamps:[...sim.foundCamps],collected:[...sim.collected],activatedRelays:[...sim.activatedRelays],latchedSwitches:[...sim.latchedSwitches],shapes:sim.shapes,wheelSizes:[...sim.wheelSizeTargets],
     props:Object.fromEntries(sim.props.filter(p=>p.spec.movable).map(p=>{const a=p.body.translation(),q=p.body.rotation();return [p.spec.id,[a.x,a.y,a.z,q.x,q.y,q.z,q.w].map(rounded)];})),
     gates:Object.fromEntries(sim.gates.map(g=>[g.spec.id,g.amount])),basins:Object.fromEntries(sim.basinLevels),
     bridges:Object.fromEntries(sim.bridges.map(bridge=>{
@@ -53,7 +53,9 @@ export function restoreWorldRun(sim:WorldSimulation,run:WorldRun){
   if(!validRun(run)||run.seed!==sim.level.seed)return false;
   run.shapes.forEach((shape,axle)=>sim.requestShape(shape,axle));
   sim.elapsed=run.elapsed;sim.rescues=run.rescues;sim.shapeChanges=Number.isInteger(run.shapeChanges)?Math.max(0,run.shapeChanges):0;
-  sim.stiffness=run.stiffness.map(s=>clamp(s,0,1));
+  // Old stiffness values are not sizes. Existing expeditions keep their wheel
+  // outlines and progress, starting at the original size until adjusted.
+  for(let axle=0;axle<2;axle++)sim.setWheelSize(axle,run.wheelSizes?.[axle]??1);
   sim.collected=new Set(strings(run.collected).filter(id=>sim.level.caches.some(c=>c.id===id)));
   sim.foundCamps=new Set(strings(run.foundCamps).filter(id=>sim.level.camps.some(c=>c.id===id)));
   for(const id of strings(run.activatedRelays)){const relay=sim.level.relays.find(r=>r.id===id);if(relay&&!sim.activatedRelays.has(id)&&sim.availableCells>=relay.requires.length)sim.activatedRelays.add(id);}

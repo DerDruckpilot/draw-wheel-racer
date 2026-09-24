@@ -52,3 +52,21 @@ test('imported mobile assets retain their documented hashes and collision geomet
     }
   }
 });
+test('utility props and ground dressing stay in proportion to the 3.2 unit vehicle',()=>{
+  const manifest=JSON.parse(readFileSync('public/assets/world/manifest.json','utf8'));
+  const sizes=new Map<string,number[]>(manifest.map((a:any)=>[a.id,a.size]));
+  for(let id=0;id<WORLD_COUNT;id++){
+    const level=createWorldLevel(id),details=level.props.filter(p=>p.detail);
+    assert.ok(details.length>600,`${id}: close ground detail is present`);
+    assert.ok(details.every(p=>!p.movable&&p.mass===0&&p.scale<.7),'tiny dressing cannot create invisible collision barriers');
+    for(const prop of level.props){
+      const [x,y,z]=sizes.get(prop.asset)!.map(n=>n*prop.scale),longest=Math.max(x,y,z);
+      if(prop.asset==='portable_generator')assert.ok(longest<.8&&y<.55,'a portable generator is much smaller than the vehicle');
+      if(prop.asset==='barrel_03')assert.ok(y>=.58&&y<=.71&&x<.5,'a drum is below cabin height');
+      if(prop.asset==='vintage_oil_lamp')assert.ok(y<.27,'the lamp has a hand-held scale');
+      if(prop.asset==='wooden_picnic_table')assert.ok(longest<1.9,'camp furniture is not another vehicle');
+      if(prop.asset==='pine_sapling_small')assert.ok(y<2.9,'saplings are smaller than mature trees');
+      if(prop.asset==='wooden_ladder_02')assert.ok(y<=2.7,'ladders fit the surroundings');
+    }
+  }
+});

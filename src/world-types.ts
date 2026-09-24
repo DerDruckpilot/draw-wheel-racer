@@ -5,7 +5,7 @@ export type Ground='stone'|'soil'|'ice'|'mud'|'gravel';
 export interface Trail { points:V3[]; width:number; rugged:number }
 export interface Hill extends V2 { radius:number; height:number; stretch:number; angle:number }
 export interface Basin extends V2 { id:string; rx:number; rz:number; angle:number; level:number; bottom:number; material:'water'|'mud'|'ice'; waves:number; current:V2; slope?:V2; controlledBy?:string; requires?:string[]; drainedLevel?:number; accessSide?:number }
-export interface WorldProp extends V3 { id:string; asset:string; scale:number; yaw:number; pitch?:number; roll?:number; stretch?:V3; anchored?:boolean; mass:number; movable:boolean; foliage?:boolean; friction?:number }
+export interface WorldProp extends V3 { id:string; asset:string; scale:number; yaw:number; pitch?:number; roll?:number; stretch?:V3; anchored?:boolean; mass:number; movable:boolean; foliage?:boolean; detail?:boolean; friction?:number }
 export interface Plate extends V3 { id:string; yaw:number; width:number; depth:number; threshold:number }
 export interface Gate extends V3 { id:string; yaw:number; width:number; height:number; requires:string[]; mode:'all'|'any'; travel:number; delay:number; kind:'gate'|'lift'|'sluice' }
 export interface Bridge extends V3 { id:string; yaw:number; length:number; width:number; angle:number; counterweight:number }

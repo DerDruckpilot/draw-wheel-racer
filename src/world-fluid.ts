@@ -1,6 +1,6 @@
 import {Vector3, Quaternion} from 'three';
 import {wheelHydro} from './wheel-geometry';
-import {clamp, type Point} from './shapes';
+import type {Point} from './shapes';
 import type {Basin, V3} from './world-types';
 
 export interface FluidBody {
@@ -25,22 +25,17 @@ function contours(shape:Point[]){
   contourCache.set(shape,cached);return cached;
 }
 
-export function applyWheelFluid(body:FluidBody,shape:Point[],compression:number,contactDirection:V3,material:Basin['material'],surface:FluidSurface,dt:number){
+export function applyWheelFluid(body:FluidBody,shape:Point[],material:Basin['material'],surface:FluidSurface,dt:number,size=1){
   const rotation=new Quaternion().copy(body.rotation()),origin=vector(body.translation()),center=vector(body.worldCom());
   // A rigid body's point velocity is analytic. Crossing the WASM boundary for
   // every face of four intricate drawings otherwise dominates water physics.
   const angular=body.angvel?.(),linear=angular?body.velocityAtPoint(center):undefined;
-  const down=vector(contactDirection).applyQuaternion(rotation.clone().invert());down.z=0;down.normalize();
-  const deform=(p:Point)=>{
-    const along=Math.max(0,p.x*down.x+p.y*down.y),t=clamp(along/.8,0,1),d=compression*t*t*(3-2*t);
-    return {x:p.x-down.x*d,y:p.y-down.y*d};
-  };
   const world=(p:Point)=>new Vector3(p.x,p.y,0).applyQuaternion(rotation).add(origin);
   const drag=new Vector3(),torque=new Vector3(),buoyancy=new Vector3(),buoyancyTorque=new Vector3();
   let power=0,volume=0,waterlineSpeed=0,waterline:V3|undefined;
   const mud=material==='mud',density=mud?62:57;
   for(const part of contours(shape))for(const source of part.rings){
-    const ring=source.map(deform),positions=ring.map(world),values=positions.map(p=>surface(p));
+    const ring=source.map(p=>({x:p.x*size,y:p.y*size})),positions=ring.map(world),values=positions.map(p=>surface(p));
     const wet:Point[]=[];
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],sa=values[i],sb=values[j];
@@ -59,7 +54,7 @@ export function applyWheelFluid(body:FluidBody,shape:Point[],compression:number,
       const relative=angular?new Vector3(linear!.x+angular.y*arm.z-angular.z*arm.y,linear!.y+angular.z*arm.x-angular.x*arm.z,linear!.z+angular.x*arm.y-angular.y*arm.x):vector(body.velocityAtPoint(point));
       relative.x-=water.vx;relative.y-=water.vy;relative.z-=water.vz;
       const normal=new Vector3(dy/length,-dx/length,0).applyQuaternion(rotation),vn=relative.dot(normal);
-      const area=length*(hi-lo)*part.width;
+      const area=length*(hi-lo)*part.width*size;
       // Only a windward face receives pressure. Skin friction also resists
       // transverse motion, but a smooth spinning ring has little paddle area.
       const force=normal.multiplyScalar(-.5*(mud?210:75)*area*Math.max(0,vn)*vn);
@@ -74,7 +69,7 @@ export function applyWheelFluid(body:FluidBody,shape:Point[],compression:number,
       area2+=cross;mx+=(a.x+b.x)*cross;my+=(a.y+b.y)*cross;
     }
     if(Math.abs(area2)>1e-9){
-      const displaced=area2*.5*part.width,point=world({x:mx/(3*area2),y:my/(3*area2)}),force=new Vector3(0,displaced*density*9.81,0);
+      const displaced=area2*.5*part.width*size,point=world({x:mx/(3*area2),y:my/(3*area2)}),force=new Vector3(0,displaced*density*9.81,0);
       volume+=displaced;buoyancy.add(force);buoyancyTorque.add(point.sub(center).cross(force));
     }
   }

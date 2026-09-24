@@ -1,4 +1,4 @@
-# FORMDRIVE 2.0 — Implementierung
+# FORMDRIVE 2.1 — Implementierung
 
 Stand: 24. September 2026. Frühere Update-Dokumente sind Entwicklungshistorie. Die zweidimensionale Streckenphysik und ihre seitlichen Fahrspuren wurden vollständig ersetzt.
 
@@ -14,9 +14,9 @@ TypeScript, Vite, Three.js, Rapier 3D und Workbox. Exakte Versionen stehen im Lo
 | Radgeometrie | `src/wheel-geometry.ts` | Vereinigte Konturen, Schwerpunkt und Massenträgheit |
 | Darstellung | `src/world-renderer.ts` | Instanzen, Kamera, Schatten, importierte Objekte und Effekte |
 | Materialien | `src/world-materials.ts`, `src/world-water.ts` | PBR-Bodenmischung, Felshänge und Wasseroberflächen |
-| Radpuffer | `src/wheel-mesh.ts` | Wiederverwendbare Grafikpuffer für elastische Konturen |
+| Radpuffer | `src/wheel-mesh.ts` | Wiederverwendbare Grafikpuffer der unveränderten Konturen |
 | Fahrspuren | `src/wheel-trails.ts` | Begrenzter Instanzpuffer für verblassende, tatsächliche Bodenkontakte |
-| Steuerung | `src/drawing.ts`, `src/drive-controls.ts`, `src/tilt-controls.ts` | Mehrere Zeichenstriche, Pedale, Tastatur und kalibrierte Neigung |
+| Steuerung | `src/drawing.ts`, `src/drive-controls.ts`, `src/tilt-controls.ts`, `src/camera-controls.ts` | Mehrere Zeichenstriche, Pedale, Tastatur und kalibrierte Neigung |
 | Speicherung | `src/world-save.ts` | Schema 2, Validierung, Migration und Fortsetzen ab Lager |
 
 ## Gelände und sichtbare Kontakte
@@ -25,7 +25,7 @@ Die Wege dienen der Gestaltung des Höhenfelds. Sie beschränken keine Positione
 
 Darstellung und Kollision verwenden dieselben Dreiecke auf einem Raster mit einer Einheit Abstand. Benachbarte Kacheln teilen exakt gleiche Randpositionen und Normalen. Das Gelände wird um das Fahrzeug nachgeladen; der Boden unter beweglichen Gegenständen bleibt vorhanden. Importierte feste Gegenstände verwenden ihre sichtbare vereinfachte Dreiecksgeometrie. Bewegliche Gegenstände verwenden konvexe Hüllen. Gras und Laub haben keine harten Kollisionen, Baumstämme schon. Das Fahrzeug kollidiert mit drei aus dem importierten Modell gewonnenen Hüllen für Heck, Kabine und Front; keine übergroße unsichtbare Dachbox begrenzt Durchfahrten.
 
-Die Kamera folgt der tatsächlichen Fahrzeugrichtung. Eine räumliche Kugelabfrage begrenzt sie vor Hindernissen, prüft seitliche Alternativen um Baumstämme und wechselt in niedrigen Durchgängen auf eine flachere Position. Nahe Blätter zwischen Fahrzeug und Kamera werden ausgeblendet; feste Stämme bleiben sichtbar.
+Die Kamera folgt der tatsächlichen Fahrzeugrichtung. Ein Finger auf der freien Welt verändert den horizontalen Winkel um volle 360 Grad und die Höhe des Blicks. Der gewählte Winkel bleibt relativ zur Fahrtrichtung erhalten; beim Gebietswechsel wird er zurückgesetzt. Pedale, Regler und Zeichenfelder besitzen unabhängige Pointer-Captures. Eine räumliche Kugelabfrage begrenzt sie vor Hindernissen, prüft seitliche Alternativen um Baumstämme und wechselt in niedrigen Durchgängen auf eine flachere Position. Nahe Blätter zwischen Fahrzeug und Kamera werden ausgeblendet; feste Stämme bleiben sichtbar.
 
 Ein gemeinsamer Rand aus Höhensamples reduziert die Auswertung einer Bodenkachel von 3.125 auf 729 Aufrufe. Die Kollisionsgeometrie bleibt gleich; geglättete Normalen folgen nun dem tatsächlichen Raster. Leere Materialgruppen erzeugen keine Zeichenaufrufe. Im automatischen Grafikmodus werden bei anhaltend langsamen Bildern zuerst Auflösung, dann Schattenauflösung und zuletzt Schatten reduziert. Die explizite Einstellung „Detailreich“ behält die volle Darstellung.
 
@@ -37,7 +37,7 @@ Striche werden als Kapselabschnitte und dünne Nabenverbindungen dargestellt und
 
 Normale Eingaben erhalten eine räumliche Vereinfachungstoleranz von 0,003. Sehr dichte Zeichnungen werden adaptiv auf höchstens 512 Konturpunkte reduziert, bis zu 32.768 Eingabepunkte werden akzeptiert. Konturen oberhalb von 128 Punkten oder 22 Längeneinheiten werden im Worker vorbereitet. Montage ist achsweise und ausdrücklich; der Entwurf wird danach geleert. Größere Räder erhalten keine kostenlose Lagekorrektur durch Decken oder Boden.
 
-Weiche Räder verformen ihre Kontur in Richtung gemessener Kontakte. Das Modell ist eine begrenzte, lastabhängige Approximation, keine Finite-Elemente-Reifensimulation. Grafikpuffer und physische Kollisionsobjekte werden bei gleichbleibender Topologie wiederverwendet. Die Masse bleibt beim Nachgeben gleich. Pausierte Ansichten werden nur neu gerendert, wenn sich die Szene oder ihre Größe ändert.
+Die äußeren Regler skalieren montierte Räder zwischen 0,4 und 1,4. Originalkonturen bleiben unverändert; Darstellung und Kollisionskapseln einschließlich Gummidicke verwenden denselben Faktor. Masse skaliert mit s³, Trägheit mit s⁵ und Wasservolumen mit s³. Veränderungen erfolgen während der Fahrt in kleinen physischen Schritten ohne Lagekorrektur des Chassis. Kontakte und Grafikpuffer werden wiederverwendet. Die alte Verformungssteuerung entfällt. Neigung wird in Bildschirmkoordinaten projiziert: rechts/links lenkt; vor/zurück bewegt den Schwerpunkt. Die Neutralstellung und beide Querformatausrichtungen bleiben unterstützt.
 
 ## Wasser, Schlamm und Eis
 
@@ -66,3 +66,12 @@ Das Layout wächst von zwei auf bis zu fünf Hauptanlagen, ergänzt durch charak
 Der Produktionsbuild enthält einen vollständigen Offlinecache einschließlich Worker, Physik, komprimierter Texturen, Modelle und Lizenznachweise. Updates warten auf die Aktion des Spielers. Eine bestehende Fahrt wird vorher gespeichert.
 
 Automatisierte Prüfungen decken reale Fahr- und Schiebeversuche, Kontrollabhängigkeiten, lösbare Hebebühnen und Wippen, passive Wasserkräfte, komplexe Konturen, Terrainränder, alle 21 Layouts, Assetprüfsummen, Spielstandvalidierung und die Oberfläche in Chromium/WebKit ab. Bildschirmgröße und Sensorereignisse werden simuliert. Die Bildrate, Akkulast und Sensorqualität auf dem tatsächlichen iPhone sind damit nicht gemessen.
+
+
+## Maßstab und Bodendetails ab 2.1
+
+`src/world-scale.ts` enthält die gemeinsamen Größenreferenzen. Der Truck ist 3,2 Einheiten lang, entsprechend ungefähr 4,5 Metern. Da die Assets auf eine längste Seite von eins normalisiert sind, wird ihre tatsächliche Größe je Objektklasse festgelegt. Dieselbe Transformationsmatrix gilt für Darstellung und Collider. Kleine Kiesel verwenden zwei vereinfachte Poly-Haven-Felsvarianten (`scripts/prepare-ground-details.mjs`); Originaltexturen, Quellen und Prüfsummen bleiben dokumentiert.
+
+Zusätzliche Vegetation und Kies entstehen mit einem separaten deterministischen Seed in Gruppen an Wegrändern, Felsfüßen und Lagerumgebungen. Sie verändern keine bestehenden Gegenstands-IDs. Kleine Details besitzen keine Collider, verwenden Instanzen in 24-Einheiten-Kacheln, keinen eigenen Schattenwurf und eine kürzere Sichtweite. Große sichtbare Steine bleiben physisch.
+
+Das Spielfeld unterbindet Textauswahl und native Kontextmenüs über `user-select`, [`-webkit-touch-callout`](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/-webkit-touch-callout), `touch-action` und gezielte Ereignisbehandlung. Native Range-Eingaben werden nicht pauschal abgefangen. Dialoge liegen außerhalb der geschützten Spielfläche und bleiben scrollbar.

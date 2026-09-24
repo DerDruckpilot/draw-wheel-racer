@@ -21,18 +21,25 @@ test('invalid stored geometry is rejected and disconnected strokes stay disconne
   assert.equal(restoreShape([{x:0,y:0},{x:4,y:0}]),null);assert.ok(wheelHydro(preset('round'))[0].rings.length>=2,'the ring keeps its open center');
 });
 
-test('lowering the screen-right edge shifts weight right in both landscape orientations',()=>{
+test('lowering the screen-right edge steers right without shifting weight in either landscape orientation',()=>{
   // At 90° the physical portrait top is on the left; lifting it (beta > 0)
   // lowers screen-right. The signs reverse with the phone turned the other way.
-  const outputs=[];for(const angle of [90,270]){const f=new TiltFilter();f.calibrate({angle,beta:0,gamma:0});for(let i=0;i<100;i++)f.update({angle,beta:angle===90?20:-20,gamma:0},1/60);outputs.push(f.weight);assert.ok(Math.abs(f.steer)<.001);}
+  const outputs=[];for(const angle of [90,270]){const f=new TiltFilter();f.calibrate({angle,beta:0,gamma:0});for(let i=0;i<100;i++)f.update({angle,beta:angle===90?20:-20,gamma:0},1/60);outputs.push(f.steer);assert.ok(Math.abs(f.weight)<.001);}
   assert.ok(outputs.every(v=>v>.99));assert.ok(Math.abs(outputs[0]-outputs[1])<.001);
   const a=screenTilt({angle:90,beta:0,gamma:-12}),b=screenTilt({angle:270,beta:0,gamma:12});assert.ok(Math.abs(a.pitch-b.pitch)<.001);assert.ok(a.pitch>11,'lifting the far screen edge tilts toward the near side');
+});
+test('forward and backward tilt shift weight along the vehicle without steering',()=>{
+  for(const angle of [90,270])for(const direction of [-1,1]){
+    const f=new TiltFilter();f.calibrate({angle,beta:0,gamma:0});
+    for(let i=0;i<100;i++)f.update({angle,beta:0,gamma:(angle===90?1:-1)*direction*24},1/60);
+    assert.ok(f.weight*direction>.99);assert.ok(Math.abs(f.steer)<.001);
+  }
 });
 test('calibration removes holding angle, dead zone suppresses jitter, and rotating the screen recenters',()=>{
   const f=new TiltFilter(),held={beta:8,gamma:42,angle:90};f.calibrate(held);
   for(let i=0;i<60;i++)f.update({...held,beta:8+Math.sin(i)*.5},1/60);
   assert.ok(Math.abs(f.weight)<.001&&Math.abs(f.steer)<.001);
-  f.update({...held,beta:28},.1);assert.ok(f.weight>0);f.update({...held,angle:270},.1);assert.equal(f.weight,0);assert.equal(f.steer,0);
+  f.update({...held,beta:28},.1);assert.ok(f.steer>0);f.update({...held,angle:270},.1);assert.equal(f.weight,0);assert.equal(f.steer,0);
 });
 test('separate strokes never gain a phantom rubber connector and remain stable on remount',()=>{
   let shape=sanitizeShape(separate)!;
