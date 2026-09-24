@@ -2,78 +2,9 @@
   "license": "CC0-1.0",
   "provider": "Poly Haven",
   "assets": [
-    "https://polyhaven.com/a/rock_face",
-    "https://polyhaven.com/a/rocky_terrain",
-    "https://polyhaven.com/a/boulder_01",
     "https://polyhaven.com/a/kloppenheim_06_puresky"
   ],
   "files": [
-    {
-      "local": "rock_face/color.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face/rock_face_diff_1k.jpg",
-      "bytes": 732721,
-      "sha256": "cce4b50517161264bdef196f5e247e328ca3739083cd6044ad3cc54d88cb82e2"
-    },
-    {
-      "local": "rock_face/normal.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face/rock_face_nor_gl_1k.jpg",
-      "bytes": 1139857,
-      "sha256": "e2682e1286c8b6aca7e01ba7b8fe1726cb6606042b9ee70d097aa67470d410ef"
-    },
-    {
-      "local": "rock_face/roughness.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_face/rock_face_rough_1k.jpg",
-      "bytes": 224371,
-      "sha256": "70ddfc5d7f292909d18ad56dbb1ff7c3a65809dc031854356c7a6978cb446219"
-    },
-    {
-      "local": "rocky_terrain/color.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain/rocky_terrain_diff_1k.jpg",
-      "bytes": 905179,
-      "sha256": "429315865fd89c150272592f6d93def174c6f69804a565ff08e53627a885579b"
-    },
-    {
-      "local": "rocky_terrain/normal.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain/rocky_terrain_nor_gl_1k.jpg",
-      "bytes": 1059194,
-      "sha256": "a6556e1220c6e6c822e68ceeb9589719e4db8c87340199657cc705fea6ecf391"
-    },
-    {
-      "local": "rocky_terrain/roughness.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rocky_terrain/rocky_terrain_rough_1k.jpg",
-      "bytes": 439748,
-      "sha256": "b37dfff29fff10a219bfe73886940625df63b345289ea6b71ec5f6ddadc8adcb"
-    },
-    {
-      "local": "boulder/boulder.gltf",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/boulder_01/boulder_01_1k.gltf",
-      "bytes": 2773,
-      "sha256": "51487934db898b4c24072780a451e34eca5c02e3ada24a62bbc600bbc4019e92"
-    },
-    {
-      "local": "boulder/textures/boulder_01_arm_1k.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/boulder_01/boulder_01_arm_1k.jpg",
-      "bytes": 659386,
-      "sha256": "c57187c5746b6be913fa53846cb44ff78743e7ca5000f131c9627b99563c2b87"
-    },
-    {
-      "local": "boulder/textures/boulder_01_diff_1k.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/boulder_01/boulder_01_diff_1k.jpg",
-      "bytes": 987467,
-      "sha256": "c38f0e918f6dc16b8d386ba3cdd89805c78320c119a1ceec85856f82b09a65b8"
-    },
-    {
-      "local": "boulder/boulder_01.bin",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/boulder_01/boulder_01.bin",
-      "bytes": 2938808,
-      "sha256": "7f5b06503d62bd95bfe9c6b8a354a5cc8ff04a4d271a8cf87a3e3125db4232d7"
-    },
-    {
-      "local": "boulder/textures/boulder_01_nor_gl_1k.jpg",
-      "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/boulder_01/boulder_01_nor_gl_1k.jpg",
-      "bytes": 1183552,
-      "sha256": "0810cf6e89d89bb6eb065b4d2e2855288f5dcbd2c15c6e40ab90d462021b50aa"
-    },
     {
       "local": "sky.hdr",
       "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr",

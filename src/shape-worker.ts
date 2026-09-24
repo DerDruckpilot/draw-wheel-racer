@@ -1,4 +1,4 @@
-import { wheelHydro } from './hydrodynamics';
+import { wheelHydro } from './wheel-geometry';
 import type { Point } from './shapes';
 
 self.onmessage = (event: MessageEvent<{ id: number; shape: Point[] }>) => {

@@ -3,9 +3,10 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/draw-wheel-racer/',
+  server:{watch:{ignored:['**/.local/**']}},
   plugins: [VitePWA({
     registerType: 'prompt',
-    includeAssets: ['licenses/*.txt'],
+    includeAssets: ['licenses/*.txt','assets/basis/LICENSE.txt'],
     manifest: {
       id: '/draw-wheel-racer/', name: 'FORMDRIVE — Zeichne deinen Weg', short_name: 'FORMDRIVE',
       description: 'Ein Physik-Abenteuer. Zeichne deine Räder. Bezwinge Fels, Eis und Wasser.',
@@ -18,7 +19,8 @@ export default defineConfig({
       ]
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,html,wasm,png,jpg,webp,glb,gltf,bin,svg,woff2,json,hdr}'],
+      globPatterns: ['**/*.{js,css,html,wasm,png,jpg,webp,ktx2,glb,gltf,bin,svg,woff2,json,hdr}'],
+      globIgnores: ['assets/world/**/*.webp'],
       maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
       clientsClaim: true,
       dontCacheBustURLsMatching: /-[a-zA-Z0-9_-]{8}\.(?:js|css)$/,

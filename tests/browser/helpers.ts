@@ -2,7 +2,13 @@ import type { Page } from '@playwright/test';
 export async function drawStroke(page: Page, axle: 'rear' | 'front', points: [number,number][]) {
   const r = (await page.locator(`#drawing-${axle}`).boundingBox())!, scale=Math.min(r.width,r.height)*.43/1.2;
   await page.mouse.move(r.x+r.width/2+points[0][0]*scale,r.y+r.height/2-points[0][1]*scale);await page.mouse.down();
-  for(const p of points.slice(1))await page.mouse.move(r.x+r.width/2+p[0]*scale,r.y+r.height/2-p[1]*scale,{steps:2});
+  // Deliver a coalesced burst between genuine pointer down/up events. Waiting
+  // for a remote round-trip per sample distorts input on software WebGL.
+  await page.evaluate(({axle,points})=>{
+    const canvas=document.querySelector<HTMLCanvasElement>(`#drawing-${axle}`)!,r=canvas.getBoundingClientRect(),scale=Math.min(r.width,r.height)*.43/1.2;
+    for(const p of points.slice(1))canvas.dispatchEvent(new PointerEvent('pointermove',{pointerId:1,pointerType:'mouse',button:0,buttons:1,clientX:r.x+r.width/2+p[0]*scale,clientY:r.y+r.height/2-p[1]*scale,bubbles:true}));
+  },{axle,points});
+  const last=points.at(-1)!;await page.mouse.move(r.x+r.width/2+last[0]*scale,r.y+r.height/2-last[1]*scale);
   await page.mouse.up();
 }
 export async function fitDrawnWheels(page: Page) {

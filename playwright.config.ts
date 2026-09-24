@@ -1,6 +1,8 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './tests/browser', timeout: 180000, workers: 1,
+  // A software-rendered full landscape can delay the next animation frame.
+  expect: { timeout: 15000 },
   use: { baseURL: process.env.GAME_URL || 'http://127.0.0.1:4173/draw-wheel-racer/', viewport: { width: 956, height: 440 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, launchOptions: { args: ['--enable-unsafe-swiftshader'] } },
   reporter: 'list',
   // Software WebGL in Chromium needs more time for the full-height scene.

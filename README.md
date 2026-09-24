@@ -1,107 +1,73 @@
 # FORMDRIVE
 
-Ein eigenständiges Physik-Abenteuer für das iPhone im Querformat: Während der Fahrt zeichnest du getrennte Radformen für Vorder- und Hinterachse. Die tatsächliche Form beeinflusst, wie das Fahrzeug über verschiedene Untergründe und Hindernisse fährt.
+Zeichne deine Räder, erkunde eine offene Landschaft und löse physische Rätsel. Ein Solo-Abenteuer für das iPhone im Querformat, ohne Zeitlimit, Werbung oder Anmeldung.
 
-**Version 1.12.0 – Verwundene Wege, geschlossene Ufer und eine nähere Kamera.**
+**Version 2.0.0 — offene 3D-Welten und mechanische Rätsel.**
 
-[Spiel im Browser öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Implementierung und Grenzen](docs/IMPLEMENTIERUNG.md)
+[Spiel öffnen](https://derdruckpilot.github.io/draw-wheel-racer/) · [Technik und Grenzen](docs/IMPLEMENTIERUNG.md) · [Prüfbericht](docs/QA-2.0.md) · [Assetquellen](https://derdruckpilot.github.io/draw-wheel-racer/credits.html)
 
-## Auf dem iPhone spielen
+![Waldgebiet mit importierten Bäumen, Farnen und Laubboden](docs/screenshots/forest.png)
 
-1. Öffne die Spieladresse in Safari.
-2. Tippe auf **Teilen → Zum Home-Bildschirm** und lasse **Als Web-App öffnen** eingeschaltet.
-3. Starte das neue Icon und warte beim ersten Start auf **Offline bereit**.
-4. Drehe das Gerät quer. Zeichne links die Hinterräder und rechts die Vorderräder; mehrere abgesetzte Striche sind möglich. Tippe jeweils auf das **Häkchen**; danach ist das Feld für den nächsten Entwurf leer.
-5. Das rechte Pedal halten; nach oben wischen aktiviert den Tempomaten. Gas antippen oder links bremsen löst ihn. Halte das linke Pedal nach dem Stillstand weiter, um rückwärts zu fahren.
+![Begehbares Küstenbecken mit Ventil, Steg und gezeichneten Paddelrädern](docs/screenshots/water.png)
 
-Zielgerät ist ein iPhone 16 Pro Max mit iOS 27. Die Browserprüfung ersetzt keinen Leistungstest auf dem tatsächlichen iPhone.
+## Spielen
 
-Die senkrechten Regler außen neben den Zeichenfeldern ändern die Radsteifigkeit. Über das Achssymbol aktivierst und kalibrierst du die Neigungssensoren: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt seitlich. Touchregler und Tastatur bleiben verfügbar. Weiter oben am Gaspedal drücken gibt mehr Gas. [Änderungen und physikalische Grenzen](docs/UPDATE-1.12.md).
+1. Öffne das Spiel in Safari. Über **Teilen → Zum Home-Bildschirm** kannst du es als PWA installieren. Warte beim ersten Start auf **Offline bereit**; die lokal gespeicherten Modelle und Texturen benötigen ungefähr 80 MB Download.
+2. Halte das iPhone quer. Zeichne links die Hinterräder und rechts die Vorderräder. Mehrere Striche sind möglich. Erst das jeweilige Häkchen montiert die Form und leert den Entwurf.
+3. Rechts Gas geben, links bremsen. Halte die Bremse nach dem Stillstand weiter für den Rückwärtsgang. Weiter oben am Gaspedal drücken gibt mehr Gas; ein Wisch nach oben aktiviert den Tempomat.
+4. Aktiviere die Neigungssteuerung im Fahrwerkmenü: rechts/links kippen verlagert Gewicht, vor/zurück kippen lenkt. Kalibriere in deiner normalen Halteposition. Dort stehen auch Touchregler bereit.
+5. Die äußeren senkrechten Regler ändern die Steifigkeit der beiden Achsen. Große, kleine, offene und nachgiebige Formen haben unterschiedliche Vor- und Nachteile.
 
-## Enthalten
+Tastatur: **D / →** Gas, **A / ←** rückwärts, **W / S** lenken, **Q / E** Gewicht, **Leertaste** bremsen, **Esc** pausieren.
 
-- 21 Solo-Expeditionen in drei Landschaften, darunter drei Expertenstrecken, und ein freies Testgelände.
-- Gas, Bremse, Rückwärtsgang und optionaler Tempomat; keine Gegner und kein Zeitlimit.
-- Ein Stern für das Ziellager, ein zweiter für eine Fahrt ohne Bergung; keine automatischen Sammelkisten.
-- Vier bis fünf Verzweigungen pro Expedition: unabhängig geschwungene Passagen um breite Geländeinseln, gemeinsame Ein- und Ausfahrten und kurze Verbindungen. Keine vorgegebenen Sperrwände am Ende eines Arms; schwierige Hindernisse lassen sich versuchen oder rückwärts verlassen.
-- Zwei unabhängige Freihand-Entwürfe mit mehreren Strichen, manueller Montage, Strich-Rückgängig und Leeren; keine fertige Radauswahl.
-- 50 kombinierte Gelände- und Hindernistypen in den aktuellen Expeditionen, einschließlich zusammenhängendem Felsgrat, erhöhtem Felsgang, Flutpassage und Schlucht mit Sprung und Gegenanstieg; darunter frei drehende Walzen, Kippplatten, Quergräben, Wellenhügel, Sägezahnfelsen, Waschbrett, Felstore, versunkene Stege und Eisanstiege.
-- Flache Furten, tiefe Seen und Brandung: Der Geländetruck schwimmt, die gezeichneten Räder paddeln; Wellen verändern Auftrieb und Kippmoment.
-- Geschwungene Strecken, steinerne Brücken, natürliche Felsbögen und Höhlen mit integrierten Felsen.
-- Vollflächige Spielwelt hinter zwei quadratischen, transparenten Zeichenfeldern im Querformat, Pedale an den Bildschirmrändern.
-- Wasser mit HDR-Reflexionen, Ufer- und Kielwasserschaum sowie Spritzern aus der tatsächlichen Bewegung der Radkontur.
-- Durchgehende Landschaft mit Uferböschungen, Photogrammetrie-Felsen, PBR-Texturen, HDR-Himmel, Schatten und drei Grafikprofilen.
-- Druckplatten, Gegengewichte, Pendeltore, Schleusen mit wechselnden Wasserständen, Strömung, nachgebende Bohlen und Eis, verformbarer Lehm sowie eine Transportmission.
-- Optionale erhöhte Meisterrouten und Präzisionssprünge mit dauerhaft gespeicherten Auszeichnungen.
-- Lokale Spielstände, Offlinebetrieb, Pause und optionaler Ton; keine Werbung oder Anmeldung.
+## Erkundung und Rätsel
 
-Version 1.8 ergänzte zwölf Hindernistypen und überarbeitete die ersten 15 Expeditionen mit sechs bis neun Gruppen: lange Engstellen, hohe Kletterwände, wechselnde Stufen, Auswaschungen, Krater, gebrochene Holzstege, Lehmausstiege, überflutete Höhlen und Gletscherbrüche. Eis liegt außerhalb des Testgeländes ausschließlich in Winterwelten. [Änderungen in Version 1.8](docs/UPDATE-1.8.md).
+- 21 vollständig neu angelegte Gebiete in Canyon, Wald, Küste, Steinbruch und Gletscher. Geschwungene Wege kreuzen und verzweigen sich; du kannst auch quer durchs Gelände fahren. Es gibt keine unsichtbaren Fahrspurkorridore.
+- Das Radar zeigt nur einen groben Zielsektor und eine Entfernungsspanne. Hindernisse, Schalter und der Lösungsweg bleiben verborgen.
+- Finde Energiezellen und fahre mit ihnen zu den Generatoren. Erst alle versorgten Generatoren öffnen das Ziellager. Drei zusätzlich versteckte Fundstücke sind optional.
+- Druckplatten funktionieren nur unter tatsächlicher Last. Schiebe Kisten, Geröll oder Fässer darauf. Manche Tore benötigen mehrere gleichzeitig gehaltene Signale oder einen bereits versorgten Generator.
+- Bedienbare Ventile, ablassbare Becken, gewichtsabhängige Wippen und Hebebühnen verändern erreichbare Wege. Der Aufzug startet erst mit belasteter Platte und aktivierter Bedienung auf der Plattform.
+- Niedrige Felspassagen, unregelmäßige Stufen, Querrinnen, steile Hänge, Seen, Schlamm und Eis verlangen unterschiedliche Formen und Fahrmanöver. Zurückfahren und einen anderen Weg suchen gehört dazu.
+- Checkpoints stehen unregelmäßig und teils abseits der Wege. Bergen versetzt nur das Fahrzeug zum zuletzt entdeckten Lager. Rätselzustände und Gegenstände bleiben erhalten; Gegenstände in der Nähe lassen sich im Pausenmenü zurücksetzen.
+- Ein Stern fürs Ziellager, einer ohne Bergung und einer für alle drei Fundstücke. Alle Gebiete bleiben frei wählbar.
 
-Die Physik arbeitet im seitlichen Profil. Wasser und Schlamm nutzen die tatsächlich eingetauchten Konturen. Schlamm ergänzt viskosen Widerstand und eine regularisierte Fließgrenze. Neue weiche Lehmfelder besitzen ein begrenzt verformbares Bodenprofil mit bleibenden Spuren innerhalb der Fahrt. Details stehen in der Implementierungsdokumentation und im Spiel unter „Quellen & Physik“.
+Die frühen Gebiete sind auf etwa 5–10 Minuten Erkundung ausgelegt; Umfang und Mechanikverknüpfungen wachsen. Die tatsächliche Dauer hängt davon ab, wie schnell man Wege und Lösungen entdeckt.
 
-Version 1.4 erhöht das maximale Achsdrehmoment von 160 auf 420 normalisierte Einheiten. Eine Lastregelung baut auch beim langsamen Klettern das volle Moment auf. Die Übersetzung berücksichtigt den Höhenhub der gezeichneten Kontur: Ein gerader Strich hebt den Buggy wiederholt an und bewegt ihn vorwärts. Konturen erhalten keinen pauschalen Vortrieb. Neue Felsblöcke besitzen eigene Kollisionsumrisse; Felskanten, Mulden, Rillen und Inseln variieren in Höhe und Abstand. [Änderungen und Messwerte](docs/UPDATE-1.4.md).
+## Umgebung
 
-Die Verbesserungen aus [Version 1.3](docs/BALANCING-1.3.md) bleiben erhalten: geringe Eishaftung, 21 Hindernistypen, bis zu 512 Konturpunkte und keine separate Linienlängenbegrenzung. Sehr dichte Zeichnungen werden adaptiv vereinfacht und im Hintergrund vorbereitet. Die hydrodynamischen Kräfte aus [Version 1.2](docs/BALANCING-1.2.md) bleiben bestehen; die neue Wasserdarstellung ergänzt sie visuell.
+33 importierte Modellvarianten und neun PBR-Materialsets von Poly Haven (CC0): unterschiedliche Felsen, Bäume, Gras, Farne, Brennnesseln, Sträucher, Baumstümpfe, Totholz, Stege, Kisten, Fässer, Lampen, Generatoren und technische Details. Der Truck stammt aus CesiumJS (Apache-2.0).
 
-Bei einer bereits installierten PWA: Spiel online öffnen und in den Einstellungen **Neue Version laden** wählen, sobald das Update angeboten wird. Danach zeigen die Einstellungen **FORMDRIVE 1.12.0**. Einstellungen, gespeicherte Radform und alte Rennergebnisse bleiben erhalten. Die neuen Expeditionen haben eine eigene Sterne-Wertung.
+Die Landschaft besitzt durchgehende Texturen, räumlich gemischte Fels- und Bodenmaterialien, bewachsene Wegränder, Schatten und eine nahe mitlenkende Kamera. Dezente, verblassende Fahrspuren helfen dabei, kürzlich erkundete Stellen wiederzuerkennen. Staub entsteht an belasteten Rädern auf trockenem Untergrund. Wasser verwendet gemeinsame Wellen für Darstellung und Auftrieb, sichtbare Tiefe, Reflexionen, Uferschaum und formabhängige Spritzer. Matsch besitzt eine langsam bewegte, texturierte Oberfläche; Eis liegt in eigenen Gletschergebieten.
 
-Die Fahrsteuerung verändert die gewünschte Raddrehzahl. Version 1.6 bietet 1.200 Einheiten Anfahrmoment je Achse und nimmt auf Land nicht mehr wegen eines festen Kippwinkels das Gas weg. Bremsen erzeugen entgegengesetzte Achsmomente und geben auf Eis keine zusätzliche Haftung. Neue Bedienelemente unterstützen gleichzeitiges Fahren und Zeichnen. [Änderungen in Version 1.5](docs/UPDATE-1.5.md).
+Modelle, Texturen und Lizenzen sind lokal enthalten. GPU-komprimierte Texturen, Instanzen, räumliche Sichtbarkeitsgrenzen und wiederverwendete Radpuffer begrenzen den Aufwand auf Mobilgeräten. Der automatische Grafikmodus kann Auflösung und Schatten anpassen; „Detailreich“ behält die volle Darstellung.
 
-Der Geländetruck stammt aus [Cesium GroundVehicle](https://github.com/CesiumGS/cesium/tree/main/Apps/SampleData/models/GroundVehicle), Copyright 2018 Analytical Graphics, Inc., Apache-2.0. Originalräder wurden entfernt, Proportionen angepasst und PBR-Texturen für Mobilgeräte komprimiert. [Änderungen in Version 1.6](docs/UPDATE-1.6.md).
+## Spielstände
 
-## Lokal entwickeln
+Version 2 verwendet ein neues Format. Alter Streckenfortschritt wird beim ersten Start entfernt; Ton und Grafikqualität werden übernommen. Neue Fahrten speichern Rätselzustände, Fundstücke, montierte Formen, Gegenstände und das zuletzt gefundene Lager. Nach einem Neustart geht es am Lager weiter.
 
-Node.js 24 verwenden.
+Browserdaten zu löschen entfernt den Spielstand und den Offlinecache. Ein App-Update wird erst nach Antippen installiert.
+
+## Lokal entwickeln und prüfen
+
+Node.js 24 oder neuer:
 
 ```sh
 npm ci
 npm run dev
-```
-
-Lokale Adresse: `http://127.0.0.1:5173/draw-wheel-racer/`.
-
-```sh
 npm test
-npm run test:courses
-npm run test:expeditions
-npm run test:balance
-npm run test:races
 npm run build
-npm run preview -- --port 4173
+npm run preview
 ```
 
-In einem zweiten Terminal kann der produktive Build getestet werden:
+Für die Browserprüfungen muss der Produktionsbuild auf Port 4173 laufen:
 
 ```sh
 npx playwright install chromium webkit
 npm run test:browser
 ```
 
-Die GitHub-Actions-Pipeline prüft Physik und vollständige Streckenfahrten, baut und veröffentlicht über GitHub Pages. Alle Laufzeitassets sind im Repository enthalten. `scripts/fetch-assets.mjs` und `scripts/prepare-assets.mjs` dokumentieren die optionale erneute Beschaffung und Aufbereitung.
+`GAME_URL` kann auf eine andere Vorschau zeigen. Die Tests prüfen unter anderem echte Kontaktlast auf Druckplatten, blockierte Tore, befahrbare Aufzüge, eine lösbare Gegengewichtswippe, Wasserkräfte, Spielstände, geschlossene Ufer, Geländeübergänge, Zeichnen, Pedale, Gyrosensorzustände und Offlineupdates. Die Tests ersetzen keinen Leistungstest auf dem tatsächlichen iPhone 16 Pro Max mit iOS 27.
 
-## Vorgaben
+Die Veröffentlichung erfolgt nach Tests und Build automatisch über den GitHub-Pages-Workflow. Die Assetaufbereitung ist optional; alle Laufzeitdateien sind eingecheckt. Details stehen in [ASSETS.md](docs/ASSETS.md).
 
-- Freihand-Zeichenfeld während des Spiels dauerhaft sichtbar.
-- Mehrere Striche pro Achse; Montage erst über den jeweiligen Knopf.
-- Unterschiedliche Untergründe und Hindernisse, ausdrücklich einschließlich Wasser.
-- Möglichst plausible Physik, insbesondere tatsächliche Wechselwirkung zwischen Radform und Gelände.
-- iPhone 16 Pro Max mit iOS 27 (Angabe des Auftraggebers), Querformat, installierbare PWA.
-- Möglichst detaillierte, realistische 3D-Grafik mit hochwertigen kostenlosen Modellen und Texturen.
-- Fremdcode und 3D-Modelle dürfen unter passenden Lizenzen verwendet werden.
-
-## Dokumentation
-
-- [Recherche und technische Empfehlung](docs/RECHERCHE.md)
-- [Spielkonzept und Physikentwurf](docs/KONZEPT.md)
-- [Produktentscheidungen](docs/ENTSCHEIDUNGEN.md)
-- [Tatsächliche Implementierung](docs/IMPLEMENTIERUNG.md)
-- [Umsetzungsschritte und Abnahmekriterien](docs/ROADMAP.md)
-- [Mögliche Bibliotheken und Asset-Quellen](docs/DRITTANBIETER.md)
-
-## Technik
-
-Three.js für die 3D-Darstellung, Rapier für die Physik, polygon-clipping für Konturvereinigungen, TypeScript für die Spiellogik und Vite mit Workbox für den PWA-Build. Die Simulation hat feste Schritte von 1/120 Sekunde, begrenztes Motordrehmoment, gefederte Achsträger und strichbasierte Kollisionsformen mit bis zu 512 Punkten.
-
-Fremdassets: Poly Haven (CC0) und Cesium/Analytical Graphics (Apache-2.0). Bibliotheken und Lizenzhinweise: [Quellen & Physik](public/credits.html). Die Werbeabbildung diente als Referenz; sie und die Marken/Spielassets des beworbenen Spiels wurden nicht übernommen.
-
-Das Repository ist öffentlich. Die Spieladresse wird über GitHub Pages bereitgestellt. Quellcode und statischer Build benötigen keine geheimen Schlüssel und keinen eigenen Backendserver.
+Historische `UPDATE-1.*`-Dokumente beschreiben die ersetzte Streckenversion, nicht die aktuelle 3D-Physik.

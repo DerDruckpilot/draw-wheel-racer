@@ -1,0 +1,1862 @@
+[
+  {
+    "id": "rock_07",
+    "name": "Rock 07",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/rock_07",
+    "glb": "rock_07.glb",
+    "size": [
+      0.5272995836912528,
+      0.4487370857587458,
+      1
+    ],
+    "triangles": 2398,
+    "bytes": 1391596,
+    "sha256": "6fb05937513eb8b162bcb3b468e5b44cf0ddebb68096892b612c14c04a9b411a",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_07/rock_07_1k.gltf",
+        "sha256": "efcc2dcaa133ff8ad5c865dc2135772e8f5dbc83fa38db2ee2cf25382436b6e6"
+      },
+      {
+        "file": "rock_07.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_07/rock_07.bin",
+        "sha256": "e4a532a6d6cf4a08c288f501b790f32cba0528136a29959ce774c3cd39369e7e"
+      },
+      {
+        "file": "textures/rock_07_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_arm_1k.jpg",
+        "sha256": "1ed76e9a8542c76bdc6b7b018720ae1f52cd75d9f5ae719f613de3f5032cf4da"
+      },
+      {
+        "file": "textures/rock_07_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_diff_1k.jpg",
+        "sha256": "8ff1965aa1664cc4abcc0131c44ee2b97ab14d6e131d7a51429ff261eeb101c8"
+      },
+      {
+        "file": "textures/rock_07_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_07/rock_07_nor_gl_1k.jpg",
+        "sha256": "57cb2210951aeb376164fce5f7c65f03e5599def04873b56cad0f173c275d78d"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "rock_09",
+    "name": "Rock 09",
+    "authors": {
+      "Jenelle van Heerden": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/rock_09",
+    "glb": "rock_09.glb",
+    "size": [
+      0.5117380203726478,
+      0.2272741570080758,
+      1
+    ],
+    "triangles": 2400,
+    "bytes": 1361028,
+    "sha256": "1a5edd033c402f43129861182ce08f1d947b5366ec0380c6f3e43e6858015f5b",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/rock_09/rock_09_1k.gltf",
+        "sha256": "636e57eb0090889627da18edaec202ff9f65f83101b94f91b7da4d21dc080ab9"
+      },
+      {
+        "file": "textures/rock_09_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_arm_1k.jpg",
+        "sha256": "594e2cec49e6bb40bd9bab2649e37dcc261079456cf4d6f680f56770c19db5ea"
+      },
+      {
+        "file": "textures/rock_09_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_nor_gl_1k.jpg",
+        "sha256": "2195b5c7da3a23af2a5f93dbb20f38bc069028509b106397bc8d2aee0bc55729"
+      },
+      {
+        "file": "textures/rock_09_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/rock_09/rock_09_diff_1k.jpg",
+        "sha256": "afb7ae5ae82238d304aba589391ac6bc87f7cf1dbfe50980c21f762cfdd87efd"
+      },
+      {
+        "file": "rock_09.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/rock_09/rock_09.bin",
+        "sha256": "780c37d6fc11ca3a01c3763535ef883908b6007271a46bd446d2289ded820751"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "namaqualand_boulder_02",
+    "name": "Namaqualand Boulder 02",
+    "authors": {
+      "Greg Zaal": "Photography",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/namaqualand_boulder_02",
+    "glb": "namaqualand_boulder_02.glb",
+    "size": [
+      0.9999999999999999,
+      0.3485735340870684,
+      0.4874382266232396
+    ],
+    "triangles": 3066,
+    "bytes": 1778824,
+    "sha256": "96375fa9243b4751b1dbfab501523accc6e0fc5e0eae8b3962b917bc7d4b9d3a",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry. Scanned underside closed along the original boundary; matching render and collision triangles.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/namaqualand_boulder_02/namaqualand_boulder_02_1k.gltf",
+        "sha256": "3c41b5946cd5b208673ec481a3969047665688b2fab1de99b57a7b4eedde099b"
+      },
+      {
+        "file": "namaqualand_boulder_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/namaqualand_boulder_02/namaqualand_boulder_02.bin",
+        "sha256": "0f6daa7ec9b1a92207c0b09b737ff1eec904aebc1c1eada778afa6e5eacd55c0"
+      },
+      {
+        "file": "textures/namaqualand_boulder_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_02/namaqualand_boulder_02_nor_gl_1k.jpg",
+        "sha256": "2407a9915ea0cf42b164d42f548618145da892b948327fff67bef6123790a5d7"
+      },
+      {
+        "file": "textures/namaqualand_boulder_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_02/namaqualand_boulder_02_arm_1k.jpg",
+        "sha256": "e67643f5de3e2bfdd07fae1137eff0b9d86745a8c60ccac7e64b62e85ae9cee0"
+      },
+      {
+        "file": "textures/namaqualand_boulder_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_02/namaqualand_boulder_02_diff_1k.jpg",
+        "sha256": "e567620fa04906e023e3d3b49860dd32db39b368d72ecfc10ad005945fd4034d"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "namaqualand_boulder_03",
+    "name": "Namaqualand Boulder 03",
+    "authors": {
+      "Jenelle van Heerden": "modeling",
+      "Dario Barresi": "Photography"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/namaqualand_boulder_03",
+    "glb": "namaqualand_boulder_03.glb",
+    "size": [
+      0.7852457505476484,
+      0.4805866070063999,
+      1
+    ],
+    "triangles": 3000,
+    "bytes": 1540248,
+    "sha256": "e447fa3f542fb9f7924be67bb053a3edcb00a0d2ebfead656c2d45c88b045900",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/namaqualand_boulder_03/namaqualand_boulder_03_1k.gltf",
+        "sha256": "14560936aaad68da0c0fc549b54c67bba4cd573dfe5b07f92835b9ca044a0092"
+      },
+      {
+        "file": "textures/namaqualand_boulder_03_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_03/namaqualand_boulder_03_diff_1k.jpg",
+        "sha256": "cd1a44c22932eb18a5989474f60bdccd622a1fdb0854fd69899a32ab8efe3bd4"
+      },
+      {
+        "file": "textures/namaqualand_boulder_03_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_03/namaqualand_boulder_03_nor_gl_1k.jpg",
+        "sha256": "c4c1d34d5fe79fdda70ddf1dc52046f3bb6002576d75c9a4643403c0ecdc55f4"
+      },
+      {
+        "file": "namaqualand_boulder_03.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/namaqualand_boulder_03/namaqualand_boulder_03.bin",
+        "sha256": "d24151021ed310fe3207f1b5964bff22b583e77d2617427a88b5dcbc0447a475"
+      },
+      {
+        "file": "textures/namaqualand_boulder_03_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/namaqualand_boulder_03/namaqualand_boulder_03_arm_1k.jpg",
+        "sha256": "604806ac2a67d6ae97d7bdeea2a0c859eac2cc42a08af480abdec70fd0385cf5"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "coast_rocks_05",
+    "name": "Coast Rocks 05",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/coast_rocks_05",
+    "glb": "coast_rocks_05.glb",
+    "size": [
+      1,
+      0.3294850644157984,
+      0.9279377735252526
+    ],
+    "triangles": 4070,
+    "bytes": 1888872,
+    "sha256": "13c4d9d61833e448cb99d4e3855fd1c9798a4cb18267a01d9737fc631784a3a0",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry. Scanned underside closed along the original boundary; matching render and collision triangles.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/coast_rocks_05/coast_rocks_05_1k.gltf",
+        "sha256": "4b5e97d42b4d9e1999ee5961922adc6b5d81f4aad34219915def7975bb2a8eb7"
+      },
+      {
+        "file": "textures/coast_rocks_05_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/coast_rocks_05/coast_rocks_05_arm_1k.jpg",
+        "sha256": "26b851f13a6e00500440d964393bee8aa1865660777c05b9082bdb12c43a23b6"
+      },
+      {
+        "file": "coast_rocks_05.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/coast_rocks_05/coast_rocks_05.bin",
+        "sha256": "c46b19d62dd5d42d5f03bc7508e22fdc00ec88fa197b4fdf8db8e40929ea13cc"
+      },
+      {
+        "file": "textures/coast_rocks_05_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/coast_rocks_05/coast_rocks_05_nor_gl_1k.jpg",
+        "sha256": "5d32e03ea42abc05dd913e7ead4e915d9d60f27c8942f75128a87f84e7baee9d"
+      },
+      {
+        "file": "textures/coast_rocks_05_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/coast_rocks_05/coast_rocks_05_diff_1k.jpg",
+        "sha256": "2ec4ec09422a14d55cc890ad902486cf76df8e663688fbc32f78a15684646ee1"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_crate_01",
+    "name": "Wooden Crate 01",
+    "authors": {
+      "James Ray Cock": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/wooden_crate_01",
+    "glb": "wooden_crate_01.glb",
+    "size": [
+      1,
+      0.42363959313565674,
+      0.49553757599245746
+    ],
+    "triangles": 2224,
+    "bytes": 1061160,
+    "sha256": "41e021c00b93d5ab214314ca37b534fa71c3453b489e90934df21d526405c074",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_crate_01/wooden_crate_01_1k.gltf",
+        "sha256": "fd9c6073acfc671e12b64666053f2805ae33aff5d3dbbcfe5c97c08c06644927"
+      },
+      {
+        "file": "textures/wooden_crate_01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_crate_01/wooden_crate_01_diff_1k.jpg",
+        "sha256": "16653f4abaf4c1d9bca94bde3bd8c54d0ea9a5298d1648abcf57de1f7ecc34cc"
+      },
+      {
+        "file": "textures/wooden_crate_01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_crate_01/wooden_crate_01_nor_gl_1k.jpg",
+        "sha256": "f4ea44c7dc1686123d337039cb713d74e8a2dbc6d1bd2beeac276d06f5df3fab"
+      },
+      {
+        "file": "wooden_crate_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/wooden_crate_01/wooden_crate_01.bin",
+        "sha256": "85f381f8035f7a6f2f3b848640894c6d3333b261946dd8a338c0fe19e0bea21e"
+      },
+      {
+        "file": "textures/wooden_crate_01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_crate_01/wooden_crate_01_arm_1k.jpg",
+        "sha256": "cd0b031c3924905e16ffd78ead062c2cc274148c4104d09635310097738b4679"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "barrel_03",
+    "name": "Barrel 03",
+    "authors": {
+      "Serhii Khromov": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/barrel_03",
+    "glb": "barrel_03.glb",
+    "size": [
+      0.6813127008841607,
+      1,
+      0.6863166222254906
+    ],
+    "triangles": 1473,
+    "bytes": 1065912,
+    "sha256": "be430b32584981c31ad04ca56cae5b8ee38b97ccede415da34fddc4daffc0e8f",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/barrel_03/barrel_03_1k.gltf",
+        "sha256": "80e2faf48b7423bb522b573e459d99c5656a16763285ec8268e957fc7d41f9b8"
+      },
+      {
+        "file": "textures/barrel_03_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_03/barrel_03_diff_1k.jpg",
+        "sha256": "62feb27dfa9a0daf3f323fdc1ddc2d8e4a5996cf2c72fe50197b55c2b9cba7f3"
+      },
+      {
+        "file": "barrel_03.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/barrel_03/barrel_03.bin",
+        "sha256": "10f3202e9ac9acf8dd896f1562c64db58311ffef89efb402d8433e03ad486427"
+      },
+      {
+        "file": "textures/barrel_03_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_03/barrel_03_nor_gl_1k.jpg",
+        "sha256": "ade97c52985047858a4f38226a9b8a888e3a766ba0434700b4618fb25424c4b6"
+      },
+      {
+        "file": "textures/barrel_03_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_03/barrel_03_arm_1k.jpg",
+        "sha256": "2cec2338b36d7322bef55e6a1d0884b223c5ed383cf986a58bfa461478c64c7e"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "old_military_crate",
+    "name": "Old Military Crate",
+    "authors": {
+      "Jack Mava": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/old_military_crate",
+    "glb": "old_military_crate.glb",
+    "size": [
+      1,
+      0.16576799058926062,
+      0.5374695005614123
+    ],
+    "triangles": 2586,
+    "bytes": 1337572,
+    "sha256": "8bc5c44dad4637f3d7abbfe250f0784d740ef6cd5dd897bc30c48c0086482785",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/old_military_crate/old_military_crate_1k.gltf",
+        "sha256": "ef4b69dca61542c4d724c4807233161129150220695742b5137ed65d8d2e1f24"
+      },
+      {
+        "file": "textures/old_military_crate_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_military_crate/old_military_crate_nor_gl_1k.jpg",
+        "sha256": "88935171626be79c4a44d0c52a33bc8d88b7b232ae48157d639a9ada0ab6e92b"
+      },
+      {
+        "file": "textures/old_military_crate_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_military_crate/old_military_crate_diff_1k.jpg",
+        "sha256": "9e74a72787364fee09a450e442db97a687d237051e98f8ed709af516434e895d"
+      },
+      {
+        "file": "textures/old_military_crate_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/old_military_crate/old_military_crate_arm_1k.jpg",
+        "sha256": "7b3a94f18f15783d9940fe4bd25316e8daffd0bdcbdfbe3e234b3cbb636bf5da"
+      },
+      {
+        "file": "old_military_crate.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/old_military_crate/old_military_crate.bin",
+        "sha256": "80eb5ad690aaa6f4f401df0f8e323666bf8f3f9943c7cb703eb37002f5084ce1"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "tree_stump_01",
+    "name": "Tree Stump 01",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/tree_stump_01",
+    "glb": "tree_stump_01.glb",
+    "size": [
+      0.8963954075715245,
+      0.3600970756507419,
+      1
+    ],
+    "triangles": 3197,
+    "bytes": 1793180,
+    "sha256": "57387e1b13f2969391bd133e8ef6624395fcfd87ce469597f2a915da7d7d06bb",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/tree_stump_01/tree_stump_01_1k.gltf",
+        "sha256": "9c66ba87d693f35eb404acaa96e0eeff831c295b61a0a903795584cbcc3527c9"
+      },
+      {
+        "file": "tree_stump_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/tree_stump_01/tree_stump_01.bin",
+        "sha256": "b4d9ca70b3c908c4a638fbd6a23ed96c84055bbbf14cf44b89e31ad59fa21e0a"
+      },
+      {
+        "file": "textures/tree_stump_01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_01/tree_stump_01_diff_1k.jpg",
+        "sha256": "781ebe420ac4d84f2e44b9e9937a596e3d5d90711d978a1392f8bf3771b5bf31"
+      },
+      {
+        "file": "textures/tree_stump_01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_01/tree_stump_01_nor_gl_1k.jpg",
+        "sha256": "425117514b0386bb6df41cb64a61a624d2596472e05777483d4021b3285e3ceb"
+      },
+      {
+        "file": "textures/tree_stump_01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_01/tree_stump_01_arm_1k.jpg",
+        "sha256": "d845cd6ab45288c546267d059ebe1f8a737e174330fe9375e5f99e753f2f95d8"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "concrete_road_barrier",
+    "name": "Concrete Road Barrier",
+    "authors": {
+      "Amal Kumar": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/concrete_road_barrier",
+    "glb": "concrete_road_barrier.glb",
+    "size": [
+      1,
+      0.5377712568359314,
+      0.41332883528307346
+    ],
+    "triangles": 2200,
+    "bytes": 1505524,
+    "sha256": "73539a4dd4b052f6471c719374b8d2818b3646697ed17818ee985eaaae7e265f",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/concrete_road_barrier/concrete_road_barrier_1k.gltf",
+        "sha256": "c371e87d303fff3f0c9fbe88520f7837514364e5c66aac3244e115ffa673d061"
+      },
+      {
+        "file": "textures/concrete_road_barrier_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_nor_gl_1k.jpg",
+        "sha256": "c1072f51ff5c3d7158f0fbb0aa26e82b816b745b9f03639c4816832af2b37c52"
+      },
+      {
+        "file": "textures/concrete_road_barrier_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_arm_1k.jpg",
+        "sha256": "b940847648012f2db8c24b16e07ad1e39b3bd33ea493203364deca209606e4b4"
+      },
+      {
+        "file": "textures/concrete_road_barrier_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_diff_1k.jpg",
+        "sha256": "88b2d79829ffec7b11ac4d9c8554328f30b665d2c17f634197fde4f1ca8696fe"
+      },
+      {
+        "file": "concrete_road_barrier.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/concrete_road_barrier/concrete_road_barrier.bin",
+        "sha256": "64a4f9bc6e4af64d714a252c3c13428c430a60569deba3d52ca6b7dd3aa70d8c"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "portable_generator",
+    "name": "Portable Generator",
+    "authors": {
+      "James Ray Cock": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/portable_generator",
+    "glb": "portable_generator.glb",
+    "size": [
+      1,
+      0.70499140873015,
+      0.6891994201819944
+    ],
+    "triangles": 4292,
+    "bytes": 1522480,
+    "sha256": "6ccef22bb37f8e6be3ee3068ff89b2819540a751cb805fbd4f557f440cb99e43",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/portable_generator/portable_generator_1k.gltf",
+        "sha256": "d5afe27834f824dfe753391713c45be03479e8100831f320796030531f61b848"
+      },
+      {
+        "file": "textures/portable_generator_spec_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/portable_generator/portable_generator_spec_1k.jpg",
+        "sha256": "acf30e81c367898eb846f353d77e404f6831ac23bf071e0e718fddb8881b86cb"
+      },
+      {
+        "file": "textures/portable_generator_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/portable_generator/portable_generator_nor_gl_1k.jpg",
+        "sha256": "8a868edab1a2f5ffa50b2b1680c2c342491b3eeeac443734178c445c7286c25d"
+      },
+      {
+        "file": "textures/portable_generator_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/portable_generator/portable_generator_diff_1k.jpg",
+        "sha256": "32acc300105a2df2290d872889b24e1b29ff1ca2c56c0a0cf8fbba0c5966a063"
+      },
+      {
+        "file": "textures/portable_generator_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/portable_generator/portable_generator_arm_1k.jpg",
+        "sha256": "10236e967baddd90ec7d4ab68969b06fb419f98782a2796db94edc0249b0dad2"
+      },
+      {
+        "file": "portable_generator.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/portable_generator/portable_generator.bin",
+        "sha256": "fb7dcfedec1331ad541569e4ca8d4157284b2164084b7fe5a97928d4abc0ea2d"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "large_iron_gate",
+    "name": "Large Iron Gate",
+    "authors": {
+      "Josh Dean": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/large_iron_gate",
+    "glb": "large_iron_gate.glb",
+    "size": [
+      1,
+      0.9927330899790173,
+      0.03299439180182424
+    ],
+    "triangles": 4496,
+    "bytes": 1309872,
+    "sha256": "f53640b6010af3ab75383613c20bf381d4600c70d1e8a782deb5f0e083fb681c",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/large_iron_gate/large_iron_gate_1k.gltf",
+        "sha256": "fd46dd0fc634c0529656dca3d275e4eb81fbfbb5105228dc9d4e215b0b4bec77"
+      },
+      {
+        "file": "textures/large_iron_gate_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/large_iron_gate/large_iron_gate_nor_gl_1k.jpg",
+        "sha256": "c46a14086705f0d4bc2858c461aa8dfdd3bf7a09955c370591511612429d60fb"
+      },
+      {
+        "file": "textures/large_iron_gate_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/large_iron_gate/large_iron_gate_diff_1k.jpg",
+        "sha256": "422b17616829c7a48805211fcca9699c0aec63dee40a8d851f5ba81fcf329575"
+      },
+      {
+        "file": "large_iron_gate.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/large_iron_gate/large_iron_gate.bin",
+        "sha256": "973f9f7b7e968a5b22bcf07aac03312af5b74bac125750c887934ee30d986c8f"
+      },
+      {
+        "file": "textures/large_iron_gate_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/large_iron_gate/large_iron_gate_arm_1k.jpg",
+        "sha256": "f528b46396e097324af2c14cc2f15b855b5f9b909bf6a8da9819f528e6ebde4a"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_ladder_02",
+    "name": "Wooden Ladder 02",
+    "authors": {
+      "JN_3DPRINTINGNERD": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/wooden_ladder_02",
+    "glb": "wooden_ladder_02.glb",
+    "size": [
+      0.5745661204655655,
+      0.9999999999999999,
+      0.35892766903057544
+    ],
+    "triangles": 2799,
+    "bytes": 1447940,
+    "sha256": "c27afd6b59d983281dbe1a4bd926f3a907c3b1918748ebaa5a092216f44db313",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_ladder_02/wooden_ladder_02_1k.gltf",
+        "sha256": "8fbb14700a4d0f6e44f538538f9294e4b3395d1923c719f18cb6dba9fd20a06a"
+      },
+      {
+        "file": "textures/wooden_ladder_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_ladder_02/wooden_ladder_02_nor_gl_1k.jpg",
+        "sha256": "6a7308af0bcbd027812801ed34fa5193f0b4a443a672e046a99a73b15199c8cd"
+      },
+      {
+        "file": "textures/wooden_ladder_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_ladder_02/wooden_ladder_02_diff_1k.jpg",
+        "sha256": "3c99e631dd30fb0d707a913fd7ffcd0d9f05161f73a93870d8ff499e78338254"
+      },
+      {
+        "file": "textures/wooden_ladder_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_ladder_02/wooden_ladder_02_arm_1k.jpg",
+        "sha256": "2830f8a73e4dd25412568dea16ca5338378f2017879249f0fc64c91f8a5d8f71"
+      },
+      {
+        "file": "wooden_ladder_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/wooden_ladder_02/wooden_ladder_02.bin",
+        "sha256": "bfbef75055bcd25fd680394fc22827817a9e78f30c21c3fde99d3d9af086d9be"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "vintage_oil_lamp",
+    "name": "Vintage Oil Lamp",
+    "authors": {
+      "Monsta3D": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/vintage_oil_lamp",
+    "glb": "vintage_oil_lamp.glb",
+    "size": [
+      0.2744383635112081,
+      1,
+      0.2744383542170028
+    ],
+    "triangles": 2404,
+    "bytes": 991904,
+    "sha256": "1a9f47efa50619d771c0945e1c58d931668b61d8fc0d379ef777d745a64c73ce",
+    "changes": "Normalized coordinates; mesh simplification; embedded 1K WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/vintage_oil_lamp/vintage_oil_lamp_1k.gltf",
+        "sha256": "ae570b98ea30b0337f62d8e7f551c03a05de00b238f3fac8f1ca5a1f1dbd1add"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_glass_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_glass_diff_1k.jpg",
+        "sha256": "dbe33017c012a00c74419bb8f05b16a2eeee5e06e2ceab49a80462d25c7a7c0a"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_nor_gl_1k.jpg",
+        "sha256": "54db7efff64c4117782e25851544a0eb4881e5e28a13a06917a16d15ce26b1db"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_flame_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_flame_diff_1k.jpg",
+        "sha256": "827c6a4fa9274141636cee9415f416a32937f2f257901bbe8488b22b862509f1"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_diff_1k.jpg",
+        "sha256": "a96cc1383fb056618eca80a0cf4ae192286c8752f8e83cb52f9fec02ca94a471"
+      },
+      {
+        "file": "vintage_oil_lamp.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/vintage_oil_lamp/vintage_oil_lamp.bin",
+        "sha256": "4064065c8e288beaa58639c139c801db337bfc6183e73378a9177157f0587167"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_glass_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_glass_nor_gl_1k.jpg",
+        "sha256": "2752589c8f6c7724bf2aa5d097010bd9257fff8ca0f85add13ec2ac702909df0"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_arm_1k.jpg",
+        "sha256": "004b7b6238632e4fc9e2ad7e76529caa292cfd96f5a42d6564531207f25c3e92"
+      },
+      {
+        "file": "textures/vintage_oil_lamp_glass_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/vintage_oil_lamp/vintage_oil_lamp_glass_arm_1k.jpg",
+        "sha256": "0ef2b0eb2087895851be979afc5ccb2c11076f71bc667f9e586b7f8038efc158"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "dead_tree_trunk",
+    "name": "Dead Tree Trunk",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/dead_tree_trunk",
+    "variant": null,
+    "glb": "dead_tree_trunk.glb",
+    "size": [
+      1,
+      0.09519178159144907,
+      0.09096235493881343
+    ],
+    "triangles": 3198,
+    "bytes": 1699096,
+    "sha256": "33f9b0abd9d896dffefdc8fac74be270e2ccd4d04a0bf5b7dd7099b9e945db10",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/dead_tree_trunk/dead_tree_trunk_1k.gltf",
+        "sha256": "8baaf1ff66ba1f79acdceed0dc3797a882990a3abb10b18abe56762f34c26e39"
+      },
+      {
+        "file": "textures/dead_tree_trunk_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/dead_tree_trunk/dead_tree_trunk_arm_1k.jpg",
+        "sha256": "0e0f7d64ac4ee3a7e7861a48f4bbd1ec2c026facd8f48b756f6b5d4557af3fd3"
+      },
+      {
+        "file": "textures/dead_tree_trunk_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/dead_tree_trunk/dead_tree_trunk_nor_gl_1k.jpg",
+        "sha256": "b7c393204c93f0c67535ff3b5d723b26598f9dbb2b5110b74249ab88189f026f"
+      },
+      {
+        "file": "textures/dead_tree_trunk_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/dead_tree_trunk/dead_tree_trunk_diff_1k.jpg",
+        "sha256": "bc31d7d23db90d90cfb568c583914eeec11b29716b79096818b706a9e3e0216c"
+      },
+      {
+        "file": "dead_tree_trunk.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/dead_tree_trunk/dead_tree_trunk.bin",
+        "sha256": "c1ac6b3195246e8647a28eee2fbfdd4712a045c7cf2dcb4f5abcc2d40a446ca6"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "tree_stump_02",
+    "name": "Tree Stump 02",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/tree_stump_02",
+    "variant": null,
+    "glb": "tree_stump_02.glb",
+    "size": [
+      1,
+      0.3430984807979679,
+      0.9151181460133923
+    ],
+    "triangles": 2198,
+    "bytes": 1772264,
+    "sha256": "b7f6f8f063956221b152ed401da4cb3c0b450400961bb567ae72b272fa3cd47f",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/tree_stump_02/tree_stump_02_1k.gltf",
+        "sha256": "a79189160d1c7cfd6d875ab4470e4d2ff9cee08d58943be69d6028034a08c7ec"
+      },
+      {
+        "file": "textures/tree_stump_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_02/tree_stump_02_nor_gl_1k.jpg",
+        "sha256": "24c07761bbdfd43b5342690b4f8dd7fc0773f9e4b966dd310bb77fa5c5ede77a"
+      },
+      {
+        "file": "tree_stump_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/tree_stump_02/tree_stump_02.bin",
+        "sha256": "db5e85d08beb889f0cc5be3b9bdfbcb1ae6df47e8e242af3c355766422f49d1d"
+      },
+      {
+        "file": "textures/tree_stump_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_02/tree_stump_02_diff_1k.jpg",
+        "sha256": "318dbe92494887d137607144ef20bc170cbda1796dad15364ecf40683a79b8a2"
+      },
+      {
+        "file": "textures/tree_stump_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_stump_02/tree_stump_02_arm_1k.jpg",
+        "sha256": "d009168a1e043b9b980dd23a1699805d8888b8fe9cc79455f809a4e58d18b96b"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "quiver_tree_01",
+    "name": "Quiver Tree 01",
+    "authors": {
+      "James Ray Cock": "Photography",
+      "Dario Barresi": "Photography",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/quiver_tree_01",
+    "variant": null,
+    "glb": "quiver_tree_01.glb",
+    "size": [
+      0.43501018022387045,
+      1,
+      0.35666864560740513
+    ],
+    "triangles": 6489,
+    "bytes": 3199576,
+    "sha256": "3e1ef1ac1329a607192320c156c1bc14f7393035c3464ce9445030e02abf158d",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/quiver_tree_01/quiver_tree_01_1k.gltf",
+        "sha256": "aa6885a0fe43b274584851b0947e2209dc64afce1d20a75a1567e790a12d0722"
+      },
+      {
+        "file": "textures/quiver_tree_01_trunk_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_trunk_arm_1k.jpg",
+        "sha256": "9271edcab1c7224aa6b9e64f0321ae54ad7c074557290cd366c3392e7c330ab7"
+      },
+      {
+        "file": "textures/quiver_tree_01_trunk_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_trunk_diff_1k.jpg",
+        "sha256": "47963e7a274bf26da0a49019d01268f5dad9e8a2e6cd17fcd3ba1d2606517f57"
+      },
+      {
+        "file": "textures/quiver_tree_01_leaf_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_leaf_nor_gl_1k.jpg",
+        "sha256": "4480bafa755e1886073546aca1fbd6da377c463849f18588c773460c61b4ed0a"
+      },
+      {
+        "file": "textures/quiver_tree_01_trunk_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_trunk_nor_gl_1k.jpg",
+        "sha256": "430ccf8d2545f7fe1119433ef34a02111a81f907dfb4ee50654ffdad4b655438"
+      },
+      {
+        "file": "textures/quiver_tree_01_leaf_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_leaf_arm_1k.jpg",
+        "sha256": "c0be7dd1b7dcc61fcbe252b2ca656b1ecf7633d9a1bb52cf7006bc97bf6c560c"
+      },
+      {
+        "file": "quiver_tree_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/quiver_tree_01/quiver_tree_01.bin",
+        "sha256": "20efdf4aa14825ffd01abb21535afd485a00022c96ad04c1269bb01c137bbe08"
+      },
+      {
+        "file": "textures/quiver_tree_01_leaf_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/quiver_tree_01/quiver_tree_01_leaf_diff_1k.jpg",
+        "sha256": "5622b466a950b74d296c3d066e0d28d85770232fd5624c5ab0f752de825fae18"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_pier",
+    "name": "Modular Wooden Pier",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_wooden_pier",
+    "variant": "^modular_wooden_pier_section_01$",
+    "glb": "wooden_pier.glb",
+    "size": [
+      0.5835818466499213,
+      1,
+      0.8246308403610068
+    ],
+    "triangles": 5198,
+    "bytes": 3392500,
+    "sha256": "5e35524d61af44f75b28221f466af6e37f2c78618d56009770d14de3e6522a2b",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_wooden_pier/modular_wooden_pier_1k.gltf",
+        "sha256": "eeea9853deb63e43510f8d9d6af21963c88adab77e17ccac9f9b8d3a7d34a923"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_arm_1k.jpg",
+        "sha256": "dacaff86f936bef10220aa60843efadae53039f064ad1a6fad735b912f1ba285"
+      },
+      {
+        "file": "modular_wooden_pier.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_wooden_pier/modular_wooden_pier.bin",
+        "sha256": "6ec10b84aaaa02800b095850fc92cf850632e5becd76698dc6609f40f05e1b60"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_arm_1k.jpg",
+        "sha256": "4c03bcee7d0fb9708be5e5ebc4dd5fd73789f4eb24b6391dff6167f11c3ce95d"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_diff_1k.jpg",
+        "sha256": "2670a7eae2a3104e8537e61d90a8d8b169c7eb0f69b51622bec10e9472dc4573"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_diff_1k.jpg",
+        "sha256": "da9e017b41e052d5e47558bb98e61b577f66e9d44eb2d26dc9b085e317bede9e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "sha256": "9b2d7ca04642e249428969fa32189f36fcea8577a282dbccca1ac15d59dce18e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "sha256": "b23d7b0c23c9a41d50b7e1691e183902765aa4c21ac6ca6da678e874c4ddfb04"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_pier_worn",
+    "name": "Modular Wooden Pier",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_wooden_pier",
+    "variant": "^modular_wooden_pier_section_02$",
+    "glb": "wooden_pier_worn.glb",
+    "size": [
+      0.6532678109690081,
+      1,
+      0.8839499199416614
+    ],
+    "triangles": 4798,
+    "bytes": 3368980,
+    "sha256": "ce664528c140ab25c4c1d6522f9c1592d01214113d497c8e8f3e52623b326f33",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_wooden_pier/modular_wooden_pier_1k.gltf",
+        "sha256": "eeea9853deb63e43510f8d9d6af21963c88adab77e17ccac9f9b8d3a7d34a923"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_arm_1k.jpg",
+        "sha256": "dacaff86f936bef10220aa60843efadae53039f064ad1a6fad735b912f1ba285"
+      },
+      {
+        "file": "modular_wooden_pier.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_wooden_pier/modular_wooden_pier.bin",
+        "sha256": "6ec10b84aaaa02800b095850fc92cf850632e5becd76698dc6609f40f05e1b60"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_arm_1k.jpg",
+        "sha256": "4c03bcee7d0fb9708be5e5ebc4dd5fd73789f4eb24b6391dff6167f11c3ce95d"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_diff_1k.jpg",
+        "sha256": "2670a7eae2a3104e8537e61d90a8d8b169c7eb0f69b51622bec10e9472dc4573"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_diff_1k.jpg",
+        "sha256": "da9e017b41e052d5e47558bb98e61b577f66e9d44eb2d26dc9b085e317bede9e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "sha256": "9b2d7ca04642e249428969fa32189f36fcea8577a282dbccca1ac15d59dce18e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "sha256": "b23d7b0c23c9a41d50b7e1691e183902765aa4c21ac6ca6da678e874c4ddfb04"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "electricity_pole",
+    "name": "Modular Electricity Poles",
+    "authors": {
+      "James Ray Cock": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_electricity_poles",
+    "variant": "^preset_02_",
+    "glb": "electricity_pole.glb",
+    "size": [
+      0.1957585206857136,
+      1,
+      0.13902799026250381
+    ],
+    "triangles": 4451,
+    "bytes": 3155980,
+    "sha256": "0c89113cb6fa7146e7297a3bd1d4368c6ebb5af601fb8a6b21b693a34b5b9831",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_electricity_poles/modular_electricity_poles_1k.gltf",
+        "sha256": "2032fb781809021258ceeb22f163bd9ddca2a9186173ed99ee61130dbb808c62"
+      },
+      {
+        "file": "textures/modular_electricity_poles_pieces_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_pieces_diff_1k.jpg",
+        "sha256": "c681efa29ce6b28eb3377cfcdb35d1c88a9265189920e9979419d2d5b4086c1d"
+      },
+      {
+        "file": "modular_electricity_poles.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_electricity_poles/modular_electricity_poles.bin",
+        "sha256": "143bc8cd007674c74a6bac784a24fd4181234c07498b3a2bbdbf6abcd8a5897f"
+      },
+      {
+        "file": "textures/modular_electricity_poles_pieces_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_pieces_arm_1k.jpg",
+        "sha256": "4648fab787b80889e54ea90e79fcb3de4c644729c16b8616ae79707b3e5515dd"
+      },
+      {
+        "file": "textures/modular_electricity_poles_pieces_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_pieces_nor_gl_1k.jpg",
+        "sha256": "c78ec7efc67caebc9d43c1c29e5d3972c23bf17e865267cc3acb793774125caa"
+      },
+      {
+        "file": "textures/modular_electricity_poles_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_arm_1k.jpg",
+        "sha256": "4765dd2e76a1191b271b2fb1c93354fe3b9cb12a323bafd7f1661effe88fc441"
+      },
+      {
+        "file": "textures/modular_electricity_poles_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_diff_1k.jpg",
+        "sha256": "da86d0fc97683a99fc2670f8b889b9632dd6da05e9c042c40cc7bf9e4d0b0104"
+      },
+      {
+        "file": "textures/modular_electricity_poles_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_electricity_poles/modular_electricity_poles_nor_gl_1k.jpg",
+        "sha256": "7c77d694c898139a82a66543e33748b4ab7b1f7cf456cdd453d5509810ae238a"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "industrial_pipe",
+    "name": "Modular Industrial Pipes 01",
+    "authors": {
+      "Jorge Camacho": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_industrial_pipes_01",
+    "variant": "^modular_industrial_pipes_01_pipe01$",
+    "glb": "industrial_pipe.glb",
+    "size": [
+      0.24108576708648832,
+      1,
+      0.24017058257952595
+    ],
+    "triangles": 600,
+    "bytes": 1241308,
+    "sha256": "b8837196f03d11195ceff1057829379d4fb69e95d7a9d695e513a846225f7573",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_1k.gltf",
+        "sha256": "455d3a0fe95b7900a08cbebb23cfb2c341672fcb67ae7355d776e53cfa3d0688"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_arm_1k.jpg",
+        "sha256": "4c65dcb651a3d345517fa93ad7c6e48f2388f4e8bb347446f70317c16049867b"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_diff_1k.jpg",
+        "sha256": "c0233f66b18e3374dfbbb8c8078a41f6571a0809d3eb14dd9d3c332265cfde7b"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_nor_gl_1k.jpg",
+        "sha256": "84a43ca11a4f1ac84f7fc8336a4e9b7b333d30c13e540f3ff42e662dc6f91b53"
+      },
+      {
+        "file": "modular_industrial_pipes_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_industrial_pipes_01/modular_industrial_pipes_01.bin",
+        "sha256": "2e11e1a7dabd56b1e158364f48b0b388bf316fcab61a01274740db75dbafa448"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_nor_gl_1k.jpg",
+        "sha256": "ed4728fde567efe420e3a6e1bdc4238b26c2782218737c7e2de88eeca1e91fb2"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_arm_1k.jpg",
+        "sha256": "7fff7d4604491eeb7531ad5f7520517015c72ec7316d1e865d62f23f976dfed6"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_diff_1k.jpg",
+        "sha256": "ef8a75c402a8871903dcaa147b023d57c640d0de4c7a8acdfdee822861656a92"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "fern_02",
+    "name": "Fern 02",
+    "authors": {
+      "Rob Tuytel": "scanning",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/fern_02",
+    "variant": "^fern_02_b$",
+    "glb": "fern_02.glb",
+    "size": [
+      1,
+      0.43212511561133304,
+      0.9029472744872904
+    ],
+    "triangles": 1400,
+    "bytes": 333020,
+    "sha256": "94a489fcb85799f5c2cb924cbbb6ab461b541c09a3b46d507ffb7bd3bc94ad7a",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/fern_02/fern_02_1k.gltf",
+        "sha256": "33974295ee19670af4877705fc7d91f33f42d6302f0d44a625e072271223031f"
+      },
+      {
+        "file": "textures/fern_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_arm_1k.jpg",
+        "sha256": "ebfb5d76ce9cbdaec20bcd22dce9b755f0b1b8650ef29ca13555e3e6961025d7"
+      },
+      {
+        "file": "textures/fern_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_diff_1k.jpg",
+        "sha256": "a828a6e7b4c01c826911e2eac4b3afc7457dab7b3b392a31c681ed88b7d50029"
+      },
+      {
+        "file": "textures/fern_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/fern_02/fern_02_nor_gl_1k.jpg",
+        "sha256": "45bce132c6e96a0864bc89ab5da51361ab3f4afa83a6669ae499ab5ca811f621"
+      },
+      {
+        "file": "fern_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/fern_02/fern_02.bin",
+        "sha256": "fe1abb762bcbbc7ad9e86925c8080437a62add257d9280e9142fdc85c226e64c"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/fern_02/fern_02_alpha_1k.png",
+        "sha256": "ea3c64284c7ebdeedf484d2d816eae92825ec526140c3bb83859ddc7a64001f9"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "grass_medium_01",
+    "name": "Grass Medium 01",
+    "authors": {
+      "Rob Tuytel": "Photography",
+      "Rico Cilliers": "Modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/grass_medium_01",
+    "variant": "^grass_medium_01_tall_a_LOD0$",
+    "glb": "grass_medium_01.glb",
+    "size": [
+      0.4990177757426117,
+      1,
+      0.49149977746540885
+    ],
+    "triangles": 290,
+    "bytes": 605072,
+    "sha256": "4d312059858a08c4557743c9501f4012c6131b7305297a86f8689975a3809c71",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/grass_medium_01/grass_medium_01_1k.gltf",
+        "sha256": "3e5e2a314c94e16de54fd7c28e41709731fbd2b1613ab539f1544f622ddb6a85"
+      },
+      {
+        "file": "textures/grass_medium_01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_nor_gl_1k.jpg",
+        "sha256": "cae298d3d1d7ff7c7e210ad8ac772b96706e356f9315a6b04fde373ce01ccf1e"
+      },
+      {
+        "file": "textures/grass_medium_01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_diff_1k.jpg",
+        "sha256": "71495bd6a11fddcab0aaff38246fea1a7b802a705483f1c7cbca53955daa8050"
+      },
+      {
+        "file": "textures/grass_medium_01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_arm_1k.jpg",
+        "sha256": "9a3a30f72bc02f4398967c5b08f2d20cce30bd423a2613b42a727034296fa3ae"
+      },
+      {
+        "file": "grass_medium_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/grass_medium_01/grass_medium_01.bin",
+        "sha256": "f4587cabdb96a2e96d8be644923dc954a248edfaaa717a0ff224cacb898bee1f"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/grass_medium_01/grass_medium_01_alpha_1k.png",
+        "sha256": "711a8e49af758d6a6ce1f610db858899a27be19da6d1866bd35c13bc7b8ffeff"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "grass_clump",
+    "name": "Grass Medium 01",
+    "authors": {
+      "Rob Tuytel": "Photography",
+      "Rico Cilliers": "Modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/grass_medium_01",
+    "variant": "^grass_medium_01_mid_a_LOD0$",
+    "glb": "grass_clump.glb",
+    "size": [
+      0.9739693646207315,
+      0.9835865213270116,
+      0.9999999999999999
+    ],
+    "triangles": 850,
+    "bytes": 634932,
+    "sha256": "6943c49e8061efcc6dd562699271ffc3b3eda89fc627aa8dacea8720e7441d10",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/grass_medium_01/grass_medium_01_1k.gltf",
+        "sha256": "3e5e2a314c94e16de54fd7c28e41709731fbd2b1613ab539f1544f622ddb6a85"
+      },
+      {
+        "file": "textures/grass_medium_01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_nor_gl_1k.jpg",
+        "sha256": "cae298d3d1d7ff7c7e210ad8ac772b96706e356f9315a6b04fde373ce01ccf1e"
+      },
+      {
+        "file": "textures/grass_medium_01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_diff_1k.jpg",
+        "sha256": "71495bd6a11fddcab0aaff38246fea1a7b802a705483f1c7cbca53955daa8050"
+      },
+      {
+        "file": "textures/grass_medium_01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_arm_1k.jpg",
+        "sha256": "9a3a30f72bc02f4398967c5b08f2d20cce30bd423a2613b42a727034296fa3ae"
+      },
+      {
+        "file": "grass_medium_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/grass_medium_01/grass_medium_01.bin",
+        "sha256": "f4587cabdb96a2e96d8be644923dc954a248edfaaa717a0ff224cacb898bee1f"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/grass_medium_01/grass_medium_01_alpha_1k.png",
+        "sha256": "711a8e49af758d6a6ce1f610db858899a27be19da6d1866bd35c13bc7b8ffeff"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "grass_low",
+    "name": "Grass Medium 01",
+    "authors": {
+      "Rob Tuytel": "Photography",
+      "Rico Cilliers": "Modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/grass_medium_01",
+    "variant": "^grass_medium_01_large_b_LOD0$",
+    "glb": "grass_low.glb",
+    "size": [
+      1,
+      0.5957904892847087,
+      0.9705816758511621
+    ],
+    "triangles": 1157,
+    "bytes": 644588,
+    "sha256": "e2d77899675f2c9a56d5a66bda3ef4d6ce2156d0c5c0a52fa44acb4a9f928fec",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/grass_medium_01/grass_medium_01_1k.gltf",
+        "sha256": "3e5e2a314c94e16de54fd7c28e41709731fbd2b1613ab539f1544f622ddb6a85"
+      },
+      {
+        "file": "textures/grass_medium_01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_nor_gl_1k.jpg",
+        "sha256": "cae298d3d1d7ff7c7e210ad8ac772b96706e356f9315a6b04fde373ce01ccf1e"
+      },
+      {
+        "file": "textures/grass_medium_01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_diff_1k.jpg",
+        "sha256": "71495bd6a11fddcab0aaff38246fea1a7b802a705483f1c7cbca53955daa8050"
+      },
+      {
+        "file": "textures/grass_medium_01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/grass_medium_01/grass_medium_01_arm_1k.jpg",
+        "sha256": "9a3a30f72bc02f4398967c5b08f2d20cce30bd423a2613b42a727034296fa3ae"
+      },
+      {
+        "file": "grass_medium_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/grass_medium_01/grass_medium_01.bin",
+        "sha256": "f4587cabdb96a2e96d8be644923dc954a248edfaaa717a0ff224cacb898bee1f"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/grass_medium_01/grass_medium_01_alpha_1k.png",
+        "sha256": "711a8e49af758d6a6ce1f610db858899a27be19da6d1866bd35c13bc7b8ffeff"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wild_rooibos_bush",
+    "name": "Wild Rooibos Bush",
+    "authors": {
+      "James Ray Cock": "modeling",
+      "Jenelle van Heerden": "photography"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/wild_rooibos_bush",
+    "variant": "^wild_rooibos_bush_b$",
+    "glb": "wild_rooibos_bush.glb",
+    "size": [
+      0.9686896189796552,
+      1,
+      0.8770082963505205
+    ],
+    "triangles": 2659,
+    "bytes": 549608,
+    "sha256": "ec282a107c9fff3d1aab758eb46e70445a4a8266b7864cc24f5dbdbf4388370a",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wild_rooibos_bush/wild_rooibos_bush_1k.gltf",
+        "sha256": "7f3fb17e4606e33d0bc4239c4901c9610b4bd17fe26b6780ba11ab4493f25d29"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_nor_gl_1k.jpg",
+        "sha256": "ffd557b4cb732d24988d41741398df150567f3ac9d1433f11b88d60158c953d4"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_diff_1k.jpg",
+        "sha256": "d963cdaf769bc39bb57295d518b37cd9456168cf5e3b82fd59f58c98d3faf596"
+      },
+      {
+        "file": "textures/wild_rooibos_bush_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wild_rooibos_bush/wild_rooibos_bush_arm_1k.jpg",
+        "sha256": "e0e512f263b8f1fe1c485e61912ba1ce5d42b397cf9a4e2b1786677e732bb84b"
+      },
+      {
+        "file": "wild_rooibos_bush.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/wild_rooibos_bush/wild_rooibos_bush.bin",
+        "sha256": "7a3471b4d110fe9927f4a200191eae86fa3c0a08f8e8e797d22e94a1703322e1"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/wild_rooibos_bush/wild_rooibos_bush_alpha_1k.png",
+        "sha256": "6a9fcd7a62aab1366b0ae50273c4a638591e932049a647ccadce6687ce657b72"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "pine_sapling_small",
+    "name": "Pine Sapling Small",
+    "authors": {
+      "Rob Tuytel": "photography",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/pine_sapling_small",
+    "variant": "^pine_sapling_small_a$",
+    "glb": "pine_sapling_small.glb",
+    "size": [
+      0.6063891065808288,
+      1,
+      0.5600039761249617
+    ],
+    "triangles": 558,
+    "bytes": 2160688,
+    "sha256": "f4ad2e122af8570d96f4afb0670255756d94aa5c4f3fb4deb76d085db20fd04a",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/pine_sapling_small/pine_sapling_small_1k.gltf",
+        "sha256": "f358c01926861dd082f32dba60f7c9fba232b585a985cf38c0d2229eecf4bc48"
+      },
+      {
+        "file": "textures/pine_sapling_small_twig_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_twig_arm_1k.jpg",
+        "sha256": "2eb0aa44124b5a4ae9401e00b23b3c916f4c3f421616ce1bb932f248fc061288"
+      },
+      {
+        "file": "textures/pine_sapling_small_twig_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_twig_diff_1k.jpg",
+        "sha256": "54af7d6fb664b5a38bcb118b557bc50e01e86ec54d6f1a573c3e32c649a53362"
+      },
+      {
+        "file": "textures/pine_sapling_small_bark_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_bark_nor_gl_1k.jpg",
+        "sha256": "05c46455531781b6cf18cae0648cf627f60ee942adaa8bcbfd1592fc2506a9e0"
+      },
+      {
+        "file": "pine_sapling_small.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/pine_sapling_small/pine_sapling_small.bin",
+        "sha256": "b4d2fc73d53f1d8717eb5ef9a2c66957d2a53152787e543aace88fcd6fca94ef"
+      },
+      {
+        "file": "textures/pine_sapling_small_bark_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_bark_diff_1k.jpg",
+        "sha256": "5c76836b01c3536fa0e24207b67bf4f3315b53ebe2b4ecc6f08dfcf3f8d74929"
+      },
+      {
+        "file": "textures/pine_sapling_small_bark_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_bark_arm_1k.jpg",
+        "sha256": "336a4680cd571b6076b67afee2310b290b8900d9d126eb39ec1ae92e95be2ea9"
+      },
+      {
+        "file": "textures/pine_sapling_small_twig_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_sapling_small/pine_sapling_small_twig_nor_gl_1k.jpg",
+        "sha256": "76af87821d7ff00e25768d5d97a449394fe64a21ae55d099da7f5ed46d9098c8"
+      },
+      {
+        "file": "textures/mask-twig_alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/pine_sapling_small/pine_sapling_small_twig_alpha_1k.png",
+        "sha256": "b875969b9df9f9cbf56dca4e2809d8ed1916f5172f173b0389f050c834c5cbed"
+      }
+    ],
+    "canopy": "Nine orthographic depth slices baked from the original full-detail Poly Haven foliage; separate 3D wood mesh",
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "pine_tree_01",
+    "name": "Pine Tree 01",
+    "authors": {
+      "Rob Tuytel": "photography",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/pine_tree_01",
+    "variant": "^pine_tree_01_a_LOD0$",
+    "glb": "pine_tree_01.glb",
+    "size": [
+      0.37305967901233444,
+      1,
+      0.4080752371137438
+    ],
+    "triangles": 6912,
+    "bytes": 3737772,
+    "sha256": "f38ab59f43ce5d8a9d2acb141cf36259295cfc2b54883cd43200d31165dc1418",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/pine_tree_01/pine_tree_01_1k.gltf",
+        "sha256": "c81e8eebbda722313f07bed37b8b9156ce520f7fa95488d83a694d02fffdb469"
+      },
+      {
+        "file": "textures/pine_tree_01_bark_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_bark_nor_gl_1k.jpg",
+        "sha256": "05c46455531781b6cf18cae0648cf627f60ee942adaa8bcbfd1592fc2506a9e0"
+      },
+      {
+        "file": "textures/pine_tree_01_bark_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_bark_diff_1k.jpg",
+        "sha256": "5c76836b01c3536fa0e24207b67bf4f3315b53ebe2b4ecc6f08dfcf3f8d74929"
+      },
+      {
+        "file": "textures/pine_tree_01_bark_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_bark_arm_1k.jpg",
+        "sha256": "336a4680cd571b6076b67afee2310b290b8900d9d126eb39ec1ae92e95be2ea9"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_a_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_a_nor_gl_1k.jpg",
+        "sha256": "9d46c05be22de0dcc4af7e3703fde4c7397644b9faeff4914c0469a6bde99caf"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_a_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_a_diff_1k.jpg",
+        "sha256": "cfb646cbc4b6cb2db410eb4342174ebe7812a4ae03520491e788722cf1867286"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_a_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_a_arm_1k.jpg",
+        "sha256": "7286e74c42b32c2df6cf04c3050b81b2ff636dff1d4389aecfff80bb8d5904da"
+      },
+      {
+        "file": "textures/pine_tree_01_twig_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_twig_nor_gl_1k.jpg",
+        "sha256": "2a02a482a18d20255c800845902d5e0061d2a2d14107d7c4ed0b789414153141"
+      },
+      {
+        "file": "textures/pine_tree_01_twig_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_twig_diff_1k.jpg",
+        "sha256": "e649f0f9bc74d1af5f1a45eaf2fe7a29adaaddfab251f746b983da301e4b80e1"
+      },
+      {
+        "file": "textures/pine_tree_01_twig_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_twig_arm_1k.jpg",
+        "sha256": "47facef9985e8c073184a64d15ea14bd2dc3b3debfb93f3671b6d5ad0dbc163d"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_b_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_b_nor_gl_1k.jpg",
+        "sha256": "5e498ee6fee29437196085620c978346ba6731edad8bfc2a2642868f8bf64efe"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_b_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_b_diff_1k.jpg",
+        "sha256": "9d39263a9243a4b6cd669de5e3a504eae32d52f5ab48e471cad5f7e52e052508"
+      },
+      {
+        "file": "textures/pine_tree_01_trunk_b_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/pine_tree_01/pine_tree_01_trunk_b_arm_1k.jpg",
+        "sha256": "8141cd57969269604351e366400354e47e7f25294881387e1ea307b48c37b033"
+      },
+      {
+        "file": "pine_tree_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/pine_tree_01/pine_tree_01.bin",
+        "sha256": "9955ac7e2f8fe28dc6da8e4d478593ad830f8a23d44e39a2187ef7dffac2646b"
+      }
+    ],
+    "canopy": "Nine orthographic depth slices baked from the original full-detail Poly Haven foliage; separate 3D wood mesh",
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "tree_small_02",
+    "name": "Tree Small 02",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/tree_small_02",
+    "variant": null,
+    "glb": "tree_small_02.glb",
+    "size": [
+      0.6400846630277943,
+      1,
+      0.9420059562758056
+    ],
+    "triangles": 6251,
+    "bytes": 3954204,
+    "sha256": "a3d31f8aad86457126199979047afe31b2c93d56bf27992ebc120dbf8f58efb8",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/tree_small_02/tree_small_02_1k.gltf",
+        "sha256": "3062a709614c05b80fdc1e56583998bc3cb1027b0d52f956c8ecfb882ff8ca6d"
+      },
+      {
+        "file": "textures/tree_small_02_branch_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_branch_nor_gl_1k.jpg",
+        "sha256": "a2efae9e7fede259601188cd5cb7e561fc502bd87e04d862a9532b2d8e647a62"
+      },
+      {
+        "file": "textures/tree_small_02_branch_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_branch_diff_1k.jpg",
+        "sha256": "a71b768e330c0c6cca097e30314f6b4e842ef724a1370f6aab14b4434eec64cb"
+      },
+      {
+        "file": "textures/tree_small_02_branch_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_branch_arm_1k.jpg",
+        "sha256": "8968b46d76c67da09ebbf4eed04b8123c9e0ddf5b55d123968b35b32aa76d27a"
+      },
+      {
+        "file": "textures/tree_small_02_leaves_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_leaves_nor_gl_1k.jpg",
+        "sha256": "8c72e04fb23e16ae1df79c01385a638473d1dd4dede3d51e83d70153c129f09b"
+      },
+      {
+        "file": "textures/tree_small_02_leaves_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_leaves_diff_1k.jpg",
+        "sha256": "261e7d7a5ac7d2e16ea8823ff8510be8f3f615999724232994039ad2885e5c36"
+      },
+      {
+        "file": "textures/tree_small_02_leaves_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_leaves_arm_1k.jpg",
+        "sha256": "71f81374daf5a8f3e6eb2c694264a1769fdb0bea508178e4105618eecea83c3e"
+      },
+      {
+        "file": "textures/tree_small_02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_nor_gl_1k.jpg",
+        "sha256": "9c83be074c950ea1b94c732c0c0291b53b9ba357f932d378bafe3ca3b4418871"
+      },
+      {
+        "file": "textures/tree_small_02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_diff_1k.jpg",
+        "sha256": "4e0093f407b3a1120a36de49a48ebe5a465a9a9b77e361c7a3e66866e115e404"
+      },
+      {
+        "file": "textures/tree_small_02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/tree_small_02/tree_small_02_arm_1k.jpg",
+        "sha256": "891c5a1bb124292984b01558e9f2b0302d27d2fa3ccf9dfc6c34f9ea4ca24e6c"
+      },
+      {
+        "file": "tree_small_02.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/tree_small_02/tree_small_02.bin",
+        "sha256": "8da6c3c389ad8748286d1b7488cd827f75ebdad9d8f59ef7dfb0916df5edc634"
+      },
+      {
+        "file": "textures/mask-leaves_alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/tree_small_02/tree_small_02_leaves_alpha_1k.png",
+        "sha256": "4f143e2dda8a6a572f427ac378b92255d21761e4611de0d26e21816c01aa533b"
+      }
+    ],
+    "canopy": "Nine orthographic depth slices baked from the original full-detail Poly Haven foliage; separate 3D wood mesh",
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "industrial_valve",
+    "name": "Modular Industrial Pipes 01",
+    "authors": {
+      "Jorge Camacho": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_industrial_pipes_01",
+    "variant": "^modular_industrial_pipes_01_pipe08$",
+    "glb": "industrial_valve.glb",
+    "size": [
+      0.7029428183519877,
+      0.9999999999999999,
+      0.8119558323537653
+    ],
+    "triangles": 3200,
+    "bytes": 1472016,
+    "sha256": "bbdaa719195d5a5419561bb5cbbfc7f963a3177190a7490ef824d96c1bcad813",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_1k.gltf",
+        "sha256": "455d3a0fe95b7900a08cbebb23cfb2c341672fcb67ae7355d776e53cfa3d0688"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_arm_1k.jpg",
+        "sha256": "4c65dcb651a3d345517fa93ad7c6e48f2388f4e8bb347446f70317c16049867b"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_diff_1k.jpg",
+        "sha256": "c0233f66b18e3374dfbbb8c8078a41f6571a0809d3eb14dd9d3c332265cfde7b"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_nor_gl_1k.jpg",
+        "sha256": "84a43ca11a4f1ac84f7fc8336a4e9b7b333d30c13e540f3ff42e662dc6f91b53"
+      },
+      {
+        "file": "modular_industrial_pipes_01.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_industrial_pipes_01/modular_industrial_pipes_01.bin",
+        "sha256": "2e11e1a7dabd56b1e158364f48b0b388bf316fcab61a01274740db75dbafa448"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_nor_gl_1k.jpg",
+        "sha256": "ed4728fde567efe420e3a6e1bdc4238b26c2782218737c7e2de88eeca1e91fb2"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group01_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group01_arm_1k.jpg",
+        "sha256": "7fff7d4604491eeb7531ad5f7520517015c72ec7316d1e865d62f23f976dfed6"
+      },
+      {
+        "file": "textures/modular_industrial_pipes_01_group02_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_industrial_pipes_01/modular_industrial_pipes_01_group02_diff_1k.jpg",
+        "sha256": "ef8a75c402a8871903dcaa147b023d57c640d0de4c7a8acdfdee822861656a92"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_deck",
+    "name": "Modular Wooden Pier",
+    "authors": {
+      "Rico Cilliers": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/modular_wooden_pier",
+    "variant": "^modular_wooden_pier_section_01$",
+    "glb": "wooden_deck.glb",
+    "size": [
+      0.7087999882514202,
+      0.08483751069004104,
+      1
+    ],
+    "triangles": 2800,
+    "bytes": 1709012,
+    "sha256": "bab89598914d35da2df3235cca3e2b3c8ef1a07b505cfb1c51350fa4d6a597b6",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/modular_wooden_pier/modular_wooden_pier_1k.gltf",
+        "sha256": "eeea9853deb63e43510f8d9d6af21963c88adab77e17ccac9f9b8d3a7d34a923"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_arm_1k.jpg",
+        "sha256": "dacaff86f936bef10220aa60843efadae53039f064ad1a6fad735b912f1ba285"
+      },
+      {
+        "file": "modular_wooden_pier.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/modular_wooden_pier/modular_wooden_pier.bin",
+        "sha256": "6ec10b84aaaa02800b095850fc92cf850632e5becd76698dc6609f40f05e1b60"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_arm_1k.jpg",
+        "sha256": "4c03bcee7d0fb9708be5e5ebc4dd5fd73789f4eb24b6391dff6167f11c3ce95d"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_diff_1k.jpg",
+        "sha256": "2670a7eae2a3104e8537e61d90a8d8b169c7eb0f69b51622bec10e9472dc4573"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_diff_1k.jpg",
+        "sha256": "da9e017b41e052d5e47558bb98e61b577f66e9d44eb2d26dc9b085e317bede9e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_poles_nor_gl_1k.jpg",
+        "sha256": "9b2d7ca04642e249428969fa32189f36fcea8577a282dbccca1ac15d59dce18e"
+      },
+      {
+        "file": "textures/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/modular_wooden_pier/modular_wooden_pier_planks_nor_gl_1k.jpg",
+        "sha256": "b23d7b0c23c9a41d50b7e1691e183902765aa4c21ac6ca6da678e874c4ddfb04"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "nettle_plant",
+    "name": "Nettle Plant",
+    "authors": {
+      "Rob Tuytel": "Photography",
+      "Rico Cilliers": "modeling"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/nettle_plant",
+    "variant": "^nettle_plant_medium_b_LOD0$",
+    "glb": "nettle_plant.glb",
+    "size": [
+      0.6261798286352807,
+      1,
+      0.6327018880301716
+    ],
+    "triangles": 1799,
+    "bytes": 597760,
+    "sha256": "06e0dc6777d0cb0c968dbcbed02730fbfb747e34d4f7b7223bca3a9d9a47b395",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 512px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/nettle_plant/nettle_plant_1k.gltf",
+        "sha256": "45baafa16feb0017e6a46712e2aa7afe7841fd00905075ead8316a5fc8314b0e"
+      },
+      {
+        "file": "textures/nettle_plant_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/nettle_plant/nettle_plant_arm_1k.jpg",
+        "sha256": "8fb33e5e939b4e089f08c867bf449d9e27aa32af94990c3cad1a89dcabd44f14"
+      },
+      {
+        "file": "textures/nettle_plant_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/nettle_plant/nettle_plant_nor_gl_1k.jpg",
+        "sha256": "ab5d0cdc9a487a8874b6e9a11bf67ef90319f02bbd74579576198aca90b0fa85"
+      },
+      {
+        "file": "textures/nettle_plant_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/nettle_plant/nettle_plant_diff_1k.jpg",
+        "sha256": "7172a9971818a18a7cb7ebaa144d9d2313b83d2a6180c9582000f7260542ea7b"
+      },
+      {
+        "file": "nettle_plant.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/nettle_plant/nettle_plant.bin",
+        "sha256": "24810f9d80b5fafdd71e1599b0cc81afa3eb9b744cfa8bf388c5e9f30271ba46"
+      },
+      {
+        "file": "textures/mask-Alpha.png",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/png/1k/nettle_plant/nettle_plant_alpha_1k.png",
+        "sha256": "61d98e886a20e401f7eb6e2d64e8513b2409e54feb41e83ecbf3b10aaa035810"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  },
+  {
+    "id": "wooden_picnic_table",
+    "name": "Wooden Picnic Table",
+    "authors": {
+      "Ulan Cabanilla": "All"
+    },
+    "license": "CC0-1.0",
+    "source": "https://polyhaven.com/a/wooden_picnic_table",
+    "variant": null,
+    "glb": "wooden_picnic_table.glb",
+    "size": [
+      0.7414730673575791,
+      0.24682513659650335,
+      1
+    ],
+    "triangles": 4198,
+    "bytes": 1896840,
+    "sha256": "68e990709bf8da76926e324b406138d9d34693b926614d1aea276e58b66e0824",
+    "changes": "Selected asset variant; normalized coordinates; mesh simplification; embedded 1024px WebP PBR textures; collision triangles from identical geometry.",
+    "originals": [
+      {
+        "file": "model.gltf",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/wooden_picnic_table/wooden_picnic_table_1k.gltf",
+        "sha256": "6b0dd9916fd87dba2e5baad06e20c0badf68bc68a5761a13854fa9a215c6bd50"
+      },
+      {
+        "file": "textures/wooden_picnic_table_top_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_top_arm_1k.jpg",
+        "sha256": "50d2b7a0b15c56bf82bc0c918e6eaa5f590a6fd61d32311c8da85c414ace297d"
+      },
+      {
+        "file": "textures/wooden_picnic_table_top_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_top_nor_gl_1k.jpg",
+        "sha256": "1e65787457f9edfdd04f1ee3f777ac2d2a9d43bfbbd3cb40c1e086f939bba419"
+      },
+      {
+        "file": "wooden_picnic_table.bin",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/wooden_picnic_table/wooden_picnic_table.bin",
+        "sha256": "1efd51c292843194fbd709452d56d06c9ddc770f43a013db57ca79bfc2731b01"
+      },
+      {
+        "file": "textures/wooden_picnic_table_bottom_arm_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_bottom_arm_1k.jpg",
+        "sha256": "555226136c1d754d4aa5da42385a9152a146c5175382c77cced611a6880efd35"
+      },
+      {
+        "file": "textures/wooden_picnic_table_top_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_top_diff_1k.jpg",
+        "sha256": "4aefdef35bf343410dbebd8577dfc968f1d6420ccddc601b19912e84b2accc0a"
+      },
+      {
+        "file": "textures/wooden_picnic_table_bottom_nor_gl_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_bottom_nor_gl_1k.jpg",
+        "sha256": "c5d6eb388eceb6d98e92ff31d3f3346d411b1bbcb15c05dc9da71e4a7e398539"
+      },
+      {
+        "file": "textures/wooden_picnic_table_bottom_diff_1k.jpg",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/wooden_picnic_table/wooden_picnic_table_bottom_diff_1k.jpg",
+        "sha256": "887b9a57213f87196fb090419e14d00095af8fa56c93ca6cd7d0d70ef4e5fd27"
+      }
+    ],
+    "textureEncoding": "KTX2: ETC1S colour/materials, UASTC normals/alpha, full mipmaps"
+  }
+]

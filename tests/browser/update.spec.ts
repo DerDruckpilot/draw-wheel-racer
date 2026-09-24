@@ -25,14 +25,14 @@ test('an update installed during the first visit reloads only after confirmation
   try {
     await page.addInitScript(() => {
       (window as any).__visit = crypto.randomUUID();
-      if (!localStorage.getItem('formdrive.v1')) localStorage.setItem('formdrive.v1', JSON.stringify({ quality: 'eco', sound: false, favorite: [{x:-1,y:0},{x:1,y:0}], expeditions: {0:{completed:true,noRescue:true,allCaches:false,fewestRescues:0}} }));
+      if (!localStorage.getItem('formdrive.world.v2')) localStorage.setItem('formdrive.world.v2', JSON.stringify({ schema:2, level:0, records:{0:{stars:2,rescues:0,time:500,relics:[]}}, runs:{}, quality:'eco', sound:false, tutorial:true }));
     });
     const port = (server.address() as { port: number }).port;
     await page.goto(`http://127.0.0.1:${port}/draw-wheel-racer/`);
-    await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 60000 });
+    await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 120000 });
     await page.evaluate(async () => { await navigator.serviceWorker.ready; });
     await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-    const favorite = await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.v1')!).favorite);
+    const records = await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.world.v2')!).records);
     const visit = await page.evaluate(() => (window as any).__visit);
     release = 2;
     await page.evaluate(async () => { await (await navigator.serviceWorker.getRegistration())!.update(); });
@@ -41,9 +41,9 @@ test('an update installed during the first visit reloads only after confirmation
     await page.locator('#settings-button').click();
     await expect(page.locator('#apply-update')).toBeVisible();
     await page.locator('#apply-update').click();
-    await page.waitForFunction(before => !!(window as any).__visit && (window as any).__visit !== before, visit, { timeout: 60000 });
-    await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 60000 });
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.v1')!).favorite)).toEqual(favorite);
+    await page.waitForFunction(before => !!(window as any).__visit && (window as any).__visit !== before, visit, { timeout: 120000 });
+    await expect(page.locator('#start-button')).toHaveText(/Motor starten/, { timeout: 120000 });
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('formdrive.world.v2')!).records)).toEqual(records);
   } finally {
     server.closeAllConnections();
     await new Promise<void>(r => server.close(() => r()));

@@ -1,4 +1,4 @@
-import { cacheWheelHydro, type HydroShape } from './hydrodynamics';
+import { cacheWheelHydro, type HydroShape } from './wheel-geometry';
 import { shapeLength, type Point } from './shapes';
 
 let worker: Worker | undefined;

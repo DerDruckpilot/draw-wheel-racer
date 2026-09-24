@@ -1,21 +1,18 @@
 {
   "name": "formdrive",
-  "version": "1.12.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "tsx --test tests/physics.test.ts tests/hydrodynamics.test.ts tests/revision.test.ts tests/presentation-physics.test.ts tests/expedition.test.ts tests/landscape-controls.test.ts tests/solo-update.test.ts tests/world-revision.test.ts tests/mechanics.test.ts tests/steering-tilt.test.ts tests/branching.test.ts",
-    "test:courses": "tsx scripts/check-courses.ts",
-    "test:races": "tsx scripts/check-races.ts",
+    "test": "tsx --test tests/drawing-controls.test.ts tests/world-physics.test.ts tests/world-fluid.test.ts tests/world-mechanisms.test.ts tests/world-save.test.ts tests/world-layout.test.ts tests/world-driving.test.ts",
     "test:browser": "playwright test",
-    "test:expeditions": "tsx scripts/check-expeditions.ts",
-    "test:balance": "tsx scripts/check-balance.ts"
+    "test:layout": "tsx --test tests/world-layout.test.ts"
   },
   "dependencies": {
-    "@dimforge/rapier2d-compat": "0.20.0",
+    "@dimforge/rapier3d-compat": "0.20.0",
     "polygon-clipping": "0.15.7",
     "three": "0.186.0"
   },

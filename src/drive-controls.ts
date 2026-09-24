@@ -13,12 +13,12 @@ export class DriveControls {
       button.addEventListener('pointerdown', e => {
         if (!this.enabled || e.button !== 0) return;
         e.preventDefault(); button.setPointerCapture(e.pointerId); this.cruise = false;
-        const r=button.getBoundingClientRect(),throttle=.3+.7*clamp((r.bottom-e.clientY)/r.height*1.5,0,1);
+        const r=button.getBoundingClientRect(),throttle=.12+.88*clamp((r.bottom-e.clientY)/r.height*1.3,0,1);
         this.pointers.set(e.pointerId, { kind: button.dataset.pedal!, startX: e.clientX, startY: e.clientY, started: performance.now(), reverse: false, latched: false,throttle }); this.publish();
       });
       button.addEventListener('pointermove', e => {
         const p = this.pointers.get(e.pointerId); if (!p) return;
-        const r=button.getBoundingClientRect();p.throttle=.3+.7*clamp((r.bottom-e.clientY)/r.height*1.5,0,1);
+        const r=button.getBoundingClientRect();p.throttle=.12+.88*clamp((r.bottom-e.clientY)/r.height*1.3,0,1);
         if (p.kind === 'gas' && p.startY - e.clientY >= 42 && Math.abs(e.clientX - p.startX) < 95) { p.latched = true; this.cruise = true; }
         this.publish();
       });
@@ -48,7 +48,7 @@ export class DriveControls {
     const brake = this.keys.has('Space') || (left && !left.reverse) || (gas && reverse) ? 1 : 0;
     if (left || brake || reverse) this.cruise = false;
     const throttle=this.keys.has('ArrowRight')||this.keys.has('KeyD')?1:Math.max(0,...held.filter(p=>p.kind==='gas').map(p=>p.throttle));
-    const drive = brake ? 0 : reverse ? -.65 : gas ? throttle : this.cruise ? .65 : 0;
+    const drive = brake ? 0 : reverse ? -(left?Math.max(.12,left.throttle*.7):.65) : gas ? throttle : this.cruise ? .65 : 0;
     this.root.querySelectorAll<HTMLButtonElement>('[data-pedal]').forEach(b => {
       const active = b.dataset.pedal === 'gas' ? gas || this.cruise : !!left || brake > 0 || !!reverse;
       b.classList.toggle('held', !!active); b.setAttribute('aria-pressed', String(!!active));

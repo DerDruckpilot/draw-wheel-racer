@@ -150,6 +150,11 @@ export function splitStrokes(points: Point[]): Point[][] {
 export function* shapeEdges(points: Point[]): Generator<[Point, Point]> {
   for (let i = 1; i < points.length; i++) if (!points[i].move) yield [points[i - 1], points[i]];
 }
+/** Duplicate strokes describe the same rubber, rather than extra colliders. */
+export function* uniqueShapeEdges(points:Point[]):Generator<[Point,Point]>{
+  const seen=new Set<string>(),key=(p:Point)=>`${Math.round(p.x*1e6)},${Math.round(p.y*1e6)}`;
+  for(const [a,b] of shapeEdges(points)){const ka=key(a),kb=key(b),id=ka<kb?ka+';'+kb:kb+';'+ka;if(seen.has(id))continue;seen.add(id);yield [a,b];}
+}
 
 // Radial supports depend on the contour, not drawing speed or retracing a line.
 // An open side connects to its nearest extreme instead of closing the opening.
@@ -170,7 +175,18 @@ export function spokeTips(shape: Point[]): Point[] {
     if (distance >= 0) return { x: ray.x * distance, y: ray.y * distance };
     return shape.reduce((best, p) => p.x * ray.x + p.y * ray.y > best.x * ray.x + best.y * ray.y ? p : best);
   });
-  // Every detached stroke is welded to the hub by an actual thin spoke.
-  if (shape.some(p => p.move)) for (const stroke of splitStrokes(shape)) tips.push(stroke.reduce((a, b) => Math.hypot(a.x, a.y) < Math.hypot(b.x, b.y) ? a : b));
-  return tips;
+  // Weld each stroke at its nearest point, not its nearest sampled vertex.
+  // This also handles a stroke crossing the hub between two distant samples.
+  // Apply the same rule to single strokes so retracing one cannot add spokes.
+  for (const stroke of splitStrokes(shape)) {
+    let nearest = stroke[0];
+    for (const [a, b] of shapeEdges(stroke)) {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const t = clamp(-(a.x * dx + a.y * dy) / Math.max(1e-12, dx * dx + dy * dy), 0, 1);
+      const p = { x: a.x + dx * t, y: a.y + dy * t };
+      if (p.x * p.x + p.y * p.y < nearest.x * nearest.x + nearest.y * nearest.y) nearest = p;
+    }
+    tips.push(nearest);
+  }
+  return tips.filter((p, i) => !tips.slice(0, i).some(a => Math.hypot(p.x - a.x, p.y - a.y) < 1e-7));
 }
