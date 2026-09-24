@@ -43,6 +43,9 @@ test('denied sensor permission leaves the touch cockpit and manual steering usab
   await page.addInitScript(()=>{localStorage.setItem('formdrive.v1',JSON.stringify({quality:'eco'}));Object.defineProperty(DeviceOrientationEvent,'requestPermission',{value:async()=>'denied'});});
   await page.goto('?test=1');await expect(page.locator('#start-button')).toHaveText(/Motor starten/,{timeout:120000});await page.locator('#tune-button').click();await page.locator('#gyro-enable').click();
   await expect(page.locator('#gyro-status')).toHaveText('Sensorzugriff nicht erlaubt');expect((await snapshot(page)).tuning.gyro.active).toBe(false);
-  await page.locator('#close-tune').click();await fitDrawnWheels(page);await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');await page.locator('#tune-button').click();await page.locator('#steering').focus();await page.locator('#steering').press('End');await expect.poll(async()=>(await snapshot(page)).tuning.steering).toBe(-1);await page.locator('#close-tune').click();expect((await snapshot(page)).tuning.steering).toBe(0);
+  await page.locator('#close-tune').click();await fitDrawnWheels(page);await page.locator('#start-button').click();await expect(page.locator('.game')).toHaveAttribute('data-state','racing');await page.locator('#tune-button').click();await page.locator('#steering').focus();await page.locator('#steering').press('End');await expect.poll(async()=>(await snapshot(page)).tuning.steering).toBe(-1);await page.locator('#close-tune').click();
+  // The frame loop can negate zero after blur centers the control. Both signs
+  // mean exactly neutral steering, so retain an exact magnitude comparison.
+  expect(Math.abs((await snapshot(page)).tuning.steering)).toBe(0);
   await expect(page.locator('#drawing-rear')).toBeVisible();
 });

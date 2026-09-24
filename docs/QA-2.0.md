@@ -13,6 +13,12 @@ Stand: 24. September 2026. Geprüft wurde der Produktionsbuild auf diesem Entwic
 
 Die Browserprüfungen decken beide Zeichenfelder, mehrere Striche, explizite Montage mit anschließend leerem Entwurf, Pedale, Tempomat, Bremsen, Bildschirmdrehung, Fortschritt, Zielfreigabe und Speicherung ab. Sensorberechtigung und Kalibrierung werden in WebKit simuliert; diese beiden Fälle sind in Chromium ausgelassen. Offline-Kaltstart und Service-Worker-Update laufen in Chromium; diese beiden Fälle sind in WebKit ausgelassen.
 
+Der GitHub-Pages-Workflow für Commit `e6d1dfe` hat Tests, Build und Veröffentlichung erfolgreich abgeschlossen. Der öffentliche Einstieg liefert denselben Anwendungscode wie der lokal geprüfte Build; alle 33 Modelle und der neue Offlinecache sind veröffentlicht.
+
+Die zehn Browserfälle wurden auch gegen die öffentliche Spieladresse geprüft. Neun bestanden im gemeinsamen Lauf; der Fall für verweigerte Sensorfreigabe wurde nach Korrektur eines Testvergleichs separat erfolgreich wiederholt. Der Vergleich hatte JavaScripts `0` und `-0` unterschieden, obwohl beide exakt neutrale Lenkung bedeuten. Das Fahrverhalten wurde dabei nicht verändert.
+
+Zusätzlich wurde das originale Pages-Paket von Version 1.12 aus GitHub-Lauf `35908594168` lokal unter derselben Browseradresse installiert und anschließend durch Version 2.0 ersetzt. Die Altversion blieb bis zur bewussten Updateaktion aktiv. Danach waren der alte Fortschritt entfernt, die Grafikeinstellung erhalten und ein vollständiger Neustart ohne Netzwerk möglich. Es gab keine JavaScript-Fehler. Bei Version 1.12 muss ein bereits geöffnetes Einstellungsmenü nach dem Updatehinweis erneut geöffnet werden; Version 2.0 ergänzt den Knopf direkt im geöffneten Menü.
+
 ## Physisch geprüfte Rätsel
 
 - Fahrzeuge schieben bereitgestellte Kisten tatsächlich auf Druckplatten. Last muss erhalten bleiben; zwei Platten müssen bei entsprechenden Toren gleichzeitig belegt sein. Schließende Tore halten vor dem Fahrzeug an.
@@ -28,7 +34,7 @@ Alle 21 Karten wurden auf Platzierung und Erreichbarkeit von Zielen, Lagern, Anl
 
 Eine steile Zufahrt im letzten Gebiet fiel im konservativen Raster zunächst durch. Ein anschließender physischer Versuch durch das geöffnete Tor erreichte die Zelle mit einem gezackten Profil; runde und kleine runde Räder scheiterten am selben Ansatz. Die Schwierigkeit wurde daher erhalten.
 
-Neun Produktionsansichten wurden auf Ladefehler, fehlende Flächen und Materialdarstellung geprüft: Wald, Felsbogen, Höhle, Wasserbecken, Gletscherbecken, Matsch, Eislandschaft, Ziellager und Wippe. Dabei traten keine JavaScript-, Konsolen- oder HTTP-Fehler auf. Die letzte Bildkorrektur betrifft ausschließlich die sichtbare Holzauflage der Wippe. Wiederholte Gebietswechsel zeigten keine fortlaufende Zunahme der Geometrie- und Texturanzahl.
+Neun Produktionsansichten wurden auf Ladefehler, fehlende Flächen und Materialdarstellung geprüft: Wald, Felsbogen, Höhle, Wasserbecken, Gletscherbecken, Matsch, Eislandschaft, Ziellager und Wippe. Dabei traten keine JavaScript-, Konsolen- oder HTTP-Fehler auf. Die letzten Bildkorrekturen betreffen die sichtbare Holzauflage der Wippe und durchgehende Landschaftstexturen an steilen Matsch-Ufern. Wiederholte Gebietswechsel zeigten keine fortlaufende Zunahme der Geometrie- und Texturanzahl.
 
 ## Grenzen
 

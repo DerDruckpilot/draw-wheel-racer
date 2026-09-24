@@ -150,7 +150,9 @@ export class WorldRenderer {
     const ground=this.groundMaterials.get(biome)!;
     const ice=new THREE.MeshPhysicalMaterial({color:0x9fbec7,roughness:.17,metalness:.07,clearcoat:1,vertexColors:true,envMapIntensity:1});
     this.worldMaterials.add(ice);
-    this.materials=[ground,this.groundMaterials.get('forest')!,ice,this.biomeMaterials.get('brown_mud_03')!,this.groundMaterials.get('coast')!];
+    // The fluid surface supplies the muddy texture. Its exposed banks use the
+    // surrounding landscape so the physical material boundary has no sawtooth seam.
+    this.materials=[ground,this.groundMaterials.get('forest')!,ice,ground,this.groundMaterials.get('coast')!];
     this.vehicle=this.models.get('vehicle')!.clone(true);this.root.add(this.vehicle);
     this.wheelMeshes=sim.wheels.map(()=>{const mesh=new THREE.Mesh(new THREE.BufferGeometry(),this.rubber);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.generated=true;this.root.add(mesh);return mesh;});this.wheelRevision.fill(-1);
     // Static imported models are instanced per spatial chunk, not cloned for every rock.

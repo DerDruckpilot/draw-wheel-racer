@@ -8,7 +8,7 @@ Zeichne deine Räder, erkunde eine offene Landschaft und löse physische Rätsel
 
 ![Waldgebiet mit importierten Bäumen, Farnen und Laubboden](docs/screenshots/forest.png)
 
-![Begehbares Küstenbecken mit Ventil, Steg und gezeichneten Paddelrädern](docs/screenshots/water.png)
+![Befahrbares Küstenbecken mit Ventil, Steg und gezeichneten Paddelrädern](docs/screenshots/water.png)
 
 ## Spielen
 
@@ -46,6 +46,8 @@ Modelle, Texturen und Lizenzen sind lokal enthalten. GPU-komprimierte Texturen, 
 Version 2 verwendet ein neues Format. Alter Streckenfortschritt wird beim ersten Start entfernt; Ton und Grafikqualität werden übernommen. Neue Fahrten speichern Rätselzustände, Fundstücke, montierte Formen, Gegenstände und das zuletzt gefundene Lager. Nach einem Neustart geht es am Lager weiter.
 
 Browserdaten zu löschen entfernt den Spielstand und den Offlinecache. Ein App-Update wird erst nach Antippen installiert.
+
+Beim Wechsel von Version 1.12: Öffne die App mit Internetverbindung und warte auf den Updatehinweis. Öffne die Einstellungen danach erneut und tippe auf **Neue Version laden**. Die Versionszeile zeigt anschließend **2.0.0**. Warte für den nächsten Start ohne Verbindung wieder auf **Offline bereit**.
 
 ## Lokal entwickeln und prüfen
 
